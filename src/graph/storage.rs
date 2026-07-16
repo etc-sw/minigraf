@@ -18,6 +18,7 @@ use crate::storage::index::{
 use anyhow::Result;
 #[cfg(any(test, feature = "bench-internals"))]
 use std::cell::Cell;
+use std::hash::Hash;
 #[cfg(any(test, feature = "bench-internals"))]
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -1075,6 +1076,74 @@ pub(crate) fn filter_facts_as_of(facts: Vec<Fact>, as_of: &AsOf) -> Vec<Fact> {
         .collect()
 }
 
+#[derive(Clone, Copy)]
+struct CanonicalValueRef<'a>(&'a Value);
+
+impl PartialEq for CanonicalValueRef<'_> {
+    fn eq(&self, other: &Self) -> bool {
+        match (self.0, other.0) {
+            (Value::Float(left), Value::Float(right)) => {
+                canonical_float_bits(*left) == canonical_float_bits(*right)
+            }
+            (left, right) => left == right,
+        }
+    }
+}
+
+impl Eq for CanonicalValueRef<'_> {}
+
+impl std::hash::Hash for CanonicalValueRef<'_> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        std::mem::discriminant(self.0).hash(state);
+        match self.0 {
+            Value::String(value) | Value::Keyword(value) => value.hash(state),
+            Value::Integer(value) => value.hash(state),
+            Value::Float(value) => canonical_float_bits(*value).hash(state),
+            Value::Boolean(value) => value.hash(state),
+            Value::Ref(value) => value.hash(state),
+            Value::Null => {}
+        }
+    }
+}
+
+fn canonical_float_bits(value: f64) -> u64 {
+    if value.is_nan() {
+        0x7FF8_0000_0000_0000
+    } else {
+        value.to_bits()
+    }
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct EavKey<'a> {
+    entity: EntityId,
+    attribute: &'a str,
+    value: CanonicalValueRef<'a>,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
+struct WindowKey<'a> {
+    eav: EavKey<'a>,
+    valid_from: i64,
+    valid_to: i64,
+}
+
+fn eav_key(fact: &Fact) -> EavKey<'_> {
+    EavKey {
+        entity: fact.entity,
+        attribute: &fact.attribute,
+        value: CanonicalValueRef(&fact.value),
+    }
+}
+
+fn window_key(fact: &Fact) -> WindowKey<'_> {
+    WindowKey {
+        eav: eav_key(fact),
+        valid_from: fact.valid_from,
+        valid_to: fact.valid_to,
+    }
+}
+
 /// Compute the net-asserted view of a fact set.
 ///
 /// For each unique `(entity, attribute, value)` triple:
@@ -1112,75 +1181,6 @@ pub(crate) fn filter_facts_as_of(facts: Vec<Fact>, as_of: &AsOf) -> Vec<Fact> {
 ///
 pub(crate) fn net_asserted_facts(facts: Vec<Fact>) -> Vec<Fact> {
     use std::collections::HashMap;
-    use std::hash::{Hash, Hasher};
-
-    #[derive(Clone, Copy)]
-    struct CanonicalValueRef<'a>(&'a Value);
-
-    impl PartialEq for CanonicalValueRef<'_> {
-        fn eq(&self, other: &Self) -> bool {
-            match (self.0, other.0) {
-                (Value::Float(left), Value::Float(right)) => {
-                    canonical_float_bits(*left) == canonical_float_bits(*right)
-                }
-                (left, right) => left == right,
-            }
-        }
-    }
-
-    impl Eq for CanonicalValueRef<'_> {}
-
-    impl Hash for CanonicalValueRef<'_> {
-        fn hash<H: Hasher>(&self, state: &mut H) {
-            std::mem::discriminant(self.0).hash(state);
-            match self.0 {
-                Value::String(value) | Value::Keyword(value) => value.hash(state),
-                Value::Integer(value) => value.hash(state),
-                Value::Float(value) => canonical_float_bits(*value).hash(state),
-                Value::Boolean(value) => value.hash(state),
-                Value::Ref(value) => value.hash(state),
-                Value::Null => {}
-            }
-        }
-    }
-
-    fn canonical_float_bits(value: f64) -> u64 {
-        if value.is_nan() {
-            0x7FF8_0000_0000_0000
-        } else {
-            value.to_bits()
-        }
-    }
-
-    #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-    struct EavKey<'a> {
-        entity: EntityId,
-        attribute: &'a str,
-        value: CanonicalValueRef<'a>,
-    }
-
-    #[derive(Clone, Copy, PartialEq, Eq, Hash)]
-    struct WindowKey<'a> {
-        eav: EavKey<'a>,
-        valid_from: i64,
-        valid_to: i64,
-    }
-
-    fn eav_key(fact: &Fact) -> EavKey<'_> {
-        EavKey {
-            entity: fact.entity,
-            attribute: &fact.attribute,
-            value: CanonicalValueRef(&fact.value),
-        }
-    }
-
-    fn window_key(fact: &Fact) -> WindowKey<'_> {
-        WindowKey {
-            eav: eav_key(fact),
-            valid_from: fact.valid_from,
-            valid_to: fact.valid_to,
-        }
-    }
 
     let mut max_unscoped_retract_tx: HashMap<EavKey<'_>, u64> = HashMap::new();
     let mut max_scoped_retract_tx: HashMap<WindowKey<'_>, u64> = HashMap::new();
@@ -1232,6 +1232,46 @@ pub(crate) fn net_asserted_facts(facts: Vec<Fact>) -> Vec<Fact> {
     drop(by_window);
     drop(max_scoped_retract_tx);
     drop(max_unscoped_retract_tx);
+
+    facts
+        .into_iter()
+        .zip(keep)
+        .filter_map(|(fact, keep)| keep.then_some(fact))
+        .collect()
+}
+
+/// Collapse overlapping validity windows into one logical EAV relation at a
+/// selected point in time.
+///
+/// Callers must first apply transaction-time, retraction, and point-in-time
+/// validity filtering. Full-history and `:any-valid-time` reads must retain the
+/// original windows and therefore must not call this helper.
+///
+/// The newest visible assertion supplies the retained row's hidden ledger
+/// metadata. Point-in-time Datalog cannot bind per-fact temporal metadata, so
+/// this choice affects neither the logical result nor full-history identity.
+pub(crate) fn coalesce_point_in_time_facts(facts: Vec<Fact>) -> Vec<Fact> {
+    use std::collections::HashMap;
+
+    let mut by_eav: HashMap<EavKey<'_>, usize> = HashMap::new();
+    for (index, fact) in facts.iter().enumerate() {
+        let key = eav_key(fact);
+        let replace = by_eav
+            .get(&key)
+            .and_then(|existing| facts.get(*existing))
+            .is_none_or(|existing| fact.tx_count > existing.tx_count);
+        if replace {
+            by_eav.insert(key, index);
+        }
+    }
+
+    let mut keep = vec![false; facts.len()];
+    for index in by_eav.values().copied() {
+        if let Some(keep_fact) = keep.get_mut(index) {
+            *keep_fact = true;
+        }
+    }
+    drop(by_eav);
 
     facts
         .into_iter()
@@ -4256,6 +4296,41 @@ mod tests {
             fact.value
                 .as_float()
                 .is_some_and(|value| value == 0.0 && value.is_sign_positive())
+        }));
+    }
+
+    #[test]
+    fn point_in_time_coalescing_uses_logical_eav_identity() {
+        let entity = uuid::Uuid::new_v4();
+        let facts = vec![
+            make_assert(entity, ":state", Value::Integer(7), 1, 0, 100),
+            make_assert(entity, ":state", Value::Integer(7), 2, 50, 150),
+            make_assert(entity, ":measure", Value::Float(f64::NAN), 3, 0, 100),
+            make_assert(
+                entity,
+                ":measure",
+                Value::Float(f64::from_bits(0x7FF0_0000_0000_0001)),
+                4,
+                50,
+                150,
+            ),
+            make_assert(entity, ":measure", Value::Float(-0.0), 5, 0, 150),
+            make_assert(entity, ":measure", Value::Float(0.0), 6, 0, 150),
+        ];
+
+        let result = coalesce_point_in_time_facts(facts);
+        assert_eq!(
+            result.len(),
+            4,
+            "equal EAVs must coalesce while signed zero stays distinct"
+        );
+        assert!(result.iter().any(|fact| {
+            fact.attribute == ":state" && fact.tx_count == 2 && fact.value == Value::Integer(7)
+        }));
+        assert!(result.iter().any(|fact| {
+            fact.attribute == ":measure"
+                && fact.tx_count == 4
+                && fact.value.as_float().is_some_and(f64::is_nan)
         }));
     }
 

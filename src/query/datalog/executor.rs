@@ -629,7 +629,13 @@ impl DatalogExecutor {
                 .collect(),
         };
 
-        Ok(Arc::from(valid_filtered))
+        let relation = if matches!(query.valid_at, Some(ValidAt::AnyValidTime)) {
+            valid_filtered
+        } else {
+            crate::graph::storage::coalesce_point_in_time_facts(valid_filtered)
+        };
+
+        Ok(Arc::from(relation))
     }
 
     /// Execute a query: find matching facts and return specified variables
@@ -5030,6 +5036,58 @@ mod tests {
             "only open-ended fact visible at t=3000"
         );
         assert_eq!(facts_outside[0].attribute, ":person/name");
+    }
+
+    #[test]
+    fn point_in_time_filter_coalesces_overlapping_eav_windows_only() {
+        use crate::graph::types::TransactOptions;
+        use uuid::Uuid;
+
+        let storage = FactStorage::new();
+        let claim = Uuid::new_v4();
+        for window in [(0_i64, 200_i64), (50_i64, 250_i64)] {
+            storage
+                .transact(
+                    vec![
+                        (claim, ":lease/live".to_string(), Value::Boolean(true)),
+                        (claim, ":lease/expires-ms".to_string(), Value::Integer(300)),
+                    ],
+                    Some(TransactOptions::new(Some(window.0), Some(window.1))),
+                )
+                .unwrap();
+        }
+        let executor = DatalogExecutor::new(storage);
+
+        let point_query = DatalogQuery {
+            find: vec![],
+            where_clauses: vec![],
+            as_of: None,
+            valid_at: Some(ValidAt::Timestamp(100)),
+            with_vars: vec![],
+            max_derived_facts: None,
+            max_results: None,
+        };
+        let point_facts = executor
+            .filter_facts_for_query(&point_query, usize::MAX)
+            .unwrap();
+        assert_eq!(
+            point_facts.len(),
+            2,
+            "point-in-time relation should contain one row per logical EAV"
+        );
+
+        let history_query = DatalogQuery {
+            valid_at: Some(ValidAt::AnyValidTime),
+            ..point_query
+        };
+        let history_facts = executor
+            .filter_facts_for_query(&history_query, usize::MAX)
+            .unwrap();
+        assert_eq!(
+            history_facts.len(),
+            4,
+            "any-valid-time relation must retain both validity windows"
+        );
     }
 
     #[test]
