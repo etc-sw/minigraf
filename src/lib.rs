@@ -100,6 +100,8 @@ pub use db::{
     CURRENT_ENTITIES_MAX_ATTRIBUTES, CURRENT_ENTITIES_MAX_HISTORY_ENTRIES,
     CURRENT_ENTITIES_MAX_IDS, CURRENT_ENTITIES_MAX_PAIRS, CURRENT_PROJECTION_MAX_ATTRIBUTES,
     CURRENT_REFS_MAX_HISTORY_ENTRIES, CurrentEntitiesRequest, CurrentFact, CurrentRefsRequest,
+    ENTITY_ATTRIBUTE_HISTORY_MAX_RESULT_BYTES, ENTITY_ATTRIBUTE_HISTORY_MAX_SOURCE_ENTRIES,
+    EntityAttributeHistoryCursor, EntityAttributeHistoryPage, EntityAttributeHistoryRequest,
     InteractiveLedger, InteractiveWriteTransaction, MaintenanceAdvice, MaintenanceCheckpointEffect,
     MaintenanceDeltaEffect, MaintenanceLedger, MaintenanceOutcome, Minigraf, OpenOptions,
     ProjectionMaintenanceOutcome, READ_VIEW_MAX_QUERY_WORK_ROWS, READ_VIEW_MAX_ROWS, ReadView,

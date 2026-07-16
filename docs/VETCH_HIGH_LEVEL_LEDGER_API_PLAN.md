@@ -546,11 +546,24 @@ retractions plus `asOf` and `validAt` selection. The Vetch current-card,
 current-space membership, proposal status/verdict, receipt, and agent-brief
 fixture produces the same results through typed readers and raw Datalog.
 
+Exact histories larger than the foreground row ceiling use the same read-view
+authority instead of full export or arbitrary Datalog. Native
+`ReadView::entity_attribute_history` and browser
+`BrowserReadView.entityAttributeHistory()` require an any-valid-time view and
+page one exact `(entity, attribute)` EAVT range with an opaque continuation.
+Every row retains entity, attribute, tagged value, transaction id/count,
+valid-time scope, and assertion/retraction polarity. A call returns at most
+10,000 rows and 8 MiB while consuming at most 65,536 source entries; exceeding
+a bound rejects the page without truncation. Native and sparse real-Chrome
+fixtures page 12,005 canvas root links as 10,000 plus 2,005 exact rows and keep
+writes newer than the pinned view out of every continuation.
+
 - Expose exact entity/attribute reads through the indexed current-view path. ✅
 - Add browser prepared/bound query parity if H0 proves repeated parsing is
   material. Not admitted by H0.
 - Add consistent `asOf` and `validAt` read-view selection. ✅
 - Return structured bounded results. ✅
+- Page exact append-only entity/attribute history above 10,000 rows. ✅
 - Reject incomplete result truncation and unindexed foreground plans. ✅
 
 Gate:

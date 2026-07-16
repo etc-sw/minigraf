@@ -383,6 +383,21 @@ impl PendingOverlay {
         Ok(entries)
     }
 
+    pub(crate) fn range_eavt_page(
+        &self,
+        start: &EavtKey,
+        end: &EavtKey,
+        max_entries: usize,
+    ) -> (Vec<PendingFactId>, bool) {
+        self.indexes.eavt.range(
+            &self.records,
+            IndexOrder::Eavt,
+            |record| compare_eavt_bound(record, start),
+            |record| compare_eavt_bound(record, end),
+            max_entries,
+        )
+    }
+
     pub(crate) fn range_aevt(&self, start: &AevtKey, end: Option<&AevtKey>) -> Vec<PendingFactId> {
         self.indexes
             .aevt

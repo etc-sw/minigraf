@@ -75,6 +75,7 @@ use crate::query::datalog::types::DatalogQuery;
 use crate::query::datalog::types::{
     AsOf, AttributeSpec, DatalogCommand, ForgetSource, ForgetSpec, PseudoAttr, Transaction, ValidAt,
 };
+use crate::storage::index::EavtKey;
 
 /// Largest result admitted by the foreground read-view API.
 pub const READ_VIEW_MAX_ROWS: usize = 10_000;
@@ -96,6 +97,11 @@ pub(crate) const CURRENT_ENTITIES_STEP_ENTRIES: usize = 4_096;
 /// Maximum historical VAET entries consumed by one foreground reverse-reference read.
 pub const CURRENT_REFS_MAX_HISTORY_ENTRIES: usize = 65_536;
 pub(crate) const CURRENT_REFS_STEP_ENTRIES: usize = 4_096;
+/// Maximum EAVT entries consumed by one exact entity/attribute history page.
+pub const ENTITY_ATTRIBUTE_HISTORY_MAX_SOURCE_ENTRIES: usize = 65_536;
+/// Maximum encoded bytes returned by one exact entity/attribute history page.
+pub const ENTITY_ATTRIBUTE_HISTORY_MAX_RESULT_BYTES: usize = 8 * 1024 * 1024;
+pub(crate) const ENTITY_ATTRIBUTE_HISTORY_STEP_ENTRIES: usize = 4_096;
 
 pub(crate) fn normalize_current_entities_request(
     ids: &[crate::EntityId],
@@ -220,6 +226,209 @@ pub struct CurrentRefsRequest<'a> {
     pub value: crate::EntityId,
     /// Maximum complete source-entity result count.
     pub limit: usize,
+}
+
+/// Opaque continuation for one exact entity/attribute fact-log history.
+///
+/// A continuation is valid only for the read view, entity, and attribute that
+/// produced it. Callers may clone and persist it for the lifetime of the
+/// underlying database handle, but cannot construct or edit its position.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EntityAttributeHistoryCursor {
+    pub(crate) entity: crate::EntityId,
+    pub(crate) attribute: String,
+    pub(crate) tx_count: u64,
+    pub(crate) last_key: EavtKey,
+}
+
+/// Exact append-only history selection for [`ReadView::entity_attribute_history`].
+pub struct EntityAttributeHistoryRequest<'a> {
+    /// Entity whose fact-log history is selected.
+    pub entity: crate::EntityId,
+    /// One namespace-qualified stored attribute.
+    pub attribute: &'a str,
+    /// Continuation returned by the preceding page, if any.
+    pub after: Option<&'a EntityAttributeHistoryCursor>,
+    /// Maximum complete rows in this page.
+    pub limit: usize,
+}
+
+/// One complete page from an exact entity/attribute append-only history.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct EntityAttributeHistoryPage {
+    /// Assertion and retraction records in deterministic EAVT index order.
+    pub facts: Vec<FactRecord>,
+    /// Continuation for the next page, or `None` when the history is exhausted.
+    pub next: Option<EntityAttributeHistoryCursor>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize)]
+struct EntityAttributeHistoryCursorWire {
+    version: u8,
+    entity: crate::EntityId,
+    attribute: String,
+    tx_count: u64,
+    last_key: EavtKey,
+}
+
+pub(crate) fn encode_entity_attribute_history_cursor(
+    cursor: &EntityAttributeHistoryCursor,
+) -> Result<String> {
+    use std::fmt::Write as _;
+
+    let payload = serde_json::to_vec(&EntityAttributeHistoryCursorWire {
+        version: 1,
+        entity: cursor.entity,
+        attribute: cursor.attribute.clone(),
+        tx_count: cursor.tx_count,
+        last_key: cursor.last_key.clone(),
+    })?;
+    let mut bytes = Vec::with_capacity(payload.len().saturating_add(4));
+    bytes.extend_from_slice(&crc32fast::hash(&payload).to_be_bytes());
+    bytes.extend_from_slice(&payload);
+    let mut encoded = String::with_capacity(bytes.len().saturating_mul(2));
+    for byte in bytes {
+        write!(&mut encoded, "{byte:02x}")?;
+    }
+    Ok(encoded)
+}
+
+#[cfg_attr(
+    not(all(target_arch = "wasm32", feature = "browser")),
+    allow(dead_code)
+)]
+pub(crate) fn decode_entity_attribute_history_cursor(
+    encoded: &str,
+) -> Result<EntityAttributeHistoryCursor> {
+    if encoded.is_empty()
+        || !encoded.len().is_multiple_of(2)
+        || encoded.len() > ENTITY_ATTRIBUTE_HISTORY_MAX_RESULT_BYTES
+    {
+        bail!("entity_attribute_history cursor is malformed or oversized");
+    }
+    fn nibble(byte: u8) -> Option<u8> {
+        match byte {
+            b'0'..=b'9' => Some(byte - b'0'),
+            b'a'..=b'f' => Some(byte - b'a' + 10),
+            b'A'..=b'F' => Some(byte - b'A' + 10),
+            _ => None,
+        }
+    }
+    let mut bytes = Vec::with_capacity(encoded.len() / 2);
+    for pair in encoded.as_bytes().chunks_exact(2) {
+        let high = pair.first().and_then(|byte| nibble(*byte));
+        let low = pair.get(1).and_then(|byte| nibble(*byte));
+        let (Some(high), Some(low)) = (high, low) else {
+            bail!("entity_attribute_history cursor contains non-hex bytes");
+        };
+        bytes.push((high << 4) | low);
+    }
+    let (checksum_bytes, payload) = bytes
+        .split_at_checked(4)
+        .ok_or_else(|| anyhow::anyhow!("entity_attribute_history cursor is malformed"))?;
+    let expected_checksum = u32::from_be_bytes(
+        checksum_bytes
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("entity_attribute_history cursor is malformed"))?,
+    );
+    if crc32fast::hash(payload) != expected_checksum {
+        bail!("entity_attribute_history cursor checksum mismatch");
+    }
+    let wire: EntityAttributeHistoryCursorWire = serde_json::from_slice(payload)
+        .map_err(|_| anyhow::anyhow!("entity_attribute_history cursor is malformed"))?;
+    if wire.version != 1 {
+        bail!(
+            "entity_attribute_history cursor version {} is unsupported",
+            wire.version
+        );
+    }
+    Ok(EntityAttributeHistoryCursor {
+        entity: wire.entity,
+        attribute: wire.attribute,
+        tx_count: wire.tx_count,
+        last_key: wire.last_key,
+    })
+}
+
+pub(crate) fn validate_entity_attribute_history_request(
+    valid_at: &ValidAt,
+    tx_count: u64,
+    entity: crate::EntityId,
+    attribute: &str,
+    after: Option<&EntityAttributeHistoryCursor>,
+    limit: usize,
+) -> Result<()> {
+    if !matches!(valid_at, ValidAt::AnyValidTime) {
+        bail!("entity_attribute_history requires an AnyValidTime read view");
+    }
+    if !attribute.starts_with(':')
+        || !attribute.contains('/')
+        || attribute.contains('\0')
+        || PseudoAttr::from_keyword(attribute).is_some()
+    {
+        bail!(
+            "entity_attribute_history attribute must be a namespace-qualified stored keyword: {attribute}"
+        );
+    }
+    if limit == 0 || limit > READ_VIEW_MAX_ROWS {
+        bail!("entity_attribute_history limit must be in 1..={READ_VIEW_MAX_ROWS}; got {limit}");
+    }
+    if after.is_some_and(|cursor| {
+        cursor.entity != entity
+            || cursor.attribute != attribute
+            || cursor.tx_count != tx_count
+            || cursor.last_key.entity != entity
+            || cursor.last_key.attribute != attribute
+    }) {
+        bail!("entity_attribute_history cursor does not belong to this read view and exact range");
+    }
+    Ok(())
+}
+
+pub(crate) fn finish_entity_attribute_history_page(
+    entity: crate::EntityId,
+    attribute: &str,
+    tx_count: u64,
+    limit: usize,
+    mut items: Vec<crate::graph::storage::EntityAttributeHistoryItem>,
+) -> Result<EntityAttributeHistoryPage> {
+    let has_more = items.len() > limit;
+    if has_more {
+        items.pop();
+    }
+    let next = if has_more {
+        let last_key = items
+            .last()
+            .ok_or_else(|| anyhow::anyhow!("history page continuation has no row"))?
+            .resume_key
+            .clone();
+        Some(EntityAttributeHistoryCursor {
+            entity,
+            attribute: attribute.to_owned(),
+            tx_count,
+            last_key,
+        })
+    } else {
+        None
+    };
+    let facts = items
+        .into_iter()
+        .map(|item| item.record)
+        .collect::<Vec<_>>();
+    let encoded_fact_bytes = serde_json::to_vec(&facts)?.len();
+    let continuation_bytes = next
+        .as_ref()
+        .map(encode_entity_attribute_history_cursor)
+        .transpose()?
+        .map_or(0, |encoded| encoded.len());
+    if encoded_fact_bytes.saturating_add(continuation_bytes)
+        > ENTITY_ATTRIBUTE_HISTORY_MAX_RESULT_BYTES
+    {
+        bail!(
+            "entity_attribute_history result exceeds {ENTITY_ATTRIBUTE_HISTORY_MAX_RESULT_BYTES} bytes; result was rejected without truncation"
+        );
+    }
+    Ok(EntityAttributeHistoryPage { facts, next })
 }
 
 /// Valid-time selection pinned by a [`ReadView`].
@@ -432,6 +641,66 @@ impl ReadView<'_> {
             }
         }
         Ok(results)
+    }
+
+    /// Read one bounded page of the append-only fact log for an exact entity and attribute.
+    ///
+    /// The view must use [`ReadViewValidAt::AnyValidTime`], because this API
+    /// returns assertion and retraction records with their own valid-time
+    /// scopes instead of projecting one valid-time instant. Results follow
+    /// deterministic EAVT index order; they are not transaction chronological.
+    pub fn entity_attribute_history(
+        &self,
+        request: EntityAttributeHistoryRequest<'_>,
+    ) -> Result<EntityAttributeHistoryPage> {
+        validate_entity_attribute_history_request(
+            &self.valid_at,
+            self.tx_count,
+            request.entity,
+            request.attribute,
+            request.after,
+            request.limit,
+        )?;
+
+        let after_key = request.after.map(|cursor| &cursor.last_key);
+        let mut cursor = self.db.inner.fact_storage.entity_attribute_history_cursor(
+            request.entity,
+            request.attribute,
+            self.tx_count,
+            after_key,
+        )?;
+        let wanted_rows = request.limit.saturating_add(1);
+        loop {
+            let step_ceiling = cursor
+                .processed_entries
+                .saturating_add(ENTITY_ATTRIBUTE_HISTORY_STEP_ENTRIES)
+                .min(ENTITY_ATTRIBUTE_HISTORY_MAX_SOURCE_ENTRIES);
+            let step = self
+                .db
+                .inner
+                .fact_storage
+                .step_entity_attribute_history_cursor(&mut cursor, step_ceiling, wanted_rows)?;
+            if matches!(
+                step,
+                crate::graph::storage::EntityAttributeHistoryStep::Complete
+            ) || cursor.items.len() >= wanted_rows
+            {
+                break;
+            }
+            if cursor.processed_entries >= ENTITY_ATTRIBUTE_HISTORY_MAX_SOURCE_ENTRIES {
+                bail!(
+                    "entity_attribute_history source work exceeds {ENTITY_ATTRIBUTE_HISTORY_MAX_SOURCE_ENTRIES} entries; result was rejected without truncation"
+                );
+            }
+        }
+
+        finish_entity_attribute_history_page(
+            request.entity,
+            request.attribute,
+            self.tx_count,
+            request.limit,
+            std::mem::take(&mut cursor.items),
+        )
     }
 
     /// Read current source entities that reference one target through one exact attribute.

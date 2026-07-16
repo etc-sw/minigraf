@@ -7,8 +7,8 @@ use crate::graph::current_projection::{
 };
 use crate::graph::pending_overlay::{PendingFactId, PendingOverlay};
 use crate::graph::types::{
-    Attribute, EntityId, Fact, RETRACT_ALL_VALID_FROM, TransactOptions, TxId, VALID_TIME_FOREVER,
-    Value, tx_id_now,
+    Attribute, EntityId, Fact, FactRecord, FactValidTime, RETRACT_ALL_VALID_FROM, TransactOptions,
+    TxId, VALID_TIME_FOREVER, Value, tx_id_now,
 };
 use crate::query::datalog::types::AsOf;
 use crate::storage::index::{
@@ -290,6 +290,29 @@ pub(crate) struct CurrentEntityAttributeCursor {
     emit_each_visible_window: bool,
 }
 
+/// Resumable append-only history scan for one exact `(entity, attribute)` range.
+pub(crate) struct EntityAttributeHistoryCursor {
+    end: EavtKey,
+    next_start: EavtKey,
+    pending: Vec<PendingFactId>,
+    pending_position: usize,
+    pending_truncated: bool,
+    as_of_tx_count: u64,
+    committed_fact_reader: Option<Arc<dyn crate::storage::CommittedFactReader>>,
+    committed_index_reader: Option<Arc<dyn crate::storage::CommittedIndexReader>>,
+    publication_generation: u64,
+    last_key: Option<EavtKey>,
+    committed_complete: bool,
+    pub(crate) complete: bool,
+    pub(crate) processed_entries: usize,
+    pub(crate) items: Vec<EntityAttributeHistoryItem>,
+}
+
+pub(crate) struct EntityAttributeHistoryItem {
+    pub(crate) record: FactRecord,
+    pub(crate) resume_key: EavtKey,
+}
+
 /// Resumable current reverse-reference reduction for one exact VAET range.
 pub(crate) struct CurrentRefsCursor {
     end: VaetKey,
@@ -394,6 +417,11 @@ pub(crate) enum CurrentAttributeStep {
 pub(crate) enum CurrentEntityAttributeStep {
     Yielded { entries: usize },
     Complete { entries: usize },
+}
+
+pub(crate) enum EntityAttributeHistoryStep {
+    Yielded,
+    Complete,
 }
 
 pub(crate) enum CurrentRefsStep {
@@ -2473,6 +2501,230 @@ impl FactStorage {
         Ok(CurrentEntityAttributeStep::Complete { entries: processed })
     }
 
+    pub(crate) fn entity_attribute_history_cursor(
+        &self,
+        entity: EntityId,
+        attribute: &str,
+        as_of_tx_count: u64,
+        after: Option<&EavtKey>,
+    ) -> Result<EntityAttributeHistoryCursor> {
+        let range_start = EavtKey {
+            entity,
+            attribute: attribute.to_owned(),
+            valid_from: i64::MIN,
+            valid_to: i64::MIN,
+            tx_count: 0,
+            value_bytes: Vec::new(),
+            tx_id: 0,
+            asserted: false,
+        };
+        let next_start = after.cloned().unwrap_or_else(|| range_start.clone());
+        let mut end_attribute = String::with_capacity(attribute.len() + 1);
+        end_attribute.push_str(attribute);
+        end_attribute.push('\0');
+        let end = EavtKey {
+            entity,
+            attribute: end_attribute,
+            valid_from: i64::MIN,
+            valid_to: i64::MIN,
+            tx_count: 0,
+            value_bytes: Vec::new(),
+            tx_id: 0,
+            asserted: false,
+        };
+        let d = self.data.read().unwrap_or_else(|error| error.into_inner());
+        let (pending, pending_truncated) = d.pending.range_eavt_page(
+            &next_start,
+            &end,
+            crate::db::ENTITY_ATTRIBUTE_HISTORY_MAX_SOURCE_ENTRIES,
+        );
+        let mut pending_position = 0;
+        if let Some(after) = after {
+            while pending.get(pending_position).is_some_and(|id| {
+                d.pending
+                    .get(*id)
+                    .is_ok_and(|record| !record.current_eavt_entry().cmp_owned(after).is_gt())
+            }) {
+                pending_position += 1;
+            }
+        }
+        Ok(EntityAttributeHistoryCursor {
+            end,
+            next_start,
+            pending,
+            pending_position,
+            pending_truncated,
+            as_of_tx_count,
+            committed_fact_reader: d.committed.clone(),
+            committed_index_reader: d.committed_index_reader.clone(),
+            publication_generation: d.publication_generation,
+            last_key: after.cloned(),
+            committed_complete: false,
+            complete: false,
+            processed_entries: 0,
+            items: Vec::new(),
+        })
+    }
+
+    pub(crate) fn step_entity_attribute_history_cursor(
+        &self,
+        cursor: &mut EntityAttributeHistoryCursor,
+        max_entries: usize,
+        max_rows: usize,
+    ) -> Result<EntityAttributeHistoryStep> {
+        if cursor.complete {
+            return Ok(EntityAttributeHistoryStep::Complete);
+        }
+        if max_entries == 0 || cursor.processed_entries >= max_entries {
+            return Ok(EntityAttributeHistoryStep::Yielded);
+        }
+        if cursor.items.len() >= max_rows {
+            return Ok(EntityAttributeHistoryStep::Yielded);
+        }
+
+        let d = self.data.read().unwrap_or_else(|error| error.into_inner());
+        if d.publication_generation != cursor.publication_generation {
+            anyhow::bail!("entity/attribute history publication changed during the read view");
+        }
+        if cursor.pending_position >= cursor.pending.len() && cursor.pending_truncated {
+            let start = cursor
+                .last_key
+                .as_ref()
+                .unwrap_or(&cursor.next_start)
+                .clone();
+            let (pending, pending_truncated) = d.pending.range_eavt_page(
+                &start,
+                &cursor.end,
+                crate::db::ENTITY_ATTRIBUTE_HISTORY_MAX_SOURCE_ENTRIES,
+            );
+            let mut pending_position = 0;
+            while pending.get(pending_position).is_some_and(|id| {
+                d.pending
+                    .get(*id)
+                    .is_ok_and(|record| !record.current_eavt_entry().cmp_owned(&start).is_gt())
+            }) {
+                pending_position += 1;
+            }
+            cursor.pending = pending;
+            cursor.pending_position = pending_position;
+            cursor.pending_truncated = pending_truncated;
+        }
+
+        let accept = |cursor: &mut EntityAttributeHistoryCursor,
+                      key: CurrentEavtEntryRef<'_>,
+                      fact_ref: CursorFactRef|
+         -> Result<()> {
+            let resume_key = owned_eavt_key(key);
+            if key.tx_count <= cursor.as_of_tx_count {
+                let value = match fact_ref {
+                    CursorFactRef::Pending(id) => d.pending.get(id)?.to_fact().value,
+                    CursorFactRef::Committed(fact_ref)
+                        if key.value_bytes.first() == Some(&0x03) =>
+                    {
+                        cursor
+                            .committed_fact_reader
+                            .as_ref()
+                            .ok_or_else(|| {
+                                anyhow::anyhow!("entity/attribute history has no fact reader")
+                            })?
+                            .resolve(fact_ref)?
+                            .value
+                    }
+                    CursorFactRef::Committed(_) => decode_index_value(key.value_bytes)?,
+                };
+                cursor.items.push(EntityAttributeHistoryItem {
+                    record: fact_record_from_eavt(key, value),
+                    resume_key: resume_key.clone(),
+                });
+            }
+            cursor.last_key = Some(resume_key);
+            cursor.processed_entries = cursor.processed_entries.saturating_add(1);
+            Ok(())
+        };
+
+        if !cursor.committed_complete {
+            let last_key = cursor.last_key.clone();
+            let next_start = cursor.next_start.clone();
+            let end = cursor.end.clone();
+            let committed_index_reader = cursor.committed_index_reader.clone();
+            let complete = committed_index_reader.as_ref().map_or(Ok(true), |reader| {
+                reader.visit_current_eavt_entries(&next_start, Some(&end), &mut |key, fact_ref| {
+                    if last_key
+                        .as_ref()
+                        .is_some_and(|last| !key.cmp_owned(last).is_gt())
+                    {
+                        return Ok(true);
+                    }
+                    while cursor.pending_position < cursor.pending.len()
+                        && cursor
+                            .pending
+                            .get(cursor.pending_position)
+                            .is_some_and(|id| {
+                                d.pending
+                                    .compare_eavt_projection(*id, key)
+                                    .is_ok_and(|order| order.is_lt())
+                            })
+                    {
+                        if cursor.processed_entries >= max_entries || cursor.items.len() >= max_rows
+                        {
+                            return Ok(false);
+                        }
+                        let pending_id = *cursor
+                            .pending
+                            .get(cursor.pending_position)
+                            .ok_or_else(|| anyhow::anyhow!("pending cursor out of bounds"))?;
+                        accept(
+                            cursor,
+                            d.pending.get(pending_id)?.current_eavt_entry(),
+                            CursorFactRef::Pending(pending_id),
+                        )?;
+                        cursor.pending_position += 1;
+                    }
+                    if cursor.pending_position >= cursor.pending.len() && cursor.pending_truncated {
+                        return Ok(false);
+                    }
+                    if cursor.processed_entries >= max_entries || cursor.items.len() >= max_rows {
+                        return Ok(false);
+                    }
+                    accept(cursor, key, CursorFactRef::Committed(fact_ref))?;
+                    Ok(cursor.processed_entries < max_entries && cursor.items.len() < max_rows)
+                })
+            })?;
+            cursor.committed_complete = complete;
+            if let Some(last) = &cursor.last_key {
+                cursor.next_start = last.clone();
+            }
+            if !complete {
+                return Ok(EntityAttributeHistoryStep::Yielded);
+            }
+        }
+
+        while cursor.pending_position < cursor.pending.len()
+            && cursor.processed_entries < max_entries
+            && cursor.items.len() < max_rows
+        {
+            let pending_id = *cursor
+                .pending
+                .get(cursor.pending_position)
+                .ok_or_else(|| anyhow::anyhow!("pending cursor out of bounds"))?;
+            accept(
+                cursor,
+                d.pending.get(pending_id)?.current_eavt_entry(),
+                CursorFactRef::Pending(pending_id),
+            )?;
+            cursor.pending_position += 1;
+        }
+        if cursor.pending_position < cursor.pending.len() {
+            return Ok(EntityAttributeHistoryStep::Yielded);
+        }
+        if cursor.pending_truncated {
+            return Ok(EntityAttributeHistoryStep::Yielded);
+        }
+
+        cursor.complete = true;
+        Ok(EntityAttributeHistoryStep::Complete)
+    }
+
     pub(crate) fn current_refs_cursor(
         &self,
         attribute: &str,
@@ -2673,6 +2925,42 @@ fn entry_visible_at_tx(tx_count: u64, tx_id: u64, as_of: Option<&AsOf>) -> bool 
         Some(AsOf::Counter(counter)) => tx_count <= *counter,
         Some(AsOf::Timestamp(timestamp)) => tx_id <= u64::try_from(*timestamp).unwrap_or(0),
         Some(AsOf::Slot(_)) => false,
+    }
+}
+
+fn owned_eavt_key(key: CurrentEavtEntryRef<'_>) -> EavtKey {
+    EavtKey {
+        entity: key.entity,
+        attribute: key.attribute.to_owned(),
+        valid_from: key.valid_from,
+        valid_to: key.valid_to,
+        tx_count: key.tx_count,
+        value_bytes: key.value_bytes.to_vec(),
+        tx_id: key.tx_id,
+        asserted: key.asserted,
+    }
+}
+
+fn fact_record_from_eavt(key: CurrentEavtEntryRef<'_>, value: Value) -> FactRecord {
+    let valid_time = if !key.asserted
+        && key.valid_from == RETRACT_ALL_VALID_FROM
+        && key.valid_to == VALID_TIME_FOREVER
+    {
+        FactValidTime::AllValidTime
+    } else {
+        FactValidTime::Window {
+            valid_from: key.valid_from,
+            valid_to: key.valid_to,
+        }
+    };
+    FactRecord {
+        entity: key.entity,
+        attribute: key.attribute.to_owned(),
+        value,
+        tx_id: key.tx_id,
+        tx_count: key.tx_count,
+        valid_time,
+        asserted: key.asserted,
     }
 }
 

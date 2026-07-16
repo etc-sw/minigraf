@@ -97,6 +97,12 @@ maintenance lifetime explicitly requests it. Read-view row bounds stop source
 and result generation at the first excess entry and reject the incomplete query
 without truncation.
 
+For an append-only history larger than 10,000 rows, create an `AnyValidTime`
+read view and page one exact entity/attribute range with
+`ReadView::entity_attribute_history`. The browser equivalent is
+`BrowserReadView.entityAttributeHistory()`. Both retain assertion, retraction,
+transaction, and valid-time identity under the pinned transaction cursor.
+
 ```rust
 use minigraf::{InteractiveLedger, MaintenanceLedger, ReadViewOptions};
 

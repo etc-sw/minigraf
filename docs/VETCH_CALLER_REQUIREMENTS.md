@@ -196,6 +196,14 @@ asserted
 `Value::Ref` is mandatory. Retractions must remain visible to full-history
 surfaces while disappearing correctly from current projections.
 
+An exact relation history may exceed the 10,000-row foreground result ceiling.
+Vicia therefore exposes transaction-pinned `(entity, attribute)` history pages
+with opaque continuations instead of forcing Vetch through full fact-log export.
+Each page preserves the complete identity above, returns at most 10,000 rows
+and 8 MiB, and rejects after 65,536 source entries rather than returning an
+incomplete prefix. The native and sparse-browser acceptance fixture reads
+12,005 `:canvas/root-link` records in two lossless pages.
+
 #### Bi-temporal queries
 
 The same query shape must correctly support:

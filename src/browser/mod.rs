@@ -1183,6 +1183,53 @@ impl BrowserReadView {
         current_facts_to_js(facts)
     }
 
+    /// Read one append-only history page for an exact entity and attribute.
+    ///
+    /// This method is available only on a view created with
+    /// `readViewAnyValidTime`. It returns assertion and retraction rows plus an
+    /// opaque continuation token. Every page is bounded and complete.
+    #[wasm_bindgen(js_name = entityAttributeHistory)]
+    pub async fn entity_attribute_history(
+        &self,
+        entity: String,
+        attribute: String,
+        after: Option<String>,
+        limit: usize,
+    ) -> Result<JsValue, JsValue> {
+        let entity = crate::EntityId::parse_str(&entity).map_err(|error| {
+            JsValue::from_str(&format!(
+                "entity_attribute_history invalid entity id {entity}: {error}"
+            ))
+        })?;
+        let after = after
+            .as_deref()
+            .map(crate::db::decode_entity_attribute_history_cursor)
+            .transpose()
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        crate::db::validate_entity_attribute_history_request(
+            &self.valid_at,
+            self.tx_count,
+            entity,
+            &attribute,
+            after.as_ref(),
+            limit,
+        )
+        .map_err(|error| JsValue::from_str(&error.to_string()))?;
+
+        let db = BrowserDb {
+            inner: Rc::clone(&self.inner),
+        };
+        db.ensure_usable()?;
+        let guarded = db.begin_paged_read()?;
+        let result = self
+            .read_entity_attribute_history(&db, entity, attribute, after.as_ref(), limit)
+            .await;
+        if guarded {
+            db.finish_paged_read();
+        }
+        history_page_to_js(result?, self.tx_count)
+    }
+
     /// Read current source entities that reference one target through one exact attribute.
     #[wasm_bindgen(js_name = refsTo)]
     pub async fn refs_to(
@@ -1230,6 +1277,76 @@ impl BrowserReadView {
 }
 
 impl BrowserReadView {
+    async fn read_entity_attribute_history(
+        &self,
+        db: &BrowserDb,
+        entity: crate::EntityId,
+        attribute: String,
+        after: Option<&crate::db::EntityAttributeHistoryCursor>,
+        limit: usize,
+    ) -> Result<crate::db::EntityAttributeHistoryPage, JsValue> {
+        let mut cursor = self
+            .inner
+            .borrow()
+            .fact_storage
+            .entity_attribute_history_cursor(
+                entity,
+                &attribute,
+                self.tx_count,
+                after.map(|cursor| &cursor.last_key),
+            )
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        let wanted_rows = limit.saturating_add(1);
+        loop {
+            let step_ceiling = cursor
+                .processed_entries
+                .saturating_add(crate::db::ENTITY_ATTRIBUTE_HISTORY_STEP_ENTRIES)
+                .min(crate::db::ENTITY_ATTRIBUTE_HISTORY_MAX_SOURCE_ENTRIES);
+            let step = self
+                .inner
+                .borrow()
+                .fact_storage
+                .step_entity_attribute_history_cursor(&mut cursor, step_ceiling, wanted_rows);
+            match step {
+                Ok(step) => {
+                    if matches!(
+                        step,
+                        crate::graph::storage::EntityAttributeHistoryStep::Complete
+                    ) || cursor.items.len() >= wanted_rows
+                    {
+                        break;
+                    }
+                    if cursor.processed_entries
+                        >= crate::db::ENTITY_ATTRIBUTE_HISTORY_MAX_SOURCE_ENTRIES
+                    {
+                        return Err(JsValue::from_str(&format!(
+                            "entity_attribute_history source work exceeds {} entries; result was rejected without truncation",
+                            crate::db::ENTITY_ATTRIBUTE_HISTORY_MAX_SOURCE_ENTRIES
+                        )));
+                    }
+                    db.evict_aggregate_staging();
+                    yield_browser_task().await?;
+                }
+                Err(error) => match page_not_resident_id(&error) {
+                    Some(page_id) => {
+                        db.fetch_and_stage_page(page_id).await?;
+                        db.evict_aggregate_staging();
+                    }
+                    None => return Err(JsValue::from_str(&error.to_string())),
+                },
+            }
+        }
+
+        crate::db::finish_entity_attribute_history_page(
+            entity,
+            &attribute,
+            self.tx_count,
+            limit,
+            std::mem::take(&mut cursor.items),
+        )
+        .map_err(|error| JsValue::from_str(&error.to_string()))
+    }
+
     async fn read_current_entities(
         &self,
         db: &BrowserDb,
@@ -1441,6 +1558,60 @@ fn current_facts_to_js(facts: Vec<crate::db::CurrentFact>) -> Result<js_sys::Arr
         rows.push(&row);
     }
     Ok(rows)
+}
+
+fn history_page_to_js(
+    page: crate::db::EntityAttributeHistoryPage,
+    tx_count: u64,
+) -> Result<JsValue, JsValue> {
+    let next = page
+        .next
+        .as_ref()
+        .map(crate::db::encode_entity_attribute_history_cursor)
+        .transpose()
+        .map_err(|error| JsValue::from_str(&error.to_string()))?;
+    let rows = page
+        .facts
+        .into_iter()
+        .map(|fact| {
+            let (valid_from, valid_to, all_valid_time) = match fact.valid_time {
+                crate::FactValidTime::Window {
+                    valid_from,
+                    valid_to,
+                } => (
+                    serde_json::Value::String(valid_from.to_string()),
+                    serde_json::Value::String(valid_to.to_string()),
+                    false,
+                ),
+                crate::FactValidTime::AllValidTime => {
+                    (serde_json::Value::Null, serde_json::Value::Null, true)
+                }
+            };
+            serde_json::json!({
+                "entity": fact.entity.to_string(),
+                "attribute": fact.attribute,
+                "value": to_tagged_json(&fact.value),
+                "txId": fact.tx_id.to_string(),
+                "txCount": fact.tx_count.to_string(),
+                "validFrom": valid_from,
+                "validTo": valid_to,
+                "allValidTime": all_valid_time,
+                "asserted": fact.asserted,
+            })
+        })
+        .collect::<Vec<_>>();
+    let encoded = serde_json::json!({
+        "rows": rows,
+        "next": next,
+        "txCount": tx_count.to_string(),
+    })
+    .to_string();
+    if encoded.len() > BROWSER_READ_VIEW_MAX_RESULT_BYTES {
+        return Err(JsValue::from_str(&format!(
+            "entity_attribute_history result exceeds {BROWSER_READ_VIEW_MAX_RESULT_BYTES} bytes; result was rejected without truncation"
+        )));
+    }
+    js_sys::JSON::parse(&encoded)
 }
 
 impl BrowserDb {
@@ -5613,6 +5784,224 @@ mod tests {
         assert_eq!(
             reference.as_string().as_deref(),
             Some(target_string.as_str())
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn browser_exact_history_pages_twelve_thousand_rows() {
+        let entity = uuid::Uuid::from_u128(93);
+        let mut facts = String::new();
+        for value in 1u128..=12_005 {
+            facts.push_str(&format!(
+                r#"[#uuid "{entity}" :canvas/root-link #uuid "{}"] "#,
+                uuid::Uuid::from_u128(value)
+            ));
+        }
+        let db = BrowserDb::open_in_memory().expect("open history database");
+        db.execute(format!("(transact [{facts}])"))
+            .await
+            .expect("seed root links");
+        let view = db.read_view_any_valid_time(1).expect("any-valid-time view");
+        db.execute(format!(
+            r#"(transact [[#uuid "{entity}" :canvas/root-link #uuid "{}"]])"#,
+            uuid::Uuid::from_u128(20_000)
+        ))
+        .await
+        .expect("post-view root link");
+
+        let first = view
+            .entity_attribute_history(
+                entity.to_string(),
+                ":canvas/root-link".to_owned(),
+                None,
+                10_000,
+            )
+            .await
+            .expect("first browser history page");
+        let first_rows =
+            js_sys::Array::from(&js_sys::Reflect::get(&first, &JsValue::from_str("rows")).unwrap());
+        assert_eq!(first_rows.length(), 10_000);
+        let next = js_sys::Reflect::get(&first, &JsValue::from_str("next"))
+            .unwrap()
+            .as_string()
+            .expect("continuation token");
+        let mut tampered = next.clone().into_bytes();
+        if let Some(last) = tampered.last_mut() {
+            *last = if *last == b'0' { b'1' } else { b'0' };
+        }
+        let tampered = String::from_utf8(tampered).expect("hex token stays UTF-8");
+        assert!(
+            view.entity_attribute_history(
+                entity.to_string(),
+                ":canvas/root-link".to_owned(),
+                Some(tampered),
+                10_000,
+            )
+            .await
+            .is_err(),
+            "tampered continuation must fail closed"
+        );
+
+        let second = view
+            .entity_attribute_history(
+                entity.to_string(),
+                ":canvas/root-link".to_owned(),
+                Some(next),
+                10_000,
+            )
+            .await
+            .expect("second browser history page");
+        let second_rows = js_sys::Array::from(
+            &js_sys::Reflect::get(&second, &JsValue::from_str("rows")).unwrap(),
+        );
+        assert_eq!(second_rows.length(), 2_005);
+        assert!(
+            js_sys::Reflect::get(&second, &JsValue::from_str("next"))
+                .unwrap()
+                .is_null()
+        );
+        let first_second_page_ref = js_sys::Reflect::get(
+            &js_sys::Reflect::get(&second_rows.get(0), &JsValue::from_str("value")).unwrap(),
+            &JsValue::from_str("$ref"),
+        )
+        .unwrap();
+        let expected_first_second_page_ref = uuid::Uuid::from_u128(10_001).to_string();
+        assert_eq!(
+            first_second_page_ref.as_string().as_deref(),
+            Some(expected_first_second_page_ref.as_str())
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn paged_browser_exact_history_resumes_across_sparse_index_pages() {
+        let entity = uuid::Uuid::from_u128(95);
+        let db_name = format!("vicia-paged-exact-history-{}", js_sys::Date::now());
+        let mut facts = String::new();
+        for value in 1u128..=12_005 {
+            facts.push_str(&format!(
+                r#"[#uuid "{entity}" :canvas/root-link #uuid "{}"] "#,
+                uuid::Uuid::from_u128(value)
+            ));
+        }
+        facts.push_str(&format!(r#"[#uuid "{entity}" :metric/value 1.25]"#));
+        {
+            let seed = BrowserDb::open(&db_name).await.expect("open history seed");
+            seed.execute(format!("(transact [{facts}])"))
+                .await
+                .expect("seed paged root links");
+            seed.checkpoint().await.expect("checkpoint history seed");
+        }
+
+        let db = BrowserDb::open_paged(&db_name)
+            .await
+            .expect("open sparse history database");
+        let view = db.read_view_any_valid_time(1).expect("history view");
+        let float_page = view
+            .entity_attribute_history(entity.to_string(), ":metric/value".to_owned(), None, 1)
+            .await
+            .expect("sparse float history");
+        let float_rows = js_sys::Array::from(
+            &js_sys::Reflect::get(&float_page, &JsValue::from_str("rows")).unwrap(),
+        );
+        assert_eq!(float_rows.length(), 1);
+        assert_eq!(
+            js_sys::Reflect::get(&float_rows.get(0), &JsValue::from_str("value"))
+                .unwrap()
+                .as_f64(),
+            Some(1.25)
+        );
+        let first = view
+            .entity_attribute_history(
+                entity.to_string(),
+                ":canvas/root-link".to_owned(),
+                None,
+                10_000,
+            )
+            .await
+            .expect("first sparse history page");
+        let first_rows =
+            js_sys::Array::from(&js_sys::Reflect::get(&first, &JsValue::from_str("rows")).unwrap());
+        assert_eq!(first_rows.length(), 10_000);
+        let next = js_sys::Reflect::get(&first, &JsValue::from_str("next"))
+            .unwrap()
+            .as_string()
+            .expect("sparse continuation");
+        let second = view
+            .entity_attribute_history(
+                entity.to_string(),
+                ":canvas/root-link".to_owned(),
+                Some(next),
+                10_000,
+            )
+            .await
+            .expect("second sparse history page");
+        let second_rows = js_sys::Array::from(
+            &js_sys::Reflect::get(&second, &JsValue::from_str("rows")).unwrap(),
+        );
+        assert_eq!(second_rows.length(), 2_005);
+        let inner = db.inner.borrow();
+        inner.pfs.with_backend(|backend| {
+            assert_eq!(
+                backend.resident_page_count(),
+                backend.pinned_page_count(),
+                "history staging pages must be released after each page"
+            );
+        });
+    }
+
+    #[wasm_bindgen_test]
+    async fn browser_exact_history_preserves_retractions_and_rejects_bad_tokens() {
+        let entity = uuid::Uuid::from_u128(94);
+        let db = BrowserDb::open_in_memory().expect("open history database");
+        db.execute(format!(
+            r#"(transact [[#uuid "{entity}" :status/value :active]])"#
+        ))
+        .await
+        .expect("assert status");
+        db.execute(format!(
+            r#"(retract [[#uuid "{entity}" :status/value :active]])"#
+        ))
+        .await
+        .expect("retract status");
+        let view = db.read_view_any_valid_time(2).expect("any-valid-time view");
+        let page = view
+            .entity_attribute_history(entity.to_string(), ":status/value".to_owned(), None, 4)
+            .await
+            .expect("history page");
+        let rows =
+            js_sys::Array::from(&js_sys::Reflect::get(&page, &JsValue::from_str("rows")).unwrap());
+        assert_eq!(rows.length(), 2);
+        let retraction = (0..rows.length())
+            .map(|index| rows.get(index))
+            .find(|row| {
+                !js_sys::Reflect::get(row, &JsValue::from_str("asserted"))
+                    .unwrap()
+                    .as_bool()
+                    .unwrap_or(true)
+            })
+            .expect("retraction row");
+        assert_eq!(
+            js_sys::Reflect::get(&retraction, &JsValue::from_str("allValidTime"))
+                .unwrap()
+                .as_bool(),
+            Some(true)
+        );
+        assert!(
+            view.entity_attribute_history(
+                entity.to_string(),
+                ":status/value".to_owned(),
+                Some("not-a-token".to_owned()),
+                4,
+            )
+            .await
+            .is_err()
+        );
+        assert!(
+            db.read_view()
+                .expect("point-time view")
+                .entity_attribute_history(entity.to_string(), ":status/value".to_owned(), None, 4,)
+                .await
+                .is_err()
         );
     }
 
