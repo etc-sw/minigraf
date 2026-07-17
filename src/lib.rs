@@ -105,7 +105,9 @@ pub use db::{
     InteractiveLedger, InteractiveWriteTransaction, MaintenanceAdvice, MaintenanceCheckpointEffect,
     MaintenanceDeltaEffect, MaintenanceLedger, MaintenanceOutcome, Minigraf, OpenOptions,
     ProjectionMaintenanceOutcome, READ_VIEW_MAX_QUERY_WORK_ROWS, READ_VIEW_MAX_ROWS, ReadView,
-    ReadViewOptions, ReadViewValidAt, WriteTransaction,
+    ReadViewOptions, ReadViewValidAt, VALID_TIME_DIFF_MAX_IDS, VALID_TIME_DIFF_MAX_RESULT_BYTES,
+    VALID_TIME_DIFF_MAX_SOURCE_ENTRIES, ValidTimeDiffChange, ValidTimeDiffCursor,
+    ValidTimeDiffPage, ValidTimeDiffRequest, ValidTimeDiffRow, WriteTransaction,
 };
 /// Vicia DB compatibility name for the primary embedded database handle.
 ///

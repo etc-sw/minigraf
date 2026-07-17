@@ -431,6 +431,237 @@ pub(crate) fn finish_entity_attribute_history_page(
     Ok(EntityAttributeHistoryPage { facts, next })
 }
 
+/// Maximum exact entities admitted by one valid-time diff request.
+pub const VALID_TIME_DIFF_MAX_IDS: usize = CURRENT_ENTITIES_MAX_IDS;
+/// Maximum index entries consumed by one valid-time diff page.
+pub const VALID_TIME_DIFF_MAX_SOURCE_ENTRIES: usize = 65_536;
+pub(crate) const VALID_TIME_DIFF_STEP_ENTRIES: usize = 4_096;
+/// Maximum encoded bytes returned by one valid-time diff page.
+pub const VALID_TIME_DIFF_MAX_RESULT_BYTES: usize = 8 * 1024 * 1024;
+
+/// Net visibility change of one value between the two requested instants.
+#[non_exhaustive]
+#[derive(Clone, Copy, Debug, Eq, PartialEq, serde::Serialize)]
+pub enum ValidTimeDiffChange {
+    /// Visible at the later instant but not at the earlier one.
+    Appeared,
+    /// Visible at the earlier instant but not at the later one.
+    Disappeared,
+}
+
+/// One net visibility difference between two valid-time instants.
+#[derive(Clone, Debug, PartialEq, serde::Serialize)]
+pub struct ValidTimeDiffRow {
+    /// Entity owning the changed value.
+    pub entity: crate::EntityId,
+    /// Exact requested attribute.
+    pub attribute: String,
+    /// The value whose visibility changed.
+    pub value: Value,
+    /// Direction of the net change.
+    pub change: ValidTimeDiffChange,
+    /// Start of the valid window proving the row on its visible side.
+    pub valid_from: i64,
+    /// End of the valid window proving the row on its visible side.
+    pub valid_to: i64,
+}
+
+/// Opaque continuation for one bounded valid-time diff.
+///
+/// A continuation is valid only for the read view, attribute, instant pair,
+/// and entity scope that produced it.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ValidTimeDiffCursor {
+    pub(crate) attribute: String,
+    pub(crate) tx_count: u64,
+    pub(crate) valid_at_before: i64,
+    pub(crate) valid_at_after: i64,
+    pub(crate) scope: ValidTimeDiffCursorScope,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub(crate) enum ValidTimeDiffCursorScope {
+    EntitySet {
+        entities: Vec<crate::EntityId>,
+        next_index: usize,
+    },
+    Attribute {
+        last_entity: crate::EntityId,
+    },
+}
+
+/// Bounded net valid-time diff selection for [`ReadView::valid_time_diff`].
+pub struct ValidTimeDiffRequest<'a> {
+    /// One namespace-qualified stored attribute.
+    pub attribute: &'a str,
+    /// Exact entity scope; `None` selects the whole attribute range.
+    pub entities: Option<&'a [crate::EntityId]>,
+    /// Earlier valid instant, Unix milliseconds.
+    pub valid_at_before: i64,
+    /// Later valid instant, Unix milliseconds; must exceed `valid_at_before`.
+    pub valid_at_after: i64,
+    /// Continuation returned by the preceding page, if any.
+    pub after: Option<&'a ValidTimeDiffCursor>,
+    /// Maximum complete rows in this page.
+    pub limit: usize,
+}
+
+/// One complete page of net valid-time differences.
+#[derive(Clone, Debug, PartialEq)]
+pub struct ValidTimeDiffPage {
+    /// Rows grouped by entity in scope order; values in canonical byte order.
+    pub rows: Vec<ValidTimeDiffRow>,
+    /// Continuation for the next page, or `None` when the scope is exhausted.
+    pub next: Option<ValidTimeDiffCursor>,
+}
+
+pub(crate) fn validate_valid_time_diff_request(
+    valid_at: &ValidAt,
+    tx_count: u64,
+    request: &ValidTimeDiffRequest<'_>,
+) -> Result<Option<Vec<crate::EntityId>>> {
+    if !matches!(valid_at, ValidAt::AnyValidTime) {
+        bail!("valid_time_diff requires an AnyValidTime read view");
+    }
+    if !request.attribute.starts_with(':')
+        || !request.attribute.contains('/')
+        || request.attribute.contains('\0')
+        || PseudoAttr::from_keyword(request.attribute).is_some()
+    {
+        bail!(
+            "valid_time_diff attribute must be a namespace-qualified stored keyword: {}",
+            request.attribute
+        );
+    }
+    if request.valid_at_before >= request.valid_at_after {
+        bail!("valid_time_diff instants must satisfy valid_at_before < valid_at_after");
+    }
+    if request.limit == 0 || request.limit > READ_VIEW_MAX_ROWS {
+        bail!(
+            "valid_time_diff limit must be in 1..={READ_VIEW_MAX_ROWS}; got {}",
+            request.limit
+        );
+    }
+    let scope = match request.entities {
+        Some(ids) => {
+            if ids.is_empty() || ids.len() > VALID_TIME_DIFF_MAX_IDS {
+                bail!(
+                    "valid_time_diff entities must be in 1..={VALID_TIME_DIFF_MAX_IDS}; got {}",
+                    ids.len()
+                );
+            }
+            let mut unique = Vec::with_capacity(ids.len());
+            for id in ids {
+                if !unique.contains(id) {
+                    unique.push(*id);
+                }
+            }
+            Some(unique)
+        }
+        None => None,
+    };
+    if let Some(cursor) = request.after {
+        if cursor.attribute != request.attribute
+            || cursor.tx_count != tx_count
+            || cursor.valid_at_before != request.valid_at_before
+            || cursor.valid_at_after != request.valid_at_after
+        {
+            bail!("valid_time_diff cursor does not belong to this read view and exact request");
+        }
+        match (&cursor.scope, &scope) {
+            (
+                ValidTimeDiffCursorScope::EntitySet {
+                    entities,
+                    next_index,
+                },
+                Some(unique),
+            ) => {
+                if entities != unique || *next_index > unique.len() {
+                    bail!("valid_time_diff cursor does not belong to this entity scope");
+                }
+            }
+            (ValidTimeDiffCursorScope::Attribute { .. }, None) => {}
+            _ => bail!("valid_time_diff cursor scope does not match the request scope"),
+        }
+    }
+    Ok(scope)
+}
+
+struct ValidTimeDiffValueState {
+    value: Value,
+    before: Option<(i64, i64)>,
+    after: Option<(i64, i64)>,
+}
+
+#[derive(Default)]
+struct ValidTimeDiffGroup {
+    values: std::collections::BTreeMap<Vec<u8>, ValidTimeDiffValueState>,
+}
+
+impl ValidTimeDiffGroup {
+    fn note_window(
+        &mut self,
+        value: &Value,
+        valid_from: i64,
+        valid_to: i64,
+        before_at: i64,
+        after_at: i64,
+    ) {
+        let visible_before = valid_from <= before_at && before_at < valid_to;
+        let visible_after = valid_from <= after_at && after_at < valid_to;
+        if !visible_before && !visible_after {
+            return;
+        }
+        let state = self
+            .values
+            .entry(crate::storage::index::encode_value(value))
+            .or_insert_with(|| ValidTimeDiffValueState {
+                value: value.clone(),
+                before: None,
+                after: None,
+            });
+        if visible_before && state.before.is_none() {
+            state.before = Some((valid_from, valid_to));
+        }
+        if visible_after && state.after.is_none() {
+            state.after = Some((valid_from, valid_to));
+        }
+    }
+
+    fn into_rows(self, entity: crate::EntityId, attribute: &str) -> Vec<ValidTimeDiffRow> {
+        let mut rows = Vec::new();
+        for state in self.values.into_values() {
+            let (change, window) = match (state.before, state.after) {
+                (Some(window), None) => (ValidTimeDiffChange::Disappeared, window),
+                (None, Some(window)) => (ValidTimeDiffChange::Appeared, window),
+                _ => continue,
+            };
+            rows.push(ValidTimeDiffRow {
+                entity,
+                attribute: attribute.to_owned(),
+                value: state.value,
+                change,
+                valid_from: window.0,
+                valid_to: window.1,
+            });
+        }
+        rows
+    }
+}
+
+fn finish_valid_time_diff_page(
+    rows: Vec<ValidTimeDiffRow>,
+    next: Option<ValidTimeDiffCursor>,
+) -> Result<ValidTimeDiffPage> {
+    let encoded_bytes = serde_json::to_vec(&rows)?.len();
+    if encoded_bytes > VALID_TIME_DIFF_MAX_RESULT_BYTES {
+        bail!(
+            "valid_time_diff result exceeds {VALID_TIME_DIFF_MAX_RESULT_BYTES} bytes; result was rejected without truncation"
+        );
+    }
+    Ok(ValidTimeDiffPage { rows, next })
+}
+
 /// Valid-time selection pinned by a [`ReadView`].
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum ReadViewValidAt {
@@ -701,6 +932,245 @@ impl ReadView<'_> {
             request.limit,
             std::mem::take(&mut cursor.items),
         )
+    }
+
+    /// Read one bounded page of net valid-time differences between two instants.
+    ///
+    /// For every value in scope, the diff compares visibility at
+    /// `valid_at_before` and `valid_at_after` under this view's transaction
+    /// basis and reports only the net changes. A value that appears and
+    /// disappears strictly inside the open interval is not reported; use
+    /// [`ReadView::entity_attribute_history`] for the raw record log. The view
+    /// must use [`ReadViewValidAt::AnyValidTime`], because the request carries
+    /// both valid instants itself.
+    pub fn valid_time_diff(&self, request: ValidTimeDiffRequest<'_>) -> Result<ValidTimeDiffPage> {
+        let scope = validate_valid_time_diff_request(&self.valid_at, self.tx_count, &request)?;
+        match scope {
+            Some(entities) => self.valid_time_diff_entity_set(&request, entities),
+            None => self.valid_time_diff_attribute(&request),
+        }
+    }
+
+    fn valid_time_diff_entity_set(
+        &self,
+        request: &ValidTimeDiffRequest<'_>,
+        entities: Vec<crate::EntityId>,
+    ) -> Result<ValidTimeDiffPage> {
+        let start_index = match request.after.map(|cursor| &cursor.scope) {
+            Some(ValidTimeDiffCursorScope::EntitySet { next_index, .. }) => *next_index,
+            _ => 0,
+        };
+        let as_of = AsOf::Counter(self.tx_count);
+        let mut rows: Vec<ValidTimeDiffRow> = Vec::new();
+        let mut source_entries = 0usize;
+        let mut next = None;
+        for index in start_index..entities.len() {
+            let entity = *entities
+                .get(index)
+                .ok_or_else(|| anyhow::anyhow!("valid_time_diff entity scope out of bounds"))?;
+            let first_group = index == start_index;
+            let Some(group) = self.scan_valid_time_diff_entity(
+                entity,
+                request,
+                &as_of,
+                &mut source_entries,
+                first_group,
+            )?
+            else {
+                next = Some(ValidTimeDiffCursor {
+                    attribute: request.attribute.to_owned(),
+                    tx_count: self.tx_count,
+                    valid_at_before: request.valid_at_before,
+                    valid_at_after: request.valid_at_after,
+                    scope: ValidTimeDiffCursorScope::EntitySet {
+                        entities,
+                        next_index: index,
+                    },
+                });
+                break;
+            };
+            let group_rows = group.into_rows(entity, request.attribute);
+            if rows.len().saturating_add(group_rows.len()) > request.limit {
+                if first_group {
+                    bail!(
+                        "valid_time_diff entity group exceeds limit {}; result was rejected without truncation",
+                        request.limit
+                    );
+                }
+                next = Some(ValidTimeDiffCursor {
+                    attribute: request.attribute.to_owned(),
+                    tx_count: self.tx_count,
+                    valid_at_before: request.valid_at_before,
+                    valid_at_after: request.valid_at_after,
+                    scope: ValidTimeDiffCursorScope::EntitySet {
+                        entities,
+                        next_index: index,
+                    },
+                });
+                break;
+            }
+            rows.extend(group_rows);
+        }
+        finish_valid_time_diff_page(rows, next)
+    }
+
+    fn scan_valid_time_diff_entity(
+        &self,
+        entity: crate::EntityId,
+        request: &ValidTimeDiffRequest<'_>,
+        as_of: &AsOf,
+        source_entries: &mut usize,
+        first_group: bool,
+    ) -> Result<Option<ValidTimeDiffGroup>> {
+        let mut cursor = self.db.inner.fact_storage.current_entity_attribute_cursor(
+            entity,
+            request.attribute,
+            Some(as_of),
+            crate::graph::storage::CurrentValidTime::Any,
+        )?;
+        cursor.emit_each_visible_window = true;
+        let mut group = ValidTimeDiffGroup::default();
+        let before_at = request.valid_at_before;
+        let after_at = request.valid_at_after;
+        loop {
+            let remaining = VALID_TIME_DIFF_MAX_SOURCE_ENTRIES.saturating_sub(*source_entries);
+            if remaining == 0 {
+                if first_group {
+                    bail!(
+                        "valid_time_diff source work exceeds {VALID_TIME_DIFF_MAX_SOURCE_ENTRIES} entries; result was rejected without truncation"
+                    );
+                }
+                return Ok(None);
+            }
+            let step = self
+                .db
+                .inner
+                .fact_storage
+                .step_current_entity_attribute_interval_cursor(
+                    &mut cursor,
+                    VALID_TIME_DIFF_STEP_ENTRIES.min(remaining),
+                    &mut |value, valid_from, valid_to| {
+                        group.note_window(value, valid_from, valid_to, before_at, after_at);
+                        Ok(())
+                    },
+                )?;
+            match step {
+                crate::graph::storage::CurrentEntityAttributeStep::Yielded { entries } => {
+                    *source_entries = source_entries.saturating_add(entries);
+                }
+                crate::graph::storage::CurrentEntityAttributeStep::Complete { entries } => {
+                    *source_entries = source_entries.saturating_add(entries);
+                    return Ok(Some(group));
+                }
+            }
+        }
+    }
+
+    fn valid_time_diff_attribute(
+        &self,
+        request: &ValidTimeDiffRequest<'_>,
+    ) -> Result<ValidTimeDiffPage> {
+        let attribute = request.attribute.to_owned();
+        let as_of = AsOf::Counter(self.tx_count);
+        let mut cursor = match request.after.map(|cursor| &cursor.scope) {
+            Some(ValidTimeDiffCursorScope::Attribute { last_entity }) => {
+                match self.db.inner.fact_storage.current_attribute_cursor_after(
+                    &attribute,
+                    Some(&as_of),
+                    crate::graph::storage::CurrentValidTime::Any,
+                    *last_entity,
+                ) {
+                    Some(cursor) => cursor,
+                    None => return finish_valid_time_diff_page(Vec::new(), None),
+                }
+            }
+            _ => self.db.inner.fact_storage.current_attribute_cursor(
+                &attribute,
+                Some(&as_of),
+                crate::graph::storage::CurrentValidTime::Any,
+            ),
+        };
+
+        let before_at = request.valid_at_before;
+        let after_at = request.valid_at_after;
+        let attribute_cursor_at = |last_entity: crate::EntityId| ValidTimeDiffCursor {
+            attribute: attribute.clone(),
+            tx_count: self.tx_count,
+            valid_at_before: before_at,
+            valid_at_after: after_at,
+            scope: ValidTimeDiffCursorScope::Attribute { last_entity },
+        };
+        let mut rows: Vec<ValidTimeDiffRow> = Vec::new();
+        let mut source_entries = 0usize;
+        let mut emitted_last: Option<crate::EntityId> = None;
+        let mut current: Option<(crate::EntityId, ValidTimeDiffGroup)> = None;
+        let mut completed: Vec<(crate::EntityId, ValidTimeDiffGroup)> = Vec::new();
+        loop {
+            let remaining = VALID_TIME_DIFF_MAX_SOURCE_ENTRIES.saturating_sub(source_entries);
+            if remaining == 0 {
+                return match emitted_last {
+                    Some(last) => {
+                        finish_valid_time_diff_page(rows, Some(attribute_cursor_at(last)))
+                    }
+                    None => bail!(
+                        "valid_time_diff source work exceeds {VALID_TIME_DIFF_MAX_SOURCE_ENTRIES} entries; result was rejected without truncation"
+                    ),
+                };
+            }
+            let step = self
+                .db
+                .inner
+                .fact_storage
+                .step_current_attribute_interval_cursor(
+                    &mut cursor,
+                    VALID_TIME_DIFF_STEP_ENTRIES.min(remaining),
+                    &mut |entity, value, valid_from, valid_to| {
+                        match &mut current {
+                            Some((open_entity, group)) if *open_entity == entity => {
+                                group.note_window(value, valid_from, valid_to, before_at, after_at);
+                            }
+                            _ => {
+                                if let Some(done) = current.take() {
+                                    completed.push(done);
+                                }
+                                let mut group = ValidTimeDiffGroup::default();
+                                group.note_window(value, valid_from, valid_to, before_at, after_at);
+                                current = Some((entity, group));
+                            }
+                        }
+                        Ok(())
+                    },
+                )?;
+            let (entries, complete) = match step {
+                crate::graph::storage::CurrentAttributeStep::Yielded { entries } => {
+                    (entries, false)
+                }
+                crate::graph::storage::CurrentAttributeStep::Complete { entries } => {
+                    (entries, true)
+                }
+            };
+            source_entries = source_entries.saturating_add(entries);
+            if complete && let Some(done) = current.take() {
+                completed.push(done);
+            }
+            for (entity, group) in completed.drain(..) {
+                let group_rows = group.into_rows(entity, &attribute);
+                if rows.len().saturating_add(group_rows.len()) > request.limit {
+                    let Some(last) = emitted_last else {
+                        bail!(
+                            "valid_time_diff entity group exceeds limit {}; result was rejected without truncation",
+                            request.limit
+                        );
+                    };
+                    return finish_valid_time_diff_page(rows, Some(attribute_cursor_at(last)));
+                }
+                rows.extend(group_rows);
+                emitted_last = Some(entity);
+            }
+            if complete {
+                return finish_valid_time_diff_page(rows, None);
+            }
+        }
     }
 
     /// Read current source entities that reference one target through one exact attribute.

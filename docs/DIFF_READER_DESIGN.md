@@ -250,20 +250,24 @@ Applicable rows from the roadmap correctness matrix, plus diff-specific rows:
   (clean native receipt → Chrome matrix → Vetch vendor sync). No package
   publish from this line without that full sequence.
 
-## 8. Open Questions (resolve before or at A-2 start)
+## 8. Open Questions (state after A-2)
 
-1. **Naming**: `valid_time_diff` vs `changes_between` — the name must encode
-   the valid axis; recommendation: `valid_time_diff`.
-2. **Row provenance payload**: v0 carries one covering window per row (shape
-   above). Alternative: all covering windows. Defer to first consumer
-   evidence; adding fields to a struct is additive.
-3. **v0.5 D-tx surface**: bounded scoped paged tail read on the A2 probe —
-   open only if vetch-memory's resume/attention flows prove the unbounded
-   `export_fact_log_since` is actually hot in a foreground path.
-4. **recall_diff mapping**: how Codex maps `(t1, t2)` selection, project/topic
-   scoping, and pairing of Appeared/Disappeared rows is vetch-memory-lane
-   design; the only contract this note fixes is the row shape and net
-   semantics above.
+1. **Naming**: resolved — `valid_time_diff`, encoding the valid axis in the
+   method name.
+2. **Row provenance payload**: resolved for v0 — one covering window per row.
+   Adding further fields later is additive.
+3. **Pending-fact visibility**: resolved — pending same-handle facts are
+   visible under the view tx basis, matching `entity_attribute_history`
+   (pinned by the committed/delta/pending layering test).
+4. **Page-break semantics**: resolved — pages break at entity-group
+   boundaries; a continuation resumes at the first unemitted group, which is
+   re-scanned with a fresh source budget. A single group that alone exceeds
+   the row limit or source budget fails closed on its own page.
+5. **v0.5 D-tx surface**: still open — bounded scoped paged tail read on the
+   A2 probe; open only if vetch-memory's resume/attention flows prove the
+   unbounded `export_fact_log_since` is actually hot in a foreground path.
+6. **recall_diff mapping**: still vetch-memory-lane design; the contract this
+   note fixes is the row shape and net semantics above.
 
 ## 9. Philosophy and Compatibility Check
 
@@ -283,7 +287,7 @@ Applicable rows from the roadmap correctness matrix, plus diff-specific rows:
 
 | Slice | Content | Exit |
 | --- | --- | --- |
-| A-1 (this note) | Semantics, scope, API shape, reuse map, matrix, gates. | Note committed; cross-lane decision recorded in vetch-memory as proposed. |
-| A-2 | Native `valid_time_diff` tests-first per §6, receipt per §7. | Green matrix + 1M receipt; no browser work. |
+| A-1 (done) | Semantics, scope, API shape, reuse map, matrix, gates. | Note committed; cross-lane decision recorded in vetch-memory as proposed. |
+| A-2 (done) | Native `valid_time_diff` tests-first per §6, receipt per §7. | 17-test matrix green in `tests/valid_time_diff_test.rs`; 1M measurement receipt in `docs/BENCHMARKS.md`. |
 | A-3 | Browser mirror + real-Chrome regression; package only via standard sequence. | Chrome suite green. |
 | A-4 | Handoff to Codex lane: capability transition + refs so recall_diff can build. | vetch-memory records updated; no vicia-db code. |
