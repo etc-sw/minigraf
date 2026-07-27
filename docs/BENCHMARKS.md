@@ -2455,6 +2455,33 @@ just current-reader-full
 
 ---
 
+## Valid-Time Diff Read (2026-07-18)
+
+A-2 gate receipt for `ReadView::valid_time_diff` (`docs/DIFF_READER_DESIGN.md`
+§7): net valid-time differences must cost the selected scope, never total
+history.
+
+Fixture: file-backed graph with 1,000,000 unrelated committed `:bulk/noise`
+facts plus 128 receipt entities holding one replaced `:status/value` window
+each (one `Disappeared` plus one `Appeared` row per entity, 256 exact rows).
+Reopened handle, 1 warmup plus 20 timed samples per scope, release build on
+the A0 host (AMD Ryzen 7 7800X3D, WSL2 ext4).
+
+| Scope | p50 | p95 | max |
+|---|---:|---:|---:|
+| 128-entity exact set | 0.636 ms | 0.665 ms | 0.716 ms |
+| Whole-attribute range | 0.191 ms | 0.207 ms | 0.208 ms |
+
+Both scopes stay sub-millisecond over the 1M base: the entity set pays 128
+exact EAVT ranges and the attribute scope pays the 256-entry `:status/value`
+AEVT range. Every sample returned the exact 256 rows with no continuation.
+
+```bash
+cargo test --test valid_time_diff_test --release -- --ignored --nocapture
+```
+
+---
+
 ## Reproducing
 
 ```bash

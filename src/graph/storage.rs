@@ -287,7 +287,7 @@ pub(crate) struct CurrentEntityAttributeCursor {
     last_key: Option<EavtKey>,
     committed_complete: bool,
     complete: bool,
-    emit_each_visible_window: bool,
+    pub(crate) emit_each_visible_window: bool,
 }
 
 /// Resumable append-only history scan for one exact `(entity, attribute)` range.
@@ -1665,9 +1665,37 @@ impl FactStorage {
         as_of: Option<&AsOf>,
         valid_time: CurrentValidTime,
     ) -> CurrentAttributeCursor {
+        self.current_attribute_cursor_starting_at(attribute, as_of, valid_time, uuid::Uuid::nil())
+    }
+
+    /// Start one attribute-wide current cursor strictly after every entry of
+    /// `after_entity`. Returns `None` when no larger entity id exists.
+    pub(crate) fn current_attribute_cursor_after(
+        &self,
+        attribute: &Attribute,
+        as_of: Option<&AsOf>,
+        valid_time: CurrentValidTime,
+        after_entity: EntityId,
+    ) -> Option<CurrentAttributeCursor> {
+        let successor = after_entity.as_u128().checked_add(1)?;
+        Some(self.current_attribute_cursor_starting_at(
+            attribute,
+            as_of,
+            valid_time,
+            uuid::Uuid::from_u128(successor),
+        ))
+    }
+
+    fn current_attribute_cursor_starting_at(
+        &self,
+        attribute: &Attribute,
+        as_of: Option<&AsOf>,
+        valid_time: CurrentValidTime,
+        start_entity: EntityId,
+    ) -> CurrentAttributeCursor {
         let start = AevtKey {
             attribute: attribute.clone(),
-            entity: uuid::Uuid::nil(),
+            entity: start_entity,
             valid_from: i64::MIN,
             valid_to: i64::MIN,
             tx_count: 0,
@@ -1741,7 +1769,7 @@ impl FactStorage {
         )
     }
 
-    fn step_current_attribute_interval_cursor(
+    pub(crate) fn step_current_attribute_interval_cursor(
         &self,
         cursor: &mut CurrentAttributeCursor,
         max_entries: usize,
