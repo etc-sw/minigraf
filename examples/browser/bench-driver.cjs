@@ -679,6 +679,125 @@ async function ledgerCallerMain() {
   console.log("ledgerCaller:", JSON.stringify(evidence));
 }
 
+// A-3 valid-time diff mode: import the diff fixture once, then measure each
+// scope in its own fresh browser so both first calls are genuinely cold and
+// exercise the paged fetch-and-retry path rather than a warmed page cache.
+async function validTimeDiffMain() {
+  const fixture = process.argv[3];
+  const samples = Number(process.argv[4] ?? 20);
+  if (!fixture || !Number.isInteger(samples) || samples < 1) {
+    console.error(
+      "usage: bench-driver.cjs valid-time-diff <fixture-url-path> [samples]",
+    );
+    process.exit(1);
+  }
+  const fixturePath = path.resolve(process.cwd(), fixture.replace(/^\//, ""));
+  const wasmPath = path.resolve(process.cwd(), "minigraf-wasm/minigraf_bg.wasm");
+  const evidence = {
+    schema: "vicia.browser-valid-time-diff.v1",
+    fixture,
+    samples,
+    chrome: CHROME,
+    chromeVersion: execFileSync(CHROME, ["--version"], { encoding: "utf8" }).trim(),
+    profile: PROFILE,
+    request: {
+      attribute: ":status/value",
+      entityCount: 128,
+      validAtBefore: 1_593_561_600_000,
+      validAtAfter: 1_625_097_600_000,
+      limit: 1_000,
+    },
+    import: null,
+    scopes: {},
+    source: {
+      commit: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+      trackedClean: execFileSync(
+        "git",
+        ["status", "--porcelain", "--untracked-files=no"],
+        { encoding: "utf8" },
+      ).trim().length === 0,
+      fixtureSha256: crypto.createHash("sha256").update(fs.readFileSync(fixturePath)).digest("hex"),
+      wasmSha256: crypto.createHash("sha256").update(fs.readFileSync(wasmPath)).digest("hex"),
+    },
+    environment: {
+      platform: process.platform,
+      release: os.release(),
+      cpu: os.cpus()[0]?.model ?? null,
+      logicalCpus: os.cpus().length,
+      totalMemoryBytes: os.totalmem(),
+      node: process.version,
+    },
+  };
+
+  evidence.import = await withPage(
+    async (page, browser) => {
+      await page.evaluate(() => window.benchReset());
+      await page.evaluate(() => window.benchReady());
+      return measureBrowserRss(browser, async () =>
+        JSON.parse(await page.evaluate((url) => window.benchPagedImport(url), fixture)),
+      );
+    },
+    { extraArgs: ["--js-flags=--expose-gc --max-old-space-size=4096"] },
+  );
+
+  for (const scope of ["entity_set", "attribute_scope"]) {
+    evidence.scopes[scope] = await withPage(
+      async (page, browser) => {
+        await page.evaluate(() => window.benchReady());
+        return measureBrowserRss(browser, async () =>
+          JSON.parse(
+            await page.evaluate(
+              (name, count) => window.benchValidTimeDiff(name, count),
+              scope,
+              samples,
+            ),
+          ),
+        );
+      },
+      {
+        extraArgs: ["--js-flags=--expose-gc --max-old-space-size=4096"],
+        forwardConsole: true,
+      },
+    );
+  }
+
+  const entitySet = evidence.scopes.entity_set.result;
+  const attributeScope = evidence.scopes.attribute_scope.result;
+  const exactRows = (scopeResult) =>
+    scopeResult.rows === 256
+    && scopeResult.appeared === 128
+    && scopeResult.disappeared === 128;
+  evidence.admissionEligible = true;
+  evidence.gates = {
+    // Both scopes must return the exact 256-row diff over the paged fixture,
+    // not a truncated or continued page.
+    exactAuthority:
+      exactRows(entitySet)
+      && exactRows(attributeScope)
+      && evidence.import.result.stats.headerNodeCount === 1_000_256,
+    // A cold call resolves page faults through IndexedDB; a warm one must not.
+    // If warm were not materially cheaper, nothing was actually staged.
+    coldPaysPageFaults:
+      entitySet.coldMs > entitySet.warmP50Ms
+      && attributeScope.coldMs > attributeScope.warmP50Ms,
+    // Interaction budget: a cold diff must stay inside one animation-frame
+    // budget an order of magnitude over, and warm inside a frame.
+    coldLatency: entitySet.coldMs <= 250 && attributeScope.coldMs <= 250,
+    warmLatency: entitySet.warmP95Ms <= 16 && attributeScope.warmP95Ms <= 16,
+    // A bounded read must not grow the process by the fixture's size.
+    rss:
+      evidence.scopes.entity_set.rss.peakDeltaBytes <= 1024 * 1024 * 1024
+      && evidence.scopes.attribute_scope.rss.peakDeltaBytes <= 1024 * 1024 * 1024,
+    pss:
+      evidence.scopes.entity_set.pss.peakDeltaBytes <= 1024 * 1024 * 1024
+      && evidence.scopes.attribute_scope.pss.peakDeltaBytes <= 1024 * 1024 * 1024,
+  };
+  evidence.admitted = evidence.admissionEligible
+    && evidence.source.trackedClean
+    && Object.values(evidence.gates).every(Boolean);
+  console.log(JSON.stringify(evidence, null, 2));
+}
+
 // Legacy A0 mode: import once, then measure open() in fresh browsers.
 async function openMain() {
   const fixture = process.argv[2];
@@ -689,6 +808,7 @@ async function openMain() {
         "       bench-driver.cjs paged-matrix <fixture-url-path> [openRuns] [growthCycles]\n" +
         "       bench-driver.cjs projection-maintenance <fixture-url-path>\n" +
         "       bench-driver.cjs ledger-caller <fixture-url-path> [samples]\n" +
+        "       bench-driver.cjs valid-time-diff <fixture-url-path> [samples]\n" +
         "       bench-driver.cjs growth <cycles> <factsPerCycle> <sampleEvery> <fixture-url-path|empty> [reopenRuns]\n" +
         "       bench-driver.cjs maintained-growth <cycles> <factsPerCycle> <sampleEvery> <maintenanceEvery> <fixture-url-path|empty> [reopenRuns]\n" +
         "       bench-driver.cjs worker-smoke",
@@ -721,6 +841,8 @@ if (process.argv[2] === "paged-matrix") {
   main = projectionMaintenanceMain();
 } else if (process.argv[2] === "ledger-caller") {
   main = ledgerCallerMain();
+} else if (process.argv[2] === "valid-time-diff") {
+  main = validTimeDiffMain();
 } else if (process.argv[2] === "growth") {
   main = growthMain();
 } else if (process.argv[2] === "maintained-growth") {
