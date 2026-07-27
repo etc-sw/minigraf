@@ -1,23 +1,25 @@
 # Vicia DB Rename Plan
 
-Status: V0 rename plan, V1 docs/metadata preparation, and V2 Rust API
-compatibility alias are complete. No package, file format, or language-binding
-rename has been performed.
+Status: V0–V2 complete. **V3 decided on 2026-07-27: publish to crates.io as
+`vicia-db`, starting at `0.1.0`.** The V3 gate is closed (see "V3 Decision"
+below); the package/type rename itself has not been performed yet, and no file
+format or language-binding rename has happened.
 
-Date: 2026-06-06
+Date: 2026-06-06, V3 decision 2026-07-27
 
 Branch: `vicia/api-alias` for the V2 update. The initial plan landed on
-`vicia/rename-plan`.
+`vicia/rename-plan`. The V3 decision landed on `vicia/rename-v3`.
 
 ## Recommendation
 
 Adopt **Vicia DB** as the Vetch-oriented name for this Minigraf line, but do it
 as a staged successor/fork rename rather than a broad in-place rewrite.
 
-The first implementation steps are now complete: docs/metadata introduced the
+The first implementation steps are complete: docs/metadata introduced the
 Vicia DB transition, and the Rust API exposes `ViciaDb` as a compatibility alias
-for `Minigraf`. Package and language-binding renames should happen only after a
-separate publish decision.
+for `Minigraf`. The publish decision that gated the package rename was taken on
+2026-07-27 — see "V3 Decision" — so the package and type rename is now cleared
+to proceed. Language-binding renames stay behind it.
 
 ## Name Rationale
 
@@ -74,9 +76,12 @@ V2 chose the lowest-risk option before any package or binding rename work:
 | Hard rename | Remove `Minigraf` public type. | Cleanest brand, highest compatibility risk. Not recommended yet. |
 
 Current result: **alias-first** is implemented. `ViciaDb` is a public type alias
-for `Minigraf`, preserving the existing API, package name, and file format. A
-future type rename with `Minigraf` as an alias remains possible, but should wait
-for a deliberate break-window or publish decision.
+for `Minigraf`, preserving the existing API, package name, and file format.
+
+V3 selected the next step: **type rename with alias**. The package rename is the
+break-window this was waiting for, so R3 promotes `ViciaDb` to the primary type
+and keeps `Minigraf` as `pub type Minigraf = ViciaDb`. Hard rename — removing
+`Minigraf` — is still not recommended.
 
 ## Rename Surfaces
 
@@ -248,6 +253,83 @@ Gate:
 - Downstream package/binding impact listed.
 - Name availability checked for the actual publish targets.
 
+## V3 Decision (2026-07-27)
+
+Decision: **publish to crates.io as `vicia-db`**, and promote `ViciaDb` to the
+primary Rust type in the same window, keeping `Minigraf` as the compatibility
+alias. The package rename is the only break-window this line gets, so the type
+flip rides along with it rather than costing a second round of doc and example
+churn.
+
+| Item | Decision |
+| --- | --- |
+| Crate name | `vicia-db` (import form `vicia_db`) |
+| First version | `0.1.0` — not a continuation of upstream's 1.1.1, which never described this fork's v10–v13 storage |
+| `authors` | `["etc-sw"]` — who ships the package. Upstream copyright stays in `LICENSE-MIT`; lineage stays in README |
+| `repository` | `https://github.com/etc-sw/vicia-db` |
+| `documentation` | Omitted until the first publish creates a real docs.rs page |
+| Primary type | `ViciaDb`, with `pub type Minigraf = ViciaDb` |
+| File format | Unchanged. `.graph`, `MGRF`, `MGCPG001`, `MGDMF001`, `MGDSG001`, and every format version stay as-is |
+
+### Gate results
+
+- **Name availability (checked 2026-07-27).** crates.io has no `vicia-db`,
+  `vicia_db`, or `vicia`. npm has no `@vicia-db/browser`. The names are free
+  but unreserved — nothing has been published to hold them.
+- **License files.** `LICENSE-MIT` (© 2023-2026 Aditya Mukhopadhyay) and
+  `LICENSE-APACHE` are present and unmodified. No `NOTICE` file exists
+  upstream, so Apache-2.0 §4(d) adds no obligation here.
+- **Attribution.** README carries the fork banner, the upstream link, and the
+  lineage statement under "License".
+
+### Downstream impact
+
+Three local consumers. They fail differently, which sets the landing order.
+
+| Consumer | Edge | Breaks on rename? | Fix |
+| --- | --- | --- | --- |
+| `~/projects/vetch-memory` | `Cargo.toml: minigraf = { path = "../vicia-db" }`, 33 `minigraf::` references across 18 `.rs` files | **Yes, immediately.** The path dependency points at this repo's main checkout, so it breaks the moment the package renames | One line: `minigraf = { package = "vicia-db", path = "../vicia-db" }`. Zero source changes. Sweep the 18 files to `vicia_db::` later, on vetch-memory's own schedule |
+| `~/projects/being-public` | `config/vicia-source.json` pins `cargo_package: "minigraf"`, `binary: "minigraf"`, and a git rev | No — it builds a pinned rev, so it keeps working until it bumps | Bump `rev` + `cargo_package` + `binary` together in one commit. Never bump the rev alone |
+| `~/projects/vetch-app` | `@vicia-db/browser` via `link:vendor/vicia-browser` | No — already insulated. `scripts/sync-vetch-browser-package.sh` passes `--out-name vicia_db`, so the vendored artifacts are already `vicia_db.js` / `vicia_db_bg.wasm` | None |
+
+The `package = "vicia-db"` rename-alias pattern is already proven in this repo:
+`bindings/browser/Cargo.toml` uses `vicia_db = { package = "minigraf", path = "../.." }`
+today, in the opposite direction.
+
+### Landing order
+
+- **R1 — docs/metadata.** README title, `Cargo.toml` `authors`/`repository`/
+  `documentation`. No code. This slice.
+- **R2 — this section.** The decision recorded before anything depends on it.
+- **R3 — package + type rename, one commit.** `name = "vicia-db"`,
+  `version = "0.1.0"`, lib `vicia_db`, `ViciaDb` promoted with `Minigraf` as
+  alias, `use minigraf::` → `use vicia_db::` across tests/benches/examples,
+  `benches/minigraf_bench.rs` renamed, CLI binary and `libminigraf.so` names.
+  Must include, or CI lies: `.github/workflows/binary-size.yml:37,52` hardcode
+  `target/release/libminigraf.so` and `target/release/minigraf` — rename
+  without them and the size budget silently measures a file that no longer
+  exists. Also `justfile:158` validates `{{OUTPUT_DIR}}/minigraf.d.ts`, and the
+  separate workspaces `fuzz/`, `tools/cross-db-bench`, `tools/ref-db-bench`,
+  `bindings/browser` all depend on the package by name. Land the vetch-memory
+  one-liner in the same session.
+- **R4 — leave history alone.** `CHANGELOG.md` entries and the 91 files under
+  `docs/superpowers/plans|specs` keep saying `minigraf`, because they record
+  what was true then. A blanket rewrite would erase that.
+- **R5 — re-arm release CI, separate commit, last.** `release.yml`
+  `-p minigraf` → `-p vicia-db`, `cascade.yml` dispatch targets moved off
+  `project-minigraf/*`. The `push: tags:` trigger and `CARGO_REGISTRY_TOKEN`
+  are added *here and nowhere earlier* — both files carry a DISARMED banner
+  warning that adding the token mid-rename silently arms a publish. Note
+  `release.yml` is cargo-dist generated; `dist generate` restores the trigger.
+- **R6 — publish, then bindings (V4).** `cargo publish --dry-run`, publish,
+  then npm/PyPI/Maven. Never in the same commit as core changes.
+
+### Open risk
+
+The names are free but unreserved. Nothing holds `vicia-db` on crates.io
+between this decision and R6. Reserving it with a placeholder publish is an
+irreversible public action and is not part of this slice.
+
 ### V4: Binding And Ecosystem Rename
 
 Goal:
@@ -270,16 +352,26 @@ Gate:
 
 ## Open Questions
 
-- Should a future release promote `ViciaDb` to the primary struct with
-  `Minigraf` as a compatibility alias?
-- Should `minigraf` remain as a compatibility crate that re-exports `vicia_db`?
-- Should Vicia DB remain Vetch-internal until Vetch validates the Q3-B
-  maintenance caller contract in a real daemon/application loop?
-- Which organization/repository should own the successor package?
+Answered by the V3 decision:
+
+- ~~Should a future release promote `ViciaDb` to the primary struct?~~ Yes, in
+  R3, with `Minigraf` as the compatibility alias.
+- ~~Should Vicia DB remain Vetch-internal?~~ No — it publishes as `vicia-db`.
+- ~~Which organization/repository should own the successor package?~~
+  `etc-sw/vicia-db`.
+
+Still open:
+
+- Should `minigraf` remain as a compatibility crate that re-exports
+  `vicia_db`? This fork does not own the upstream crate name, so this is only
+  possible if upstream cooperates. Assume no.
 - Should the public file extension remain `.graph` indefinitely?
+- Does the crates.io name need reserving before R6, or is the exposure window
+  short enough to accept? See "Open risk".
 
 ## Current Recommendation
 
-Proceed to V3 only when a real package/repository publish decision is needed.
-Keep Vetch maintenance-caller validation and any future Vicia package/binding
-rename work on separate branches.
+Proceed to R3 — the package and type rename — as a single commit on its own
+branch, landing the `~/projects/vetch-memory` one-line dependency fix in the
+same session so the path dependency never sits broken. Keep Vetch
+maintenance-caller validation and any binding rename work on separate branches.

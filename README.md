@@ -1,4 +1,4 @@
-# Minigraf
+# Vicia DB
 
 [![Build Status](https://github.com/etc-sw/vicia-db/actions/workflows/rust.yml/badge.svg)](https://github.com/etc-sw/vicia-db/actions/workflows/rust.yml)
 [![Clippy Status](https://github.com/etc-sw/vicia-db/actions/workflows/rust-clippy.yml/badge.svg)](https://github.com/etc-sw/vicia-db/actions/workflows/rust-clippy.yml)
@@ -31,13 +31,23 @@ A tiny, self-contained graph database with **Datalog queries** and **bi-temporal
 
 ## Vicia DB Transition
 
-This repository is preparing **Vicia DB** as the Vetch-oriented successor name
-for this Minigraf line. The current Rust package and language bindings remain
-`minigraf`; Rust code may now use the `ViciaDb` compatibility alias while
-existing `Minigraf` code continues to work unchanged.
+This repository is becoming **Vicia DB**, the Vetch-oriented successor name for
+this Minigraf line. As of 2026-07-27 the publish decision is made: this fork
+will be published to crates.io as `vicia-db`, starting at `0.1.0`.
+
+The rename has not happened yet. The Rust package is still `minigraf` and the
+language bindings still carry upstream's names; Rust code may use the `ViciaDb`
+compatibility alias today, and existing `Minigraf` code continues to work
+unchanged. When the package renames, `ViciaDb` becomes the primary type and
+`Minigraf` stays as a compatibility alias.
+
+The file format does not change. `.graph` files, the `MGRF` header magic, and
+every format version remain exactly as they are — format stability outranks
+name consistency.
 
 See [docs/VICIA_DB_RENAME_PLAN.md](docs/VICIA_DB_RENAME_PLAN.md) for the staged
-rename plan, compatibility policy, and attribution checklist.
+rename plan, compatibility policy, downstream impact list, and attribution
+checklist.
 
 See [docs/MAINTENANCE_API_CONTRACT.md](docs/MAINTENANCE_API_CONTRACT.md) for
 the `run_idle_maintenance()` caller contract.
