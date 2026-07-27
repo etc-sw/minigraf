@@ -1,5 +1,28 @@
 # Minigraf Benchmarks
 
+> ## ⚠️ Every number below predates the 2026-07-27 `opt-level` change
+>
+> All results on this page were measured with `[profile.release] opt-level = "z"`.
+> That profile is now `opt-level = 3`, after an A/B on 2026-07-27 showed `"z"`
+> was costing roughly **1.6x on the core read path** while saving nothing in the
+> artifact the philosophy actually budgets — `libminigraf.so` is 302 KiB at
+> every optimization level.
+>
+> Sample of the measured delta (`"z"` -> `3`, same host, same day):
+>
+> | Benchmark | `opt-level = "z"` | `opt-level = 3` |
+> |---|---:|---:|
+> | `query/point_entity/10k` | 4.09 µs | 2.61 µs |
+> | `query/point_attribute/10k` | 8.55 ms | 4.98 ms |
+> | `query/join_3pattern/1k` | 3.05 ms | 1.82 ms |
+> | `btree_lookup/entity_point/100k` | 5.08 µs | 3.13 µs |
+> | `query/predicate_pushdown/10k` | 26.5 ms | 16.5 ms |
+>
+> Treat the tables below as a conservative floor until a dedicated-host refresh
+> lands. Only `query` and `btree_lookup` were sampled, so the write, checkpoint,
+> and browser paths have an unmeasured — not a zero — delta. The refresh must
+> run with `MINIGRAF_BENCH_MODE=full`; a default run no longer emits 1M rows.
+
 ## Post-1.0 Updates
 
 v1.1.x shipped several query and storage path changes that affect benchmark numbers:
@@ -22,7 +45,7 @@ Benchmark results for Minigraf. Core query benchmarks were updated in v0.13.1 (P
 | RAM | 16 GB |
 | OS | Manjaro Linux 6.12.73-1 |
 | Rust | 1.94.0 |
-| Profile | `release` (`opt-level = 3`, `lto = "thin"`, `panic = "abort"`) |
+| Profile | `release` (`opt-level = 3`, `lto = true`, `codegen-units = 1`, `panic = "abort"`, `strip = "symbols"`) |
 | Swap | None |
 
 Sections marked "A0 environment" (Query Latency, Time-Travel, and the A0
@@ -296,7 +319,7 @@ Measures time to flush the WAL to committed `.graph` pages (including B+tree reb
 |---|---|---|---|
 | `checkpoint` | 1.25 ms | 11.80 ms | — |
 
-> 100K and 1M variants added in v0.20.1 but not yet run on this machine (each iteration requires a fresh 100K/1M-fact WAL setup — setup cost dominates at `sample_size(10)`). Numbers will be added in the next benchmark pass.
+> The Criterion 100K and 1M variants added in v0.20.1 were never run on this machine (each iteration requires a fresh 100K/1M-fact WAL setup — setup cost dominates at `sample_size(10)`), and they are now superseded rather than pending. Checkpoint behaviour at 100K and 1M is covered by the R2 through T8C sections below, which measure the full-rebuild and delta paths through the public API, and by the Gate D exact caller trace in the A0 suites.
 
 Checkpoint now includes a merge-sort of committed + pending entries and a B+tree rebuild across all four indexes (EAVT, AEVT, AVET, VAET). At 10K facts this is **11.8 ms** — slightly faster than the v5 paged-blob serialisation (16.5 ms), as the B+tree writer makes fewer random-access passes.
 
@@ -560,7 +583,7 @@ measured only around `recompact_visible_delta()`.
 
 ## A0: Caller-Shaped Evidence Suites (2026-07-11)
 
-Evidence gate for the app-adoption line (`docs/APP_ADOPTION_GAP_PLAN.md`,
+Evidence gate for the app-adoption line (`docs/internal/APP_ADOPTION_GAP_PLAN.md`,
 slice A0). Three suites shaped after the vetch-app and harrekki caller
 requirement documents. All numbers: A0 environment (see Environment).
 
@@ -697,7 +720,7 @@ match the A0 rows above — no regression from the atomicity change.
 
 `Minigraf::export_fact_log_since(since_tx_count)` returns the fact-log tail
 (`tx_count > since`) at cost proportional to the tail, not the committed
-graph (`docs/APP_ADOPTION_GAP_PLAN.md` slice A2, harrekki P0 #2). Committed
+graph (`docs/internal/APP_ADOPTION_GAP_PLAN.md` slice A2, harrekki P0 #2). Committed
 packed pages hold facts in nondecreasing `tx_count` order, so the reader
 binary-searches the first tail page (O(log pages) cache reads) and streams
 from there; delta segments and pending facts filter in memory. Fixture:
@@ -726,7 +749,7 @@ keeps it ~2,800× cheaper than the full export. Setup cost for the fixture:
 
 ## A7: kill -9 Durability Gate (2026-07-11)
 
-Reliability gate, not a benchmark (`docs/APP_ADOPTION_GAP_PLAN.md` slice A7,
+Reliability gate, not a benchmark (`docs/internal/APP_ADOPTION_GAP_PLAN.md` slice A7,
 harrekki P0 #3). `tests/kill9_durability_test.rs` SIGKILLs real
 `minigraf --session --file` child processes at randomized instants —
 including checkpoint-biased windows — over growing `.graph` lineages, then
@@ -768,7 +791,7 @@ only (recompact thresholds are unreachable at this scale).
 
 `(forget ...)` closes query-selected or explicitly supplied EAV valid-time
 windows as one WAL-first transaction while preserving the earlier history
-(`docs/APP_ADOPTION_GAP_PLAN.md` slice A8, harrekki P1 #6). Gate commands:
+(`docs/internal/APP_ADOPTION_GAP_PLAN.md` slice A8, harrekki P1 #6). Gate commands:
 
 ```bash
 cargo test --release --test forget_test \
@@ -815,7 +838,7 @@ bad-magic headers remain hard errors.
 ## A5: Browser IndexedDB Growth (2026-07-11)
 
 Long-running write growth of the browser backend (`BrowserDb`), measured for
-the A5 parity-evidence gate (`docs/APP_ADOPTION_GAP_PLAN.md`). This is the
+the A5 parity-evidence gate (`docs/internal/APP_ADOPTION_GAP_PLAN.md`). This is the
 pre-A5-4 maintenance snapshot. At the time, every browser
 write `execute()` runs `save()`, which appends a delta segment and rewrites
 the manifest; `save()` never consults the delta growth thresholds, and the

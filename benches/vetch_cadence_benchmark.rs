@@ -1,6 +1,6 @@
 #![cfg(not(target_arch = "wasm32"))]
 
-//! A0 Vetch cadence replay (docs/APP_ADOPTION_GAP_PLAN.md).
+//! A0 Vetch cadence replay (docs/internal/APP_ADOPTION_GAP_PLAN.md).
 //!
 //! Replays the interactive Vetch work unit on a checkpointed base:
 //! capture (new card entity) → edit (retract + assert geometry) → receipt

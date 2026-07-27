@@ -24,7 +24,7 @@ Before submitting, please confirm:
 
 - [ ] This does not break the single-file storage philosophy
 - [ ] This does not require client-server architecture or external services
-- [ ] This does not add heavy dependencies that increase binary size significantly
+- [ ] This does not add heavy dependencies that grow the core engine past its budget (see the size-budget table in PHILOSOPHY.md)
 - [ ] This is useful for embedded use cases (mobile, WASM, desktop apps)
 
 See [PHILOSOPHY.md](../PHILOSOPHY.md) and [ROADMAP.md](../ROADMAP.md) for context.

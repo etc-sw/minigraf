@@ -154,7 +154,7 @@ Core rules:
 
 Do not put volatile benchmark numbers directly in the skill. The skill should
 route agents to `docs/BENCHMARKS.md`, `docs/DELTA_INDEX_DESIGN.md`, and
-`docs/VETCH_DELTA_STORAGE_ROADMAP.md` for current evidence.
+`docs/internal/VETCH_DELTA_STORAGE_ROADMAP.md` for current evidence.
 
 ## Proposed Slice Plan
 

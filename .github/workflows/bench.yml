@@ -16,15 +16,61 @@ on:
 permissions:
   contents: read
   issues: write
+  actions: read   # read this workflow's own run history to detect repeat commits
 
 jobs:
   compile:
     name: bench / compile
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    outputs:
+      has_bencher: ${{ steps.bencher_configured.outputs.has_bencher }}
+      is_new_commit: ${{ steps.freshness.outputs.is_new_commit }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # The cron fires whether or not anything changed. Between 2026-07-18 and
+      # 2026-07-27 that produced ten consecutive nightly runs against the
+      # identical commit 2afac62 — roughly 42 CPU-hours spent re-measuring
+      # byte-identical code. Benchmark a commit once; a repeat run only
+      # re-samples runner noise.
+      - name: Detect an already-benchmarked commit
+        id: freshness
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" != "schedule" ]; then
+            echo "is_new_commit=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$EVENT_NAME run; freshness check does not apply."
+            exit 0
+          fi
+          previous="$(gh run list --workflow bench.yml --event schedule \
+            --status completed --limit 1 --json headSha --jq '.[0].headSha // ""')"
+          if [ "$previous" = "$HEAD_SHA" ]; then
+            echo "is_new_commit=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$HEAD_SHA was already benchmarked by the previous nightly; skipping the matrix. Use workflow_dispatch to force a re-run."
+          else
+            echo "is_new_commit=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # The `secrets` context is not available in `if:` conditions, so resolve
+      # it once here and expose the answer as a job output. Without a Bencher
+      # API key the whole benchmark matrix exists only to upload nowhere, so it
+      # is skipped rather than run for 40 minutes and fail.
+      - name: Detect Bencher configuration
+        id: bencher_configured
+        env:
+          BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+        run: |
+          if [ -n "$BENCHER_API_KEY" ]; then
+            echo "has_bencher=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_bencher=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::BENCHER_API_KEY is not set; skipping the benchmark matrix. The local coverage and smoke-receipt gates in this job still run."
+          fi
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -72,7 +118,10 @@ jobs:
 
   benchmark:
     name: bench / ${{ matrix.name }}
-    if: github.event_name != 'pull_request'
+    if: >-
+      github.event_name != 'pull_request'
+      && needs.compile.outputs.has_bencher == 'true'
+      && needs.compile.outputs.is_new_commit == 'true'
     runs-on: ubuntu-latest
     needs: [compile]
     timeout-minutes: 360
@@ -80,156 +129,42 @@ jobs:
       fail-fast: false   # one timeout must not cancel sibling jobs
       matrix:
         include:
-          # ── Sequential: insert ──────────────────────────────────────────────
-          - name: insert
-            filter: "^insert/"
-            file: bench_insert.txt
+          # Six jobs, not one per Criterion group. Each job pays ~2-3 minutes of
+          # fixed cost (checkout, toolchain, cache restore), so a 26-way matrix
+          # spent most of its budget on overhead once the 1M scale rung moved
+          # behind MINIGRAF_BENCH_MODE=full. Filters must still cover every
+          # Criterion group -- scripts/check-benchmark-coverage.mjs enforces it.
+
+          # ── Write path: insert, file-backed insert, retract ─────────────────
+          - name: write
+            filter: "^(insert|insert_file|retract)/"
+            file: bench_write.txt
             threshold: "0.99"
 
-          # ── Sequential: insert_file ─────────────────────────────────────────
-          - name: insert_file
-            filter: "^insert_file/"
-            file: bench_insert_file.txt
+          # ── Read path: point/join queries, time travel, index lookups ───────
+          - name: read
+            filter: "^(query|time_travel|btree_lookup|prepared|decay)/"
+            file: bench_read.txt
             threshold: "0.99"
 
-          # ── Sequential: query (includes query_extras) ───────────────────────
-          - name: query
-            filter: "^query/"
-            file: bench_query.txt
+          # ── Durability lifecycle: open, WAL replay, checkpoint ──────────────
+          - name: lifecycle
+            filter: "^(open/|checkpoint)"
+            file: bench_lifecycle.txt
             threshold: "0.99"
 
-          # ── Decay candidate queries ────────────────────────────────────────
-          - name: decay
-            filter: "^decay/"
-            file: bench_decay.txt
+          # ── Query language surface ─────────────────────────────────────────
+          - name: query_features
+            filter: "^(negation|disjunction|aggregation|expr|window|temporal_metadata|udf|recursion)/"
+            file: bench_query_features.txt
             threshold: "0.99"
 
-          # ── Sequential: time_travel ─────────────────────────────────────────
-          - name: time_travel
-            filter: "^time_travel/"
-            file: bench_time_travel.txt
-            threshold: "0.99"
-
-          # ── Sequential: recursion ───────────────────────────────────────────
-          - name: recursion
-            filter: "^recursion/"
-            file: bench_recursion.txt
-            threshold: "0.99"
-
-          # ── Sequential: open ────────────────────────────────────────────────
-          - name: open
-            filter: "^open/"
-            file: bench_open.txt
-            threshold: "0.99"
-
-          # ── Sequential: checkpoint ──────────────────────────────────────────
-          - name: checkpoint
-            filter: "^checkpoint"
-            file: bench_checkpoint.txt
-            threshold: "0.99"
-
-          # ── Concurrent (in-memory): readers ────────────────────────────────
+          # ── Concurrency ────────────────────────────────────────────────────
           # threshold=0.999: concurrent benchmarks are noisy on shared CI runners
-          - name: concurrent/readers
-            filter: "^concurrent/readers/"
-            file: bench_concurrent_readers.txt
+          - name: concurrency
+            filter: "^(concurrent/|concurrent_file/|concurrent_btree_scan)"
+            file: bench_concurrency.txt
             threshold: "0.999"
-
-          # ── Concurrent (in-memory): readers_plus_writer ────────────────────
-          - name: concurrent/readers_plus_writer
-            filter: "^concurrent/readers_plus_writer/"
-            file: bench_concurrent_mixed.txt
-            threshold: "0.999"
-
-          # ── Concurrent (in-memory): serialized_writers ─────────────────────
-          - name: concurrent/serialized_writers
-            filter: "^concurrent/serialized_writers/"
-            file: bench_concurrent_writers.txt
-            threshold: "0.999"
-
-          # ── Concurrent (file-backed): readers ──────────────────────────────
-          - name: concurrent_file/readers
-            filter: "^concurrent_file/readers/"
-            file: bench_concurrent_file_readers.txt
-            threshold: "0.999"
-
-          # ── Concurrent (file-backed): readers_plus_writer ──────────────────
-          - name: concurrent_file/readers_plus_writer
-            filter: "^concurrent_file/readers_plus_writer/"
-            file: bench_concurrent_file_mixed.txt
-            threshold: "0.999"
-
-          # ── Concurrent (file-backed): serialized_writers ───────────────────
-          - name: concurrent_file/serialized_writers
-            filter: "^concurrent_file/serialized_writers/"
-            file: bench_concurrent_file_writers.txt
-            threshold: "0.999"
-
-          # ── Concurrent: B+tree scan ─────────────────────────────────────────
-          - name: concurrent_btree_scan
-            filter: "^concurrent_btree_scan"
-            file: bench_concurrent_btree_scan.txt
-            threshold: "0.999"
-
-          # ── Negation: not / not-join ────────────────────────────────────────
-          - name: negation
-            filter: "^negation/"
-            file: bench_negation.txt
-            threshold: "0.99"
-
-          # ── Disjunction: or / or-join ───────────────────────────────────────
-          - name: disjunction
-            filter: "^disjunction/"
-            file: bench_disjunction.txt
-            threshold: "0.99"
-
-          # ── Aggregation (includes aggregation_extras) ───────────────────────
-          - name: aggregation
-            filter: "^aggregation/"
-            file: bench_aggregation.txt
-            threshold: "0.99"
-
-          # ── Expression filters / binding ────────────────────────────────────
-          - name: expr
-            filter: "^expr/"
-            file: bench_expr.txt
-            threshold: "0.99"
-
-          # ── Window functions ────────────────────────────────────────────────
-          - name: window
-            filter: "^window/"
-            file: bench_window.txt
-            threshold: "0.99"
-
-          # ── Temporal metadata ───────────────────────────────────────────────
-          - name: temporal_metadata
-            filter: "^temporal_metadata/"
-            file: bench_temporal_metadata.txt
-            threshold: "0.99"
-
-          # ── User-defined functions ──────────────────────────────────────────
-          - name: udf
-            filter: "^udf/"
-            file: bench_udf.txt
-            threshold: "0.99"
-
-          # ── Prepared query execution ───────────────────────────────────────
-          - name: prepared
-            filter: "^prepared/"
-            file: bench_prepared.txt
-            threshold: "0.99"
-
-          # ── Retraction throughput ──────────────────────────────────────────
-          - name: retract
-            filter: "^retract/"
-            file: bench_retract.txt
-            threshold: "0.99"
-
-          # ── Direct B+tree lookups ──────────────────────────────────────────
-          - name: btree_lookup
-            filter: "^btree_lookup/"
-            file: bench_btree_lookup.txt
-            threshold: "0.99"
 
           # ── Scalar/SIMD comparison groups ──────────────────────────────────
           - name: simd
@@ -266,27 +201,36 @@ jobs:
           CARGO_TERM_COLOR=never cargo bench -- "${{ matrix.filter }}" \
             2>&1 | tee ${{ matrix.file }}
 
+      # Deliberately unpinned. Bencher's own guidance is to pin only for
+      # Bencher Self-Hosted; against Bencher Cloud a pinned old CLI drifts out
+      # of compatibility with the live API.
       - name: Install Bencher CLI
-        uses: bencherdev/bencher@v0.4.25
+        uses: bencherdev/bencher@main
 
       - name: Upload to Bencher
         id: bencher
         continue-on-error: true
+        env:
+          BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+          BENCHER_FILE: ${{ matrix.file }}
+          BENCHER_THRESHOLD: ${{ matrix.threshold }}
         run: |
           bencher run \
-            --project minigraf \
-            --token "${{ secrets.BENCHER_API_TOKEN }}" \
+            --project vicia-db \
             --branch main \
             --testbed ubuntu-latest \
             --threshold-measure latency \
             --threshold-test t_test \
-            --threshold-upper-boundary ${{ matrix.threshold }} \
-            --err \
+            --threshold-upper-boundary "$BENCHER_THRESHOLD" \
+            --error-on-alert \
             --adapter rust_criterion \
-            --file ${{ matrix.file }}
+            --file "$BENCHER_FILE"
 
+      # Best-effort. Repositories with Issues disabled (the default for a fork)
+      # must not turn a benchmark report into a red build.
       - name: Open regression issue
         if: steps.bencher.outcome == 'failure'
+        continue-on-error: true
         uses: actions/github-script@v6
         with:
           script: |

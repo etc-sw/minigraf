@@ -173,7 +173,7 @@ fn test_v6_explicit_checkpoint_clears_wal() {
     }
     db.checkpoint().unwrap();
 
-    // WAL sidecar is named <db_path>.wal (per CLAUDE.md "WAL sidecar <db>.wal")
+    // WAL sidecar is named <db_path>.wal (see the file-format section of README.md)
     let wal_path = format!("{}.wal", path);
     let wal_absent = !Path::new(&wal_path).exists();
     let wal_empty = std::fs::metadata(&wal_path)

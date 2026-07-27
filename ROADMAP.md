@@ -1166,7 +1166,7 @@ This is a deliberate operation (a button or API call), not transparent — which
 **Browser-specific constraints**:
 - No filesystem access in `wasm32-unknown-unknown` — all storage goes through IndexedDB
 - No threads in standard browser WASM — lock-free or single-threaded execution paths required
-- Binary size budget: target <1MB gzipped; audit dependencies under `wasm` feature
+- Binary size budget: target <1MB **gzipped** for the browser WASM artifact; audit dependencies under `wasm` feature. This is a separate budget from the core engine's uncompressed <1 MiB — see the size-budget table in PHILOSOPHY.md.
 
 **Build toolchain**:
 ```bash

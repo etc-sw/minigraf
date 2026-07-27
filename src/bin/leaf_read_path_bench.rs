@@ -61,7 +61,11 @@ fn build_fixture(path: &Path, facts: u64) -> Result<()> {
         fs::create_dir_all(parent)?;
     }
     let db = OpenOptions::new().path(path).open()?;
-    for start in (0..facts).step_by(BATCH as usize) {
+    // BATCH is a 1_000 literal, so it is representable as usize on every
+    // target this binary builds for, including 32-bit wasm.
+    #[allow(clippy::cast_possible_truncation)]
+    let batch_step = BATCH as usize;
+    for start in (0..facts).step_by(batch_step) {
         let mut command = String::from("(transact [");
         for entity in start..(start + BATCH).min(facts) {
             command.push_str(&format!("[:leaf/e{entity} :leaf/value {entity}]"));

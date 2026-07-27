@@ -8,7 +8,7 @@ documents:
 
 - `docs/BENCHMARKS.md` owns measured results and receipt provenance.
 - `docs/REF_DB_PERFORMANCE_TODO.md` owns the current executable checklist.
-- `docs/VETCH_DELTA_STORAGE_ROADMAP.md` and `docs/DELTA_INDEX_DESIGN.md` own
+- `docs/internal/VETCH_DELTA_STORAGE_ROADMAP.md` and `docs/DELTA_INDEX_DESIGN.md` own
   base/delta/recompact durability semantics.
 - `docs/CROSS_DB_STRESS_BENCHMARK.md` owns cross-engine workload contracts.
 

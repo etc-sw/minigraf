@@ -28,14 +28,23 @@ use minigraf::OpenOptions;
 // ── A0 evidence-gate mode ─────────────────────────────────────────────────────
 //
 // `MINIGRAF_BENCH_MODE=full` extends the query-latency scales to 100K/1M for
-// local BENCHMARKS.md refresh runs (docs/APP_ADOPTION_GAP_PLAN.md, A0).
+// local BENCHMARKS.md refresh runs (docs/internal/APP_ADOPTION_GAP_PLAN.md, A0).
 // Without it the CI-shaped run keeps the fast 1K/10K scales.
 
 fn full_bench_mode() -> bool {
     std::env::var("MINIGRAF_BENCH_MODE").as_deref() == Ok("full")
 }
 
-fn query_scales() -> Vec<(&'static str, usize)> {
+/// Scale ladder shared by every size-parameterised group.
+///
+/// CI-shaped runs stay on the fast 1K/10K rungs; `MINIGRAF_BENCH_MODE=full`
+/// adds the 100K/1M rungs used for local BENCHMARKS.md refreshes on a
+/// dedicated host. The 1M rung is where nightly CI cost concentrated — it
+/// dominated the `insert_file`, `checkpoint`, `open`, `insert`, and `retract`
+/// jobs — while contributing no acceptance evidence, since the nightly
+/// shared-runner profile is `acceptanceEligible: false` in
+/// `benchmarks/milestones.json`.
+fn bench_scales() -> Vec<(&'static str, usize)> {
     let mut scales = vec![("1k", 1_000), ("10k", 10_000)];
     if full_bench_mode() {
         scales.extend([("100k", 100_000), ("1m", 1_000_000)]);
@@ -43,15 +52,14 @@ fn query_scales() -> Vec<(&'static str, usize)> {
     scales
 }
 
+fn query_scales() -> Vec<(&'static str, usize)> {
+    bench_scales()
+}
+
 // ── Task 3: insert/ ───────────────────────────────────────────────────────────
 
 fn bench_insert(c: &mut Criterion) {
-    const SCALES: &[(&str, usize)] = &[
-        ("1k", 1_000),
-        ("10k", 10_000),
-        ("100k", 100_000),
-        ("1m", 1_000_000),
-    ];
+    let scales = bench_scales();
 
     // single_fact: insert one fact into a pre-populated in-memory DB.
     // DB created once per scale; b.iter() accumulates facts across iterations
@@ -59,7 +67,7 @@ fn bench_insert(c: &mut Criterion) {
     {
         let mut group = c.benchmark_group("insert/single_fact");
         group.sample_size(10);
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 let db = helpers::populate_in_memory(n);
                 b.iter(|| db.execute("(transact [[:ebench :val 0]])").unwrap());
@@ -83,7 +91,7 @@ fn bench_insert(c: &mut Criterion) {
             s.push(')');
             s
         };
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             let cmd = batch_cmd.clone();
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 let db = helpers::populate_in_memory(n);
@@ -97,7 +105,7 @@ fn bench_insert(c: &mut Criterion) {
     {
         let mut group = c.benchmark_group("insert/explicit_tx");
         group.sample_size(10);
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 let db = helpers::populate_in_memory(n);
                 b.iter(|| {
@@ -115,18 +123,13 @@ fn bench_insert(c: &mut Criterion) {
 
 fn bench_insert_file(c: &mut Criterion) {
     use tempfile::NamedTempFile;
-    const SCALES: &[(&str, usize)] = &[
-        ("1k", 1_000),
-        ("10k", 10_000),
-        ("100k", 100_000),
-        ("1m", 1_000_000),
-    ];
+    let scales = bench_scales();
 
     // single_fact: one execute() per iter against growing file-backed DB
     {
         let mut group = c.benchmark_group("insert_file/single_fact");
         group.sample_size(10);
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 let tmp = NamedTempFile::new().unwrap();
                 let path = tmp.path().to_str().unwrap().to_string();
@@ -154,7 +157,7 @@ fn bench_insert_file(c: &mut Criterion) {
             s.push(')');
             s
         };
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             let cmd = batch_cmd.clone();
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 let tmp = NamedTempFile::new().unwrap();
@@ -172,7 +175,7 @@ fn bench_insert_file(c: &mut Criterion) {
     {
         let mut group = c.benchmark_group("insert_file/explicit_tx");
         group.sample_size(10);
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 let tmp = NamedTempFile::new().unwrap();
                 let path = tmp.path().to_str().unwrap().to_string();
@@ -248,12 +251,7 @@ fn bench_query(c: &mut Criterion) {
 // ── Task 6: time_travel/ ──────────────────────────────────────────────────────
 
 fn bench_time_travel(c: &mut Criterion) {
-    const SCALES: &[(&str, usize)] = &[
-        ("1k", 1_000),
-        ("10k", 10_000),
-        ("100k", 100_000),
-        ("1m", 1_000_000),
-    ];
+    let scales = bench_scales();
 
     // as_of_counter: :as-of with a large tx counter (all facts pass)
     // tx count after N facts inserted in batches of 100 is N/100.
@@ -261,7 +259,7 @@ fn bench_time_travel(c: &mut Criterion) {
     {
         let mut group = c.benchmark_group("time_travel/as_of_counter");
         group.sample_size(10); // 1m scale takes ~2s/iter; 10 samples suffices
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 let db = helpers::populate_in_memory(n);
                 b.iter(|| {
@@ -279,7 +277,7 @@ fn bench_time_travel(c: &mut Criterion) {
     {
         let mut group = c.benchmark_group("time_travel/valid_at");
         group.sample_size(10); // 1m scale takes ~2s/iter; 10 samples suffices
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 let db = helpers::populate_in_memory(n);
                 b.iter(|| {
@@ -297,9 +295,9 @@ fn bench_time_travel(c: &mut Criterion) {
 // ── A0: decay/ — harrekki decay-candidate read shapes ─────────────────────────
 //
 // "Entities untouched since T" is the harrekki decay-candidate shape
-// (docs/HARREKKI_CALLER_REQUIREMENTS.md P1 #6). Both variants return the same
+// (docs/internal/HARREKKI_CALLER_REQUIREMENTS.md P1 #6). Both variants return the same
 // 20% candidate set; the numbers gate the A3 range-pushdown promotion decision
-// (docs/APP_ADOPTION_GAP_PLAN.md candidates).
+// (docs/internal/APP_ADOPTION_GAP_PLAN.md candidates).
 
 fn bench_decay_candidate(c: &mut Criterion) {
     let scales = query_scales();
@@ -397,12 +395,7 @@ fn bench_open(c: &mut Criterion) {
     {
         let mut group = c.benchmark_group("open/checkpointed");
         group.sample_size(10);
-        for &(label, n) in &[
-            ("1k", 1_000usize),
-            ("10k", 10_000),
-            ("100k", 100_000),
-            ("1m", 1_000_000),
-        ] {
+        for &(label, n) in &bench_scales() {
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 // Create the pre-populated file ONCE per benchmark variant (outside iter loop).
                 let tmp = NamedTempFile::new().unwrap();
@@ -455,12 +448,7 @@ fn bench_checkpoint(c: &mut Criterion) {
     use tempfile::NamedTempFile;
 
     let mut group = c.benchmark_group("checkpoint");
-    for &(label, n) in &[
-        ("1k", 1_000usize),
-        ("10k", 10_000),
-        ("100k", 100_000),
-        ("1m", 1_000_000),
-    ] {
+    for &(label, n) in &bench_scales() {
         group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
             b.iter_batched(
                 || {
@@ -1485,12 +1473,7 @@ fn bench_prepared(c: &mut Criterion) {
 // it scales comparably to insertion.
 
 fn bench_retract(c: &mut Criterion) {
-    const SCALES: &[(&str, usize)] = &[
-        ("1k", 1_000),
-        ("10k", 10_000),
-        ("100k", 100_000),
-        ("1m", 1_000_000),
-    ];
+    let scales = bench_scales();
 
     // single_fact: retract one fact from a pre-populated in-memory DB.
     // DB created once per scale; b.iter() accumulates retractions (realistic
@@ -1498,7 +1481,7 @@ fn bench_retract(c: &mut Criterion) {
     {
         let mut group = c.benchmark_group("retract/single_fact");
         group.sample_size(10);
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 let db = helpers::populate_in_memory(n);
                 // Retract entity :e0 :val — the fact is already asserted; repeated
@@ -1525,7 +1508,7 @@ fn bench_retract(c: &mut Criterion) {
             s.push(')');
             s
         };
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             let cmd = batch_cmd.clone();
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 let db = helpers::populate_in_memory(n);
@@ -1616,13 +1599,9 @@ fn bench_predicate_pushdown(c: &mut Criterion) {
 // Cross-reference the existing time_travel/ and aggregation/ groups for full-query costs.
 
 fn bench_simd(c: &mut Criterion) {
-    const SCALES: &[(&str, usize)] = &[
-        ("100", 100),
-        ("1k", 1_000),
-        ("10k", 10_000),
-        ("100k", 100_000),
-        ("1m", 1_000_000),
-    ];
+    let mut scales = vec![("100", 100usize)];
+    scales.extend(bench_scales());
+    let scales = scales;
 
     // ── simd_temporal: valid-time range filter ──────────────────────────────
     //
@@ -1632,7 +1611,7 @@ fn bench_simd(c: &mut Criterion) {
         let mut group = c.benchmark_group("simd_temporal");
         group.sample_size(10);
 
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             let n_i64 = i64::try_from(n).unwrap_or(i64::MAX);
             let valid_from: Vec<i64> = (0_i64..n_i64).collect();
             let valid_to: Vec<i64> = valid_from.iter().map(|&vf| vf + n_i64 / 2).collect();
@@ -1670,7 +1649,7 @@ fn bench_simd(c: &mut Criterion) {
         let mut group = c.benchmark_group("simd_as_of");
         group.sample_size(10);
 
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             let n_u64 = u64::try_from(n).unwrap_or(u64::MAX);
             let tx_counts: Vec<u64> = (1..=n_u64).collect();
             let threshold = n_u64 / 2;
@@ -1702,7 +1681,7 @@ fn bench_simd(c: &mut Criterion) {
         let mut group = c.benchmark_group("simd_aggregate");
         group.sample_size(10);
 
-        for &(label, n) in SCALES {
+        for &(label, n) in &scales {
             let n_i64 = i64::try_from(n).unwrap_or(i64::MAX);
             let values: Vec<i64> = (0_i64..n_i64).collect();
 

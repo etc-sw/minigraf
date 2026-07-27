@@ -5,7 +5,7 @@ Historical branch: `vetch/minigraf-refactor-plan`
 Historical worktree: `.worktrees/vetch-minigraf-refactor-plan`
 
 Status: planning artifact only. This is not the active implementation branch.
-Use `docs/VETCH_DELTA_STORAGE_ROADMAP.md` for the current Vicia/Vetch
+Use `docs/internal/VETCH_DELTA_STORAGE_ROADMAP.md` for the current Vicia/Vetch
 delta-storage line.
 
 ## Philosophy Fit

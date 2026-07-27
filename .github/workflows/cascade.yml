@@ -1,9 +1,16 @@
 name: Release Cascade
 
+# DISARMED ON THIS FORK.
+#
+# This workflow waits for `minigraf@<version>` to appear on crates.io and then
+# dispatches to the binding repositories under project-minigraf. Both are
+# upstream's; this fork publishes nothing and owns none of those repos, so on a
+# tag push it could only poll for someone else's release and then fail.
+#
+# Re-arm alongside release.yml as part of the rename plan's V3 publish
+# decision, pointed at this fork's own package and binding repositories.
 on:
-  push:
-    tags:
-      - 'v[0-9]*.[0-9]*.[0-9]*'
+  workflow_dispatch:
 
 jobs:
   dispatch-bindings:

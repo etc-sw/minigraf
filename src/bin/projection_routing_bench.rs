@@ -443,8 +443,15 @@ fn expected_pair(facts: u64) -> (u64, i128) {
 }
 
 fn percentile(samples: &[f64], quantile: f64) -> f64 {
-    let index = ((samples.len().saturating_sub(1)) as f64 * quantile).ceil() as usize;
-    samples[index.min(samples.len().saturating_sub(1))]
+    let Some(last) = samples.len().checked_sub(1) else {
+        return f64::NAN;
+    };
+    // `position` is clamped to [0, last] before the cast, so it is a finite
+    // non-negative value no larger than an existing index.
+    let position = (last as f64 * quantile.clamp(0.0, 1.0)).ceil().max(0.0);
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+    let index = position as usize;
+    samples.get(index.min(last)).copied().unwrap_or(f64::NAN)
 }
 
 fn command_text(program: &str, args: &[&str]) -> Result<String> {

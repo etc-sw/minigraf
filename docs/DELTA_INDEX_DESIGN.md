@@ -26,7 +26,7 @@ image, atomically replaces the IndexedDB page set, and swaps the live handle
 only after the durable replacement commits. Browser foreground writes and
 `checkpoint()` still never hide an O(total facts) compact rebuild.
 
-Roadmap: see `docs/VETCH_DELTA_STORAGE_ROADMAP.md` for the post-T7C execution
+Roadmap: see `docs/internal/VETCH_DELTA_STORAGE_ROADMAP.md` for the post-T7C execution
 plan and gate sequence. Maintenance caller guidance: see
 `docs/MAINTENANCE_API_CONTRACT.md`. Rename sequencing: see
 `docs/VICIA_DB_RENAME_PLAN.md`; Vicia DB naming must not change this storage

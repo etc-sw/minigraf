@@ -12,7 +12,7 @@
 //! (`durability: "applied"`), so every acknowledged transaction must survive
 //! SIGKILL.
 //!
-//! Gate (docs/APP_ADOPTION_GAP_PLAN.md A7): zero lost acknowledged
+//! Gate (docs/internal/APP_ADOPTION_GAP_PLAN.md A7): zero lost acknowledged
 //! transactions, zero unopenable files.
 //!
 //! Division of labor: `tests/delta_checkpoint_crash_recovery_test.rs` pins
