@@ -30,18 +30,18 @@ jobs:
 
       # The `secrets` context is not available in `if:` conditions, so resolve
       # it once here and expose the answer as a job output. Without a Bencher
-      # project + token the whole benchmark matrix exists only to upload
-      # nowhere, so it is skipped rather than run for 40 minutes and fail.
+      # API key the whole benchmark matrix exists only to upload nowhere, so it
+      # is skipped rather than run for 40 minutes and fail.
       - name: Detect Bencher configuration
         id: bencher_configured
         env:
-          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+          BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
         run: |
-          if [ -n "$BENCHER_API_TOKEN" ]; then
+          if [ -n "$BENCHER_API_KEY" ]; then
             echo "has_bencher=true" >> "$GITHUB_OUTPUT"
           else
             echo "has_bencher=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::BENCHER_API_TOKEN is not set; skipping the benchmark matrix. The local coverage and smoke-receipt gates in this job still run."
+            echo "::notice::BENCHER_API_KEY is not set; skipping the benchmark matrix. The local coverage and smoke-receipt gates in this job still run."
           fi
 
       - name: Install Rust toolchain
@@ -284,24 +284,30 @@ jobs:
           CARGO_TERM_COLOR=never cargo bench -- "${{ matrix.filter }}" \
             2>&1 | tee ${{ matrix.file }}
 
+      # Deliberately unpinned. Bencher's own guidance is to pin only for
+      # Bencher Self-Hosted; against Bencher Cloud a pinned old CLI drifts out
+      # of compatibility with the live API.
       - name: Install Bencher CLI
-        uses: bencherdev/bencher@v0.4.25
+        uses: bencherdev/bencher@main
 
       - name: Upload to Bencher
         id: bencher
         continue-on-error: true
+        env:
+          BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+          BENCHER_FILE: ${{ matrix.file }}
+          BENCHER_THRESHOLD: ${{ matrix.threshold }}
         run: |
           bencher run \
             --project vicia-db \
-            --token "${{ secrets.BENCHER_API_TOKEN }}" \
             --branch main \
             --testbed ubuntu-latest \
             --threshold-measure latency \
             --threshold-test t_test \
-            --threshold-upper-boundary ${{ matrix.threshold }} \
-            --err \
+            --threshold-upper-boundary "$BENCHER_THRESHOLD" \
+            --error-on-alert \
             --adapter rust_criterion \
-            --file ${{ matrix.file }}
+            --file "$BENCHER_FILE"
 
       # Best-effort. Repositories with Issues disabled (the default for a fork)
       # must not turn a benchmark report into a red build.

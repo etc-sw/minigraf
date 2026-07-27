@@ -17,6 +17,12 @@ memory.graph
 # heaptrack profiling artifacts
 heaptrack.*.zst
 
+# Editor swap/backup files. These mirror buffer contents verbatim, so a swap
+# file for an ignored secret (.env.local) is itself a secret.
+*.swp
+*.swo
+*~
+
 # wiki repo (plain clone, not a submodule)
 .wiki/
 
