@@ -2,16 +2,17 @@
 
 ## Supported Versions
 
-Vicia DB is pre-1.0 and under active development. Nothing is published yet —
-the `vicia-db` crate has not shipped a release — so only the current `main`
-branch receives security fixes. Once `vicia-db` is on crates.io, the latest
-published version joins `main`; older versions are not patched.
+Vicia DB is pre-1.0 and under active development. Nothing is published, by
+decision — see the publish note in
+[docs/VICIA_DB_RENAME_PLAN.md](../docs/VICIA_DB_RENAME_PLAN.md). Consumers pin
+this repository by path or git revision, so **only the current `main` branch
+receives security fixes**. Pin a revision you have reviewed; there is no
+release channel to fall back on.
 
 | Version | Supported |
 | ------- | --------- |
 | `main` | ✅ |
-| latest published 0.x (once published) | ✅ |
-| older 0.x    | ❌ |
+| any pinned older revision | ❌ |
 
 Vulnerabilities in the published `minigraf` crate belong to
 [upstream](https://github.com/project-minigraf/minigraf), not to this fork.

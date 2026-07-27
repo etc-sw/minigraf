@@ -1,11 +1,12 @@
 # Vicia DB Rename Plan
 
-Status: V0–V2 complete. **V3 decided on 2026-07-27: publish to crates.io as
-`vicia-db`, starting at `0.1.0`.** The V3 gate is closed (see "V3 Decision"
-below); the package/type rename itself has not been performed yet, and no file
-format or language-binding rename has happened.
+Status: V0–V3 complete; R1–R3 landed on 2026-07-27 (merge `fa27cf6`). The
+package is `vicia-db`, the import path is `vicia_db`, and `ViciaDb` is the
+primary type with `Minigraf` kept as a live alias. **Publishing is deferred by
+decision** — see "Publish Deferred" below, which supersedes the publish half of
+the V3 decision. No file format or language-binding rename has happened.
 
-Date: 2026-06-06, V3 decision 2026-07-27
+Date: 2026-06-06, V3 decision 2026-07-27, publish deferred 2026-07-27
 
 Branch: `vicia/api-alias` for the V2 update. The initial plan landed on
 `vicia/rename-plan`. The V3 decision landed on `vicia/rename-v3`.
@@ -255,9 +256,12 @@ Gate:
 
 ## V3 Decision (2026-07-27)
 
-Decision: **publish to crates.io as `vicia-db`**, and promote `ViciaDb` to the
+Decision: **rename the package to `vicia-db`**, and promote `ViciaDb` to the
 primary Rust type in the same window, keeping `Minigraf` as the compatibility
-alias. The package rename is the only break-window this line gets, so the type
+alias. (This section originally also decided to publish to crates.io. That half
+was reversed the same day — see "Publish Deferred". The name, version, metadata,
+and type decisions below stand unchanged; they are what the rename needed, not
+what publishing needed.) The package rename is the only break-window this line gets, so the type
 flip rides along with it rather than costing a second round of doc and example
 churn.
 
@@ -267,7 +271,7 @@ churn.
 | First version | `0.1.0` — not a continuation of upstream's 1.1.1, which never described this fork's v10–v13 storage |
 | `authors` | `["etc-sw"]` — who ships the package. Upstream copyright stays in `LICENSE-MIT`; lineage stays in README |
 | `repository` | `https://github.com/etc-sw/vicia-db` |
-| `documentation` | Omitted until the first publish creates a real docs.rs page |
+| `documentation` | Omitted. With publishing deferred there is no docs.rs page to point at |
 | Primary type | `ViciaDb`, with `pub type Minigraf = ViciaDb` |
 | File format | Unchanged. `.graph`, `MGRF`, `MGCPG001`, `MGDMF001`, `MGDSG001`, and every format version stay as-is |
 
@@ -298,10 +302,12 @@ today, in the opposite direction.
 
 ### Landing order
 
-- **R1 — docs/metadata.** README title, `Cargo.toml` `authors`/`repository`/
-  `documentation`. No code. This slice.
-- **R2 — this section.** The decision recorded before anything depends on it.
-- **R3 — package + type rename, one commit.** `name = "vicia-db"`,
+- **R1 — docs/metadata (landed, `ea8a40b`).** README title, `Cargo.toml`
+  `authors`/`repository`/`documentation`. No code.
+- **R2 — this section (landed, `ea8a40b`).** The decision recorded before
+  anything depends on it.
+- **R3 — package + type rename, one commit (landed, `5f91c6c`; docs synced in
+  `1633af9`).** `name = "vicia-db"`,
   `version = "0.1.0"`, lib `vicia_db`, `ViciaDb` promoted with `Minigraf` as
   alias, `use minigraf::` → `use vicia_db::` across tests/benches/examples,
   `benches/minigraf_bench.rs` renamed, CLI binary and `libminigraf.so` names.
@@ -315,20 +321,23 @@ today, in the opposite direction.
 - **R4 — leave history alone.** `CHANGELOG.md` entries and the 91 files under
   `docs/superpowers/plans|specs` keep saying `minigraf`, because they record
   what was true then. A blanket rewrite would erase that.
-- **R5 — re-arm release CI, separate commit, last.** `release.yml`
+- **R5 — re-arm release CI, separate commit, last. NOT DONE — deferred, see
+  "Publish Deferred".** `release.yml`
   `-p minigraf` → `-p vicia-db`, `cascade.yml` dispatch targets moved off
   `project-minigraf/*`. The `push: tags:` trigger and `CARGO_REGISTRY_TOKEN`
   are added *here and nowhere earlier* — both files carry a DISARMED banner
   warning that adding the token mid-rename silently arms a publish. Note
   `release.yml` is cargo-dist generated; `dist generate` restores the trigger.
-- **R6 — publish, then bindings (V4).** `cargo publish --dry-run`, publish,
+- **R6 — publish, then bindings (V4). NOT DONE — deferred, see "Publish
+  Deferred".** `cargo publish --dry-run`, publish,
   then npm/PyPI/Maven. Never in the same commit as core changes.
 
 ### Open risk
 
-The names are free but unreserved. Nothing holds `vicia-db` on crates.io
-between this decision and R6. Reserving it with a placeholder publish is an
-irreversible public action and is not part of this slice.
+The names are free but unreserved, and with publishing deferred they stay that
+way indefinitely. Nothing holds `vicia-db` on crates.io or the `@vicia-db`
+scope on npm. Reserving either with a placeholder publish is an irreversible
+public action and was deliberately not done.
 
 ### V4: Binding And Ecosystem Rename
 
@@ -340,6 +349,35 @@ Gate:
 
 - Separate checklist for npm, PyPI, Maven, Swift, C, WASM, and docs.rs.
 - No binding rename should be bundled into core storage changes.
+
+## Publish Deferred (2026-07-27)
+
+Decision: **do not publish.** `vicia-db` does not go to crates.io and
+`@vicia-db/browser` does not go to npm until an outside consumer needs one.
+This supersedes the publish half of the V3 decision above; the rename itself
+already landed and is not affected.
+
+Reasoning: no consumer resolves this package from a registry.
+
+| Consumer | Actual edge | Needs a registry? |
+| --- | --- | --- |
+| `vetch-memory` | `minigraf = { package = "vicia-db", path = "../vicia-db" }` | No |
+| `being-public` | `config/vicia-source.json` — `cargo install --git` at a pinned rev | No |
+| `vetch-app` | `"@vicia-db/browser": "link:vendor/vicia-browser"`, built by `scripts/sync-vetch-browser-package.sh` | No |
+
+Publishing would buy a docs.rs page, a reserved name, and third-party
+consumability. None is needed today, and each costs something that is hard to
+undo: a crates.io release cannot be deleted, only yanked, and the name is held
+forever; and R5 is the step that arms `CARGO_REGISTRY_TOKEN` plus the release
+tag trigger, which is exactly the configuration where a stray tag publishes by
+accident. Leaving R5 and R6 closed removes that failure mode entirely.
+
+What this does *not* change: the rename, the `0.1.0` version, the `authors` and
+`repository` metadata, and the `ViciaDb`/`Minigraf` type decision all stand.
+They were needed to stop the fork from wearing upstream's identity, which is
+independent of whether anything ships to a registry.
+
+To reverse: R5 then R6, in that order, as originally written.
 
 ## Non-Goals
 
@@ -366,12 +404,15 @@ Still open:
   `vicia_db`? This fork does not own the upstream crate name, so this is only
   possible if upstream cooperates. Assume no.
 - Should the public file extension remain `.graph` indefinitely?
-- Does the crates.io name need reserving before R6, or is the exposure window
-  short enough to accept? See "Open risk".
+- ~~Does the crates.io name need reserving before R6?~~ Answered: publishing
+  is deferred, so the exposure window is open-ended and accepted. See "Publish
+  Deferred".
 
 ## Current Recommendation
 
-Proceed to R3 — the package and type rename — as a single commit on its own
-branch, landing the `~/projects/vetch-memory` one-line dependency fix in the
-same session so the path dependency never sits broken. Keep Vetch
-maintenance-caller validation and any binding rename work on separate branches.
+Nothing is pending. R1–R3 landed, all three downstream consumers were repinned
+in the same session (`vetch-memory` `cac914f`, `being-public` `32c2563`;
+`vetch-app` needed no change because its sync script already emits
+`vicia_db`), and R4 is a decision to leave history alone rather than work to do.
+R5 and R6 stay closed until an outside consumer needs a registry release. Keep
+any binding rename work (V4) on its own branch.

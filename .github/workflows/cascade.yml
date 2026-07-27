@@ -7,8 +7,10 @@ name: Release Cascade
 # upstream's; this fork publishes nothing and owns none of those repos, so on a
 # tag push it could only poll for someone else's release and then fail.
 #
-# Re-arm alongside release.yml as part of the rename plan's V3 publish
-# decision, pointed at this fork's own package and binding repositories.
+# PUBLISHING WAS DEFERRED on 2026-07-27 — see "Publish Deferred" in
+# docs/VICIA_DB_RENAME_PLAN.md. There is no pending step that re-arms this.
+# If that decision is reversed, re-arm alongside release.yml and point this at
+# this fork's own package and binding repositories, not upstream's.
 on:
   workflow_dispatch:
 

@@ -32,8 +32,7 @@ A tiny, self-contained graph database with **Datalog queries** and **bi-temporal
 ## Vicia DB Transition
 
 This repository is **Vicia DB**, the Vetch-oriented successor name for the
-forked Minigraf line. As of 2026-07-27 the publish decision is made: this fork
-will be published to crates.io as `vicia-db`, starting at `0.1.0`.
+forked Minigraf line.
 
 The Rust package rename has landed. The crate is `vicia-db`, the import path is
 `vicia_db`, and `ViciaDb` is the primary handle type. `Minigraf` remains as a
@@ -41,6 +40,14 @@ type alias — it names the same type with the same API, so pre-rename source
 keeps compiling — and is not deprecated. The version restarts at `0.1.0` rather
 than continuing upstream's `1.1.1`; that number belongs to a different package
 under a different maintainer.
+
+**Publishing is deferred.** `vicia-db` is not on crates.io and
+`@vicia-db/browser` is not on npm, by decision rather than by backlog. Every
+consumer reaches this repository directly — by path, by pinned git revision, or
+through a vendored package build — so a registry release would buy a docs.rs
+page and a reserved name, at the cost of an irreversible publish and a release
+pipeline that has to stay armed. That trade is worth making when there is an
+outside consumer; there is not one yet. If you need one, open an issue.
 
 The language bindings still carry upstream's names. They move in a later slice.
 
@@ -57,8 +64,9 @@ the `run_idle_maintenance()` caller contract.
 
 ## Local Vetch browser sync
 
-Vicia's browser binding lives in `bindings/browser` and uses the same package
-identity planned for npm: `@vicia-db/browser`. Build the current checkout and
+Vicia's browser binding lives in `bindings/browser` and builds under the
+package name `@vicia-db/browser`. Nothing is published to npm — the name is the
+local package identity Vetch links against. Build the current checkout and
 atomically sync it into the sibling Vetch checkout with:
 
 ```bash
@@ -74,9 +82,9 @@ just sync /absolute/path/to/vetch-worktree
 The synced package includes `vicia-build.json` with the exact source commit,
 dirty-state flag, wasm hash, and wasm-pack version. Vetch consumes it through a
 `link:` dependency, so replacing the package directory takes effect without
-overwriting `node_modules` or changing imports. The same binding shim is the
-future public-package build surface; npm publication only replaces Vetch's
-dependency locator.
+overwriting `node_modules` or changing imports. This is the whole distribution
+path today; if npm publication is ever taken up, it would replace Vetch's
+dependency locator and nothing else.
 
 ## Vision
 
@@ -104,8 +112,9 @@ Vicia DB is a **single-file embedded graph database** that lets you:
 
 ## Installation
 
-`vicia-db` is **not on crates.io yet**. Until it is, depend on this repository
-by path or git revision:
+`vicia-db` is **not on crates.io**, by decision — see
+[Vicia DB Transition](#vicia-db-transition). Depend on this repository by path
+or git revision:
 
 ```toml
 [dependencies]
