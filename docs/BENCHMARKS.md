@@ -2480,6 +2480,47 @@ AEVT range. Every sample returned the exact 256 rows with no continuation.
 cargo test --test valid_time_diff_test --release -- --ignored --nocapture
 ```
 
+### Shared-fixture native baseline (2026-07-27)
+
+The A-2 receipt above builds its own in-test fixture, which the browser cannot
+open. To make a browser diff number interpretable, the same measurement is
+repeated against a fixture file the browser can import. `bench-1m-diff.graph`
+is `generate_bench_fixture 1000000 <out> 128`: the standard 1,000,000-fact
+`:bench/base-{i}` browser base plus the same 128 `:status/value` receipt
+entities, same UUIDs (`0x9000_0000 + i`) and same instants as the A-2 test, so
+one request shape serves both sides.
+
+Fixture: 309,190,656 bytes, 1,000,256 facts, SHA256
+`5eefb0c6da1714f830506f29851cc1b4e5ecc29e170d9b12b754b4026fc9caaa`. Copied to
+a temporary path before opening so the measured file's hash stays stable.
+1 warmup plus 20 timed samples, release build on the A0 host (AMD Ryzen 7
+7800X3D, WSL2 ext4); four consecutive runs.
+
+| Scope | p50 | p95 | max |
+|---|---:|---:|---:|
+| 128-entity exact set | 0.408–0.421 ms | 0.428–0.458 ms | 0.435–0.479 ms |
+| Whole-attribute range | 0.093–0.098 ms | 0.105–0.110 ms | 0.109–0.121 ms |
+
+Both scopes come in roughly 2x faster than the A-2 table. The diff work is
+identical — 128 exact EAVT ranges, or the 256-entry `:status/value` AEVT range
+— so the difference is base shape, not diff cost: A-2's base is 1,000,000
+single-attribute `:bulk/noise` entities, while this base spreads four
+attributes over its entities and yields a different index layout. This is the
+number a browser run on this fixture must be compared against, not the A-2
+table. Every sample returned the exact 256 rows with no continuation.
+
+The generator is not byte-reproducible in either mode — `tx_id` is wall-clock,
+so a rebuild produces a different file. Receipts pin the SHA256 of the one
+file they measured.
+
+```bash
+cargo run --release --example generate_bench_fixture -- \
+  1000000 /tmp/bench-fixtures/bench-1m-diff.graph 128
+VICIA_DIFF_FIXTURE=/tmp/bench-fixtures/bench-1m-diff.graph \
+  cargo test --test valid_time_diff_test --release -- \
+  --ignored measure_valid_time_diff_fixture --nocapture
+```
+
 ---
 
 ## Reproducing
