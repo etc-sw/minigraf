@@ -10,6 +10,8 @@ a Vicia storage dependency.
 ```
 
 The current clean 1M reference run is
+[`2026-07-28-hal7800-full.md`](../benchmarks/baselines/cross-db/2026-07-28-hal7800-full.md),
+which also tabulates the movement since the previous baseline,
 [`2026-07-12-hal7800-full.md`](../benchmarks/baselines/cross-db/2026-07-12-hal7800-full.md).
 
 Each engine runs in a fresh process and receives the same base fact count,
@@ -25,6 +27,20 @@ percentiles and correctness from raw samples.
 reads, and scan. It is a whole-workload capacity signal, not a scan-only memory
 measurement. Use a fresh-process `verify` run under `/usr/bin/time -v` when
 attributing query-only resident memory.
+
+## Vicia's query work bound
+
+Vicia bounds query work at `DEFAULT_MAX_RESULTS` (1,000,000 rows) and rejects an
+incomplete result instead of truncating it. The `full` profile ends with more
+facts than that, so a materialized full scan crosses the bound and a
+default-configured handle refuses the query outright. The harness opens its
+Vicia handles with a raised `OpenOptions::max_results` so the scan column stays
+comparable with engines that have no equivalent guard.
+
+Read the refusal as a product property, not a harness workaround: at this size
+the default configuration will not materialize the scan at all, and the
+`materialized scan` column measures what it costs when a caller explicitly asks
+for it anyway. The `engine aggregate` column is the shape ordinary callers use.
 
 ## Comparison roles
 

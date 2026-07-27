@@ -13,6 +13,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 const REDB_FACTS: TableDefinition<u64, i64> = TableDefinition::new("facts");
 const INSERT_BATCH: u64 = 1_000;
+const VICIA_BENCH_MAX_RESULTS: usize = 64_000_000;
 
 #[derive(Clone, Copy)]
 enum Engine {
@@ -237,7 +238,7 @@ fn measure_scan(engine: Engine, db_dir: &Path, workload: ScanWorkload) -> Result
 
     let (count, checksum, execution_boundary, elapsed_ms) = match engine {
         Engine::Vicia => {
-            let db = OpenOptions::new().path(db_dir.join("vicia.graph")).open()?;
+            let db = vicia_open(&db_dir.join("vicia.graph"))?;
             let started = Instant::now();
             let (count, checksum) = match workload {
                 ScanWorkload::EngineAggregate => vicia_aggregate(&db)?,
@@ -493,7 +494,7 @@ fn crash_write(
 fn append_engine(engine: Engine, db_dir: &Path, start: u64, end: u64) -> Result<()> {
     match engine {
         Engine::Vicia => {
-            let db = OpenOptions::new().path(db_dir.join("vicia.graph")).open()?;
+            let db = vicia_open(&db_dir.join("vicia.graph"))?;
             vicia_insert(&db, start, end)
         }
         Engine::Cozo => {
@@ -514,7 +515,7 @@ fn append_engine(engine: Engine, db_dir: &Path, start: u64, end: u64) -> Result<
 fn verify_after_crash(engine: Engine, db_dir: &Path, minimum_count: u64) -> Result<CrashReceipt> {
     let (count, checksum, integrity) = match engine {
         Engine::Vicia => {
-            let db = OpenOptions::new().path(db_dir.join("vicia.graph")).open()?;
+            let db = vicia_open(&db_dir.join("vicia.graph"))?;
             let (count, checksum) = vicia_scan(&db)?;
             (count, checksum, "wal-replay-open-and-full-scan".to_string())
         }
@@ -592,7 +593,7 @@ fn verify_after_crash(engine: Engine, db_dir: &Path, minimum_count: u64) -> Resu
 fn run_vicia(dir: &Path, config: Config) -> Result<RunMeasurements> {
     let path = dir.join("vicia.graph");
     let started = Instant::now();
-    let db = OpenOptions::new().path(&path).open()?;
+    let db = vicia_open(&path)?;
     for start in (0..config.base_facts).step_by(INSERT_BATCH as usize) {
         vicia_insert(&db, start, (start + INSERT_BATCH).min(config.base_facts))?;
     }
@@ -605,7 +606,7 @@ fn run_vicia(dir: &Path, config: Config) -> Result<RunMeasurements> {
     let mut read_ms = Vec::new();
     for cycle in 0..config.cycles {
         let opened = Instant::now();
-        let db = OpenOptions::new().path(&path).open()?;
+        let db = vicia_open(&path)?;
         reopen_ms.push(elapsed_ms(opened));
         let visible = config.base_facts + cycle * config.facts_per_cycle;
         for probe in 0..config.reads_per_cycle {
@@ -654,6 +655,20 @@ fn vicia_point(db: &vicia_db::ViciaDb, entity: u64) -> Result<i64> {
         .and_then(|row| row.first())
         .and_then(|value| value.as_integer())
         .context("Vicia point query returned no integer")
+}
+
+fn vicia_open(path: &Path) -> Result<vicia_db::ViciaDb> {
+    // Vicia bounds query work at DEFAULT_MAX_RESULTS (1,000,000 rows) and rejects
+    // an incomplete result rather than truncating it. The `full` profile builds
+    // 1,000,000 base facts and then appends, so a materialized full scan crosses
+    // that bound and the run aborts. The bound is the product's designed refusal,
+    // not a harness bug — the benchmark raises it only so the scan column stays
+    // comparable with engines that have no equivalent guard.
+    OpenOptions::new()
+        .max_results(VICIA_BENCH_MAX_RESULTS)
+        .path(path)
+        .open()
+        .map_err(Into::into)
 }
 
 fn vicia_scan(db: &vicia_db::ViciaDb) -> Result<(u64, i128)> {
