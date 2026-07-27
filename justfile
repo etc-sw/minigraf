@@ -20,6 +20,11 @@ publish-browser-dry-run VETCH_APP_DIR="":
 publish-browser VETCH_APP_DIR="":
     VICIA_NPM_PUBLISH=1 ./scripts/sync-vetch-browser-package.sh "{{VETCH_APP_DIR}}"
 
+# Run every gate and leave the verified package in target/npm-package for a
+# separate `npm publish`. Use this when the account requires a one-time password.
+publish-browser-stage VETCH_APP_DIR="":
+    VICIA_NPM_KEEP_STAGE=1 ./scripts/sync-vetch-browser-package.sh "{{VETCH_APP_DIR}}"
+
 # Clone/update the reference engines under ~/db-ref and link the local harness.
 db-ref-setup:
     ./scripts/setup-db-refs.sh

@@ -21,16 +21,38 @@ allow_dirty_publish="${VICIA_SYNC_ALLOW_DIRTY_PUBLISH:-0}"
 # release is for outside consumers, not for Vetch.
 npm_publish="${VICIA_NPM_PUBLISH:-0}"
 npm_publish_dry_run="${VICIA_NPM_PUBLISH_DRY_RUN:-0}"
+# Run every gate, then leave the verified package on disk instead of publishing
+# it. This exists because npm one-time passwords expire in about 30 seconds
+# while the gate chain takes minutes — a code entered at the start of the run is
+# always dead by the time `npm publish` is reached. Staging splits the two so
+# the OTP is typed against a publish that starts immediately.
+npm_keep_stage="${VICIA_NPM_KEEP_STAGE:-0}"
 
+release_mode=0
+release_flag=""
 if [[ "$npm_publish" == 1 ]]; then
+  release_mode=1
+  release_flag="VICIA_NPM_PUBLISH"
+fi
+if [[ "$npm_keep_stage" == 1 ]]; then
+  if [[ "$release_mode" == 1 ]]; then
+    echo "error: VICIA_NPM_PUBLISH cannot be combined with VICIA_NPM_KEEP_STAGE" >&2
+    exit 1
+  fi
+  release_mode=1
+  release_flag="VICIA_NPM_KEEP_STAGE"
+fi
+
+if [[ "$release_mode" == 1 ]]; then
   # A published artifact has to be reproducible from a commit. There is no
-  # allow-dirty escape hatch here, unlike the Vetch-local sync.
+  # allow-dirty escape hatch here, unlike the Vetch-local sync. Staging is held
+  # to the same rule: a staged package exists only to be published.
   if [[ "$allow_dirty_publish" == 1 ]]; then
-    echo "error: VICIA_SYNC_ALLOW_DIRTY_PUBLISH cannot be combined with VICIA_NPM_PUBLISH" >&2
+    echo "error: VICIA_SYNC_ALLOW_DIRTY_PUBLISH cannot be combined with $release_flag" >&2
     exit 1
   fi
   if [[ "$verify_only" == 1 ]]; then
-    echo "error: VICIA_SYNC_VERIFY_ONLY cannot be combined with VICIA_NPM_PUBLISH" >&2
+    echo "error: VICIA_SYNC_VERIFY_ONLY cannot be combined with $release_flag" >&2
     exit 1
   fi
   command -v npm >/dev/null || {
@@ -96,7 +118,7 @@ if [[ -n "$(git -C "$repo_root" status --porcelain --untracked-files=normal)" ]]
 fi
 if [[ "$source_dirty" == true && "$verify_only" != 1 && "$allow_dirty_publish" != 1 ]]; then
   echo "error: refusing to publish a browser package from a dirty Vicia checkout" >&2
-  if [[ "$npm_publish" == 1 ]]; then
+  if [[ "$release_mode" == 1 ]]; then
     echo "hint: an npm release must be reproducible from a commit; commit or stash first" >&2
   else
     echo "hint: use 'just sync-local' to verify and publish the current local worktree" >&2
@@ -203,6 +225,26 @@ fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
 NODE
   echo "error: Vicia source changed while integration gates were running; publish aborted" >&2
   exit 1
+fi
+
+if [[ "$npm_keep_stage" == 1 ]]; then
+  staged="$repo_root/target/npm-package"
+  rm -rf "$staged"
+  mkdir -p "$(dirname "$staged")"
+  mv "$stage_package" "$staged"
+  echo "staged @vicia-db/browser from $source_commit — nothing published"
+  echo "source kind: $source_kind"
+  echo "workspace sha256: $source_workspace_sha256"
+  echo "wasm sha256: $wasm_sha256"
+  echo "receipt: $latest_receipt"
+  echo
+  echo "every gate passed. publish it with a FRESH one-time password:"
+  echo
+  echo "  cd $staged && npm publish --access public --otp=<6 digits>"
+  echo
+  echo "the staged package is bound to commit $source_commit; rebuild it if the"
+  echo "working tree moves before you publish"
+  exit 0
 fi
 
 if [[ "$npm_publish" == 1 ]]; then

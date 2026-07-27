@@ -99,12 +99,34 @@ cargo publish --dry-run     # full build of the packaged crate; uploads nothing
 cargo publish               # IRREVERSIBLE
 ```
 
+The root `Cargo.lock` is not tracked, so a release is not byte-reproducible
+from the repository alone — two checkouts of the same commit can resolve
+different dependency versions. This has already bitten once: a stale lock pinned
+`wasm-bindgen` to a version the installed test runner did not match, and the
+browser integration gate caught it before publishing. If a gate fails on a
+version mismatch, regenerate the lock (`rm Cargo.lock && cargo generate-lockfile`)
+before assuming the code is wrong.
+
 **Browser package — `@vicia-db/browser` on npm**
 
 ```sh
 just publish-browser-dry-run   # every gate, publishes nothing
 just publish-browser           # IRREVERSIBLE
 ```
+
+If the npm account requires a one-time password, `just publish-browser` will
+fail with `EOTP` when run non-interactively: the gate chain takes minutes and an
+OTP lives about thirty seconds, so a code supplied up front is always expired by
+the time the publish starts. Split the two instead:
+
+```sh
+just publish-browser-stage                       # every gate, publishes nothing
+cd target/npm-package
+npm publish --access public --otp=<6 digits>     # IRREVERSIBLE
+```
+
+The staged package is bound to the commit it was built from. If the working
+tree moves before you publish, rebuild it.
 
 `publish-browser` reuses the Vetch sync pipeline: it builds the package with
 `wasm-pack`, stamps `vicia-build.json` with the source commit and wasm hash,
