@@ -10,6 +10,8 @@ a Vicia storage dependency.
 ```
 
 The current clean 1M reference run is
+[`2026-07-28-hal7800-full.md`](../benchmarks/baselines/cross-db/2026-07-28-hal7800-full.md),
+which also tabulates the movement since the previous baseline,
 [`2026-07-12-hal7800-full.md`](../benchmarks/baselines/cross-db/2026-07-12-hal7800-full.md).
 
 Each engine runs in a fresh process and receives the same base fact count,

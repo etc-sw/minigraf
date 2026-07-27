@@ -1,5 +1,7 @@
 # Vicia DB
 
+[![crates.io](https://img.shields.io/crates/v/vicia-db.svg)](https://crates.io/crates/vicia-db)
+[![npm](https://img.shields.io/npm/v/@vicia-db/browser.svg)](https://www.npmjs.com/package/@vicia-db/browser)
 [![Build Status](https://github.com/etc-sw/vicia-db/actions/workflows/rust.yml/badge.svg)](https://github.com/etc-sw/vicia-db/actions/workflows/rust.yml)
 [![Clippy Status](https://github.com/etc-sw/vicia-db/actions/workflows/rust-clippy.yml/badge.svg)](https://github.com/etc-sw/vicia-db/actions/workflows/rust-clippy.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/etc-sw/vicia-db#license)
@@ -12,8 +14,10 @@
 > maintained independently for the Vetch line. It is **not** the upstream
 > project and is not endorsed by it.
 >
-> - **This fork publishes only under its own names.** `vicia-db` on crates.io
->   and `@vicia-db/browser` on npm are this fork's. Every package named
+> - **This fork publishes only under its own names.**
+>   [`vicia-db`](https://crates.io/crates/vicia-db) on crates.io and
+>   [`@vicia-db/browser`](https://www.npmjs.com/package/@vicia-db/browser) on
+>   npm are this fork's; both are live at `0.1.0`. Every package named
 >   `minigraf` below — on crates.io, npm, PyPI, and Maven Central — is
 >   **upstream's**, and reflects upstream's code, not this fork's. The two are
 >   not interchangeable and have diverged since v10.
@@ -42,13 +46,17 @@ keeps compiling — and is not deprecated. The version restarts at `0.1.0` rathe
 than continuing upstream's `1.1.1`; that number belongs to a different package
 under a different maintainer.
 
-**Publishing is manual.** `vicia-db` goes to crates.io and
-`@vicia-db/browser` goes to npm, both released by hand. The release workflows in
-`.github/workflows/` stay disarmed on purpose: there is no tag trigger and no
-registry token in CI, so a routine `git push --tags` cannot publish anything.
-Every release is a deliberate local command.
+**Both packages are published.** `vicia-db 0.1.0` is on crates.io and
+`@vicia-db/browser 0.1.0` is on npm, released by hand on 2026-07-27.
 
-The language bindings still carry upstream's names. They move in a later slice.
+**Publishing stays manual.** The release workflows in `.github/workflows/` are
+disarmed on purpose: there is no tag trigger and no registry token in CI, so a
+routine `git push --tags` cannot publish anything. Every release is a deliberate
+local command — see [Releasing](#releasing). This is a decision, not an unfinished
+step; adding a registry token would arm a publish nobody asked for.
+
+The browser binding is published under this fork's own name. The Python,
+Node.js, Java, and C bindings still carry upstream's. They move in a later slice.
 
 The file format does not change. `.graph` files, the `MGRF` header magic, and
 every format version remain exactly as they are — format stability outranks
@@ -353,7 +361,8 @@ No other database offers this combination:
 |---|---|---|
 | Python | [`minigraf` on PyPI](https://pypi.org/p/minigraf) | [minigraf-python](https://github.com/project-minigraf/minigraf-python) |
 | Node.js | [`minigraf` on npm](https://www.npmjs.com/package/minigraf) | [minigraf-node](https://github.com/project-minigraf/minigraf-node) |
-| Browser WASM | [`@minigraf/browser` on npm](https://www.npmjs.com/package/@minigraf/browser) | [minigraf-wasm](https://github.com/project-minigraf/minigraf-wasm) |
+| Browser WASM | [`@vicia-db/browser` on npm](https://www.npmjs.com/package/@vicia-db/browser) — **this fork** | (in this repo — [`bindings/browser`](bindings/browser)) |
+| Browser WASM | [`@minigraf/browser` on npm](https://www.npmjs.com/package/@minigraf/browser) — upstream's | [minigraf-wasm](https://github.com/project-minigraf/minigraf-wasm) |
 | WASI | [`@minigraf/wasi` on npm](https://www.npmjs.com/package/@minigraf/wasi) | [minigraf-wasm](https://github.com/project-minigraf/minigraf-wasm) |
 | Java | (in this repo — Phase 2 split pending) | — |
 | Android | (in this repo — Phase 2 split pending) | — |
@@ -390,7 +399,13 @@ See the [Mobile Integration](https://github.com/project-minigraf/minigraf/wiki/U
 
 ### For WASM / Browser
 
-Published compatibility package: [`@minigraf/browser`](https://www.npmjs.com/package/@minigraf/browser) (IndexedDB-backed, `wasm-pack`). Vetch consumes the current checkout through its local `@vicia-db/browser` package boundary. `BrowserDb` remains the low-level 1.x compatibility surface. Ordinary foreground callers should open `BrowserInteractiveLedger`, which always uses the paged path and exposes only bounded transaction-pinned read views plus `executeAtomic(commands)`. Reads require row and byte budgets, reject unindexed plans or incomplete results, and select current, any-valid-time, `asOf`, or exact valid time through the read-view constructor. Portability and O(total) work belong to `BrowserMaintenanceLedger`, which owns verified export, strict import, caller-scheduled idle maintenance, and explicit current-projection rebuilds but cannot query or write. Keep foreground writer ownership under a Web Lock; run legacy migration, import, full export, and maintenance in a disposable worker that acquires the same lock, reports its outcome, terminates, and lets the caller reopen the interactive capability. See the runnable [`examples/browser`](examples/browser) flow, [`docs/API_COMPATIBILITY_AND_MIGRATION.md`](docs/API_COMPATIBILITY_AND_MIGRATION.md), [`docs/DURABILITY_AND_CALLER_RULES.md`](docs/DURABILITY_AND_CALLER_RULES.md), and [`docs/MAINTENANCE_API_CONTRACT.md`](docs/MAINTENANCE_API_CONTRACT.md).
+This fork publishes [`@vicia-db/browser`](https://www.npmjs.com/package/@vicia-db/browser) (IndexedDB-backed, `wasm-pack`), built from `bindings/browser` in this repository:
+
+```sh
+npm install @vicia-db/browser
+```
+
+Upstream's [`@minigraf/browser`](https://www.npmjs.com/package/@minigraf/browser) is a different package and is not a drop-in substitute. Vetch consumes the current checkout through its local `@vicia-db/browser` package boundary. `BrowserDb` remains the low-level 1.x compatibility surface. Ordinary foreground callers should open `BrowserInteractiveLedger`, which always uses the paged path and exposes only bounded transaction-pinned read views plus `executeAtomic(commands)`. Reads require row and byte budgets, reject unindexed plans or incomplete results, and select current, any-valid-time, `asOf`, or exact valid time through the read-view constructor. Portability and O(total) work belong to `BrowserMaintenanceLedger`, which owns verified export, strict import, caller-scheduled idle maintenance, and explicit current-projection rebuilds but cannot query or write. Keep foreground writer ownership under a Web Lock; run legacy migration, import, full export, and maintenance in a disposable worker that acquires the same lock, reports its outcome, terminates, and lets the caller reopen the interactive capability. See the runnable [`examples/browser`](examples/browser) flow, [`docs/API_COMPATIBILITY_AND_MIGRATION.md`](docs/API_COMPATIBILITY_AND_MIGRATION.md), [`docs/DURABILITY_AND_CALLER_RULES.md`](docs/DURABILITY_AND_CALLER_RULES.md), and [`docs/MAINTENANCE_API_CONTRACT.md`](docs/MAINTENANCE_API_CONTRACT.md).
 
 WASI build (`wasm32-wasip1`) remains available as [`@minigraf/wasi`](https://www.npmjs.com/package/@minigraf/wasi) and as a GitHub Releases artifact. File format v12 retains v11's generation-bound, page-local base integrity checks and adds adaptive prefix-compressed index leaves. V11 remains directly readable: foreground open and delta checkpoints preserve its bytes, while caller-scheduled idle maintenance is the COW upgrade boundary. Explicit native and browser maintenance capabilities can publish a bounded attribute list as a v13 current-projection catalog; ordinary writes remain v12. Transaction-pinned read views use the catalog only for exact-watermark, single-attribute, ungrouped `count`/`sum` queries, with a bounded resident tail overlay keeping post-publication writes on that route and generation changes, unsupported query shapes, corrupt projection copies, or over-budget tails falling back to the full-history ledger. Browser publication is one atomic IndexedDB transaction and reopens the selected v13 authority after commit. On the recorded 1M-fact Chrome 150 matrix, paged open starts in a 17.8 ms five-run maximum and the open-plus-six-probe phase adds at most 51.1 MiB of sampled PSS; one-fact writes remain 8.3 ms p95. Legacy migration, import, full verified export, recompact, and projection rebuild are explicit O(total) operations and must run in a disposable worker. R2-C5 and its bounded-contract correction deliver the complete v13 boundary to Vetch from clean source `77a3008`; the generated JS glue, declarations, manifests, licenses, WASM, and provenance pass the 78-test real-Chrome package matrix, complete Vetch authority suite, TypeScript check, and production build. Foreground read views independently cap complete results at 10,000 rows, while resident projection tails count empty replacements toward both their entity and byte bounds. The package version, ordinary v12 writer default, and Vetch scheduling policy remain unchanged. R3 bounded-memory recompact is next.
 
@@ -403,7 +418,7 @@ Language bindings ship as `minigraf` on PyPI, `minigraf` on npm (Node.js native 
 Vicia DB runs as:
 - ✅ An embedded library
 - ✅ A standalone binary (interactive REPL)
-- ✅ Browser WASM — `@minigraf/browser` (IndexedDB-backed, `wasm-pack`)
+- ✅ Browser WASM — `@vicia-db/browser` (IndexedDB-backed, `wasm-pack`)
 - ✅ Server-side WASM — `wasm32-wasip1` / WASI (Wasmtime, Wasmer, Cloudflare Workers)
 - ✅ Android, iOS, Python, Node.js, Java, C — via UniFFI / napi-rs / cbindgen
 
@@ -422,10 +437,8 @@ See [ROADMAP.md](ROADMAP.md) for the full phase plan, current status, and releas
 These numbers come from **two different machines**; cross-machine comparison is
 indicative only. See [BENCHMARKS.md](docs/BENCHMARKS.md) for full tables and
 per-row provenance, [BENCHMARK_MILESTONES.md](docs/BENCHMARK_MILESTONES.md) for
-the machine-checked development and release gates, and
-[CROSS_DB_STRESS_BENCHMARK.md](docs/CROSS_DB_STRESS_BENCHMARK.md) for the
-classified Vicia/CozoDB/SQLite/redb speed, memory, storage, reopen, and kill-9
-comparison.
+the machine-checked development and release gates. The Vicia/CozoDB/SQLite/redb
+comparison has its own section [below](#against-other-embedded-engines).
 
 - **H0** — Intel Core i7-1065G7 @ 1.30GHz, 16 GB, Rust 1.94.0
 - **A0** — AMD Ryzen 7 7800X3D, 32 GB, WSL2, Rust 1.96.0-nightly
@@ -447,6 +460,52 @@ The last two rows date from the v6 format and have not been re-measured since;
 the current format is v12 with an explicit v13 current-projection catalog.
 
 File-backed databases enforce a maximum fact size of **4 080 serialised bytes** per fact. In-memory databases have no limit.
+
+### Against other embedded engines
+
+One deterministic EAV workload — 1,000,000 base facts, 100 durable
+append/reopen cycles, deterministic point reads, one aggregate, one full scan,
+then `SIGKILL` and recovery — run against each engine in a fresh process on the
+same host. Clean source `fec3940`, 2026-07-28, A0.
+
+| | Vicia | CozoDB 0.7.6 | SQLite | redb 4.1 |
+|---|---:|---:|---:|---:|
+| role | bi-temporal Datalog **product** | Datalog/graph **peer** | relational EAV **baseline** | key-value **floor** |
+| build | 6,135 ms | 6,934 ms | 986 ms | 1,643 ms |
+| append p95 | 2.56 ms | 3.98 ms | 2.40 ms | 1.25 ms |
+| point read p95 | 0.017 ms | 0.100 ms | 0.007 ms | 0.004 ms |
+| reopen p95 | 11.25 ms | 0.29 ms | 0.36 ms | 0.50 ms |
+| engine aggregate | 174 ms / 27 MiB | 327 ms / 18 MiB | 26 ms / 12 MiB | n/a |
+| materialized scan | 1,971 ms / 516 MiB | 972 ms / 554 MiB | 45 ms / 20 MiB | 86 ms / 50 MiB |
+| storage | 266 MiB (276 B/fact) | 79 MiB (82 B/fact) | 12 MiB (12 B/fact) | 55 MiB (57 B/fact) |
+| kill-9 recovery | exact | exact | exact | exact |
+
+Read this as four different things, not one ranking. redb is a storage floor
+that has had query, graph, and temporal semantics removed; SQLite is a
+hand-shaped current-value table; only CozoDB is a semantic peer. All four
+recovered exact counts and checksums after `SIGKILL`.
+
+Against that peer, Vicia leads build, append, point read, and aggregate, and
+**trails on reopen (39×), materialized scan (2.0×), and bytes per fact (3.4×)**.
+Storage amplification is structural — Vicia stores bi-temporal identity plus
+four graph indexes where the others store current values — but the reopen gap is
+paid on every open, and is the sharpest remaining boundary.
+
+The materialized-scan column needs a caveat: at this size a default-configured
+Vicia handle **refuses that query outright** rather than returning a truncated
+result, because it crosses the 1,000,000-row work bound. The benchmark raises the
+bound to measure past the refusal. The aggregate column is the shape ordinary
+callers use.
+
+Full tables, provenance, and the movement since the previous baseline are in
+[`benchmarks/baselines/cross-db/2026-07-28-hal7800-full.md`](benchmarks/baselines/cross-db/2026-07-28-hal7800-full.md);
+methodology and comparison roles are in
+[CROSS_DB_STRESS_BENCHMARK.md](docs/CROSS_DB_STRESS_BENCHMARK.md). Reproduce with:
+
+```bash
+./scripts/run-cross-db-stress.sh smoke   # 10K facts, minutes
+./scripts/run-cross-db-stress.sh full    # 1M facts, the numbers above
+```
 
 ## Contributing
 
