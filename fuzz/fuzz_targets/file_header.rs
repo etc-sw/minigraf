@@ -13,5 +13,5 @@ fuzz_target!(|data: &[u8]| {
     if std::fs::write(&path, &page).is_err() {
         return;
     }
-    let _ = minigraf::db::Minigraf::open(&path);
+    let _ = vicia_db::db::ViciaDb::open(&path);
 });

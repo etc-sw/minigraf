@@ -1,14 +1,14 @@
 use anyhow::{Context, Result, bail};
-use minigraf::{
-    InteractiveLedger, MaintenanceLedger, ProjectionReadDiagnostics, QueryResult, ReadViewOptions,
-    Value,
-};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Read;
 use std::path::Path;
 use std::process::Command;
 use std::time::Instant;
+use vicia_db::{
+    InteractiveLedger, MaintenanceLedger, ProjectionReadDiagnostics, QueryResult, ReadViewOptions,
+    Value,
+};
 
 const ATTRIBUTE: &str = ":projection/value";
 const QUERY: &str =

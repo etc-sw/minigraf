@@ -16,7 +16,7 @@
 
 //! Zero-config, single-file, embedded graph database with bi-temporal Datalog queries.
 //!
-//! Minigraf is the SQLite of graph databases: embedded, no server, no configuration,
+//! Vicia DB is the SQLite of graph databases: embedded, no server, no configuration,
 //! a single portable `.graph` file. It stores data as Entity-Attribute-Value facts,
 //! queries them with [Datalog](https://en.wikipedia.org/wiki/Datalog), and tracks every
 //! change with full bi-temporal history (transaction time + valid time).
@@ -25,16 +25,16 @@
 //!
 //! ```toml
 //! [dependencies]
-//! minigraf = "0.21"
+//! vicia-db = "0.1"
 //! ```
 //!
 //! # Quick Start
 //!
 //! ```
-//! use minigraf::{Minigraf, BindValue};
+//! use vicia_db::{ViciaDb, BindValue};
 //!
 //! // Open (or create) a database
-//! let db = Minigraf::in_memory().unwrap();
+//! let db = ViciaDb::in_memory().unwrap();
 //!
 //! // Assert facts
 //! db.execute(r#"(transact [[:alice :person/name "Alice"]
@@ -67,13 +67,13 @@
 //! | `bench-internals` | native | Exposes repository-only cursor and pending/WAL memory diagnostics for benchmark receipts; not a stable application API |
 //!
 //! The `browser` feature is only meaningful on the `wasm32-unknown-unknown` target.
-//! When browsing docs on [docs.rs](https://docs.rs/minigraf), switch the target to
+//! When browsing docs on [docs.rs](https://docs.rs/vicia-db), switch the target to
 //! `wasm32-unknown-unknown` (top-right target selector) to see the full browser API.
 //!
 //! ## WebAssembly targets
 //!
 //! - **Browser** (`wasm32-unknown-unknown` + `browser` feature) — `wasm-pack build --target web --features browser`
-//! - **WASI / server-side** (`wasm32-wasip1`) — `cargo build --target wasm32-wasip1 --release --bin minigraf`
+//! - **WASI / server-side** (`wasm32-wasip1`) — `cargo build --target wasm32-wasip1 --release --bin vicia-db`
 
 pub mod db;
 #[cfg(test)]
@@ -81,7 +81,7 @@ pub(crate) mod gate_e_test_support;
 pub(crate) mod graph;
 pub(crate) mod json_value;
 pub(crate) mod query;
-/// Interactive REPL for exploring a [`Minigraf`] database from the command line.
+/// Interactive REPL for exploring a [`ViciaDb`] database from the command line.
 pub mod repl;
 /// A6 framed pipe session mode — NDJSON protocol for caller-owned child processes.
 #[cfg(not(target_arch = "wasm32"))]
@@ -103,17 +103,19 @@ pub use db::{
     ENTITY_ATTRIBUTE_HISTORY_MAX_RESULT_BYTES, ENTITY_ATTRIBUTE_HISTORY_MAX_SOURCE_ENTRIES,
     EntityAttributeHistoryCursor, EntityAttributeHistoryPage, EntityAttributeHistoryRequest,
     InteractiveLedger, InteractiveWriteTransaction, MaintenanceAdvice, MaintenanceCheckpointEffect,
-    MaintenanceDeltaEffect, MaintenanceLedger, MaintenanceOutcome, Minigraf, OpenOptions,
+    MaintenanceDeltaEffect, MaintenanceLedger, MaintenanceOutcome, OpenOptions,
     ProjectionMaintenanceOutcome, READ_VIEW_MAX_QUERY_WORK_ROWS, READ_VIEW_MAX_ROWS, ReadView,
     ReadViewOptions, ReadViewValidAt, VALID_TIME_DIFF_MAX_IDS, VALID_TIME_DIFF_MAX_RESULT_BYTES,
     VALID_TIME_DIFF_MAX_SOURCE_ENTRIES, ValidTimeDiffChange, ValidTimeDiffCursor,
-    ValidTimeDiffPage, ValidTimeDiffRequest, ValidTimeDiffRow, WriteTransaction,
+    ValidTimeDiffPage, ValidTimeDiffRequest, ValidTimeDiffRow, ViciaDb, WriteTransaction,
 };
-/// Vicia DB compatibility name for the primary embedded database handle.
+/// Pre-rename name for the primary embedded database handle, kept as an alias.
 ///
-/// This is intentionally a type alias during the Vicia DB transition: existing
-/// `Minigraf` code and new `ViciaDb` code use the same API and file format.
-pub type ViciaDb = Minigraf;
+/// [`ViciaDb`] is the primary type. This alias exists so code written against
+/// the `minigraf` package keeps compiling after the rename — it names the same
+/// type, the same API, and the same on-disk format. It is not deprecated; the
+/// fork simply no longer leads with the upstream name.
+pub type Minigraf = ViciaDb;
 pub use repl::Repl;
 
 // EAV value types — users construct and match on these

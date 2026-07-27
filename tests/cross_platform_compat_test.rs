@@ -1,5 +1,5 @@
 //! Cross-platform `.graph` file compatibility tests (native side).
-// These tests use Minigraf::open() and the file system, which are not available
+// These tests use ViciaDb::open() and the file system, which are not available
 // on wasm32 targets. wasm-pack compiles integration tests too, so gate the
 // entire file.
 #![cfg(not(target_arch = "wasm32"))]
@@ -8,16 +8,16 @@
 //!
 //! Verifies that raw page bytes produced by the native storage layer are
 //! self-consistent (mimicking what `BrowserDb::export_graph` / `import_graph`
-//! do) and that the committed binary fixture is readable by `Minigraf::open`.
+//! do) and that the committed binary fixture is readable by `ViciaDb::open`.
 //!
 //! The companion browser side lives in `src/browser/mod.rs` under
 //! `#[wasm_bindgen_test]` and loads the same fixture via `include_bytes!`.
 
-use minigraf::{Minigraf, QueryResult};
 use std::path::PathBuf;
+use vicia_db::{QueryResult, ViciaDb};
 
 fn tmp(tag: &str) -> PathBuf {
-    std::env::temp_dir().join(format!("minigraf_compat_{tag}.graph"))
+    std::env::temp_dir().join(format!("vicia_db_compat_{tag}.graph"))
 }
 
 fn cleanup(path: &PathBuf) {
@@ -40,7 +40,7 @@ fn native_raw_page_bytes_round_trip() {
 
     // Produce a populated, checkpointed .graph file.
     {
-        let db = Minigraf::open(&src).expect("open src");
+        let db = ViciaDb::open(&src).expect("open src");
         db.execute(r#"(transact [[:alice :name "Alice"]])"#)
             .expect("transact name");
         db.execute("(transact [[:alice :age 30]])")
@@ -53,7 +53,7 @@ fn native_raw_page_bytes_round_trip() {
     std::fs::write(&dst, &bytes).expect("write dst");
 
     // Open the byte-copy and verify both facts survive.
-    let db2 = Minigraf::open(&dst).expect("open dst");
+    let db2 = ViciaDb::open(&dst).expect("open dst");
 
     let r = db2
         .execute("(query [:find ?name :where [?e :name ?name]])")
@@ -80,7 +80,7 @@ fn native_raw_page_bytes_round_trip() {
 }
 
 /// Load the committed fixture (produced by `cargo run --example generate_compat_fixture`)
-/// via `Minigraf::open` and assert that the known facts are present.
+/// via `ViciaDb::open` and assert that the known facts are present.
 ///
 /// This fixture is also loaded by the browser WASM tests via `include_bytes!` +
 /// `BrowserDb::import_graph`, completing the cross-boundary coverage.
@@ -88,12 +88,12 @@ fn native_raw_page_bytes_round_trip() {
 fn fixture_readable_by_native() {
     let fixture: &[u8] = include_bytes!("fixtures/compat.graph");
 
-    // Write to a temp path so Minigraf::open can use it.
+    // Write to a temp path so ViciaDb::open can use it.
     let path = tmp("fixture");
     cleanup(&path);
     std::fs::write(&path, fixture).expect("write fixture");
 
-    let db = Minigraf::open(&path).expect("open fixture");
+    let db = ViciaDb::open(&path).expect("open fixture");
 
     let r = db
         .execute("(query [:find ?name :where [?e :name ?name]])")

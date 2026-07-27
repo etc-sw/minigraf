@@ -1,12 +1,12 @@
-//! Public `Minigraf` facade with `WriteTransaction` and `OpenOptions`.
+//! Public `ViciaDb` facade with `WriteTransaction` and `OpenOptions`.
 //!
-//! This module provides the primary user-facing API for Minigraf:
-//! - `Minigraf::open()` / `Minigraf::in_memory()` for database creation
-//! - `Minigraf::execute()` for implicit (self-contained) transactions
-//! - `Minigraf::begin_write()` / `WriteTransaction` for explicit transactions
-//! - `Minigraf::checkpoint()` for manual WAL compaction
-//! - `Minigraf::backup_to()` for linearized live-writer snapshots
-//! - `Minigraf::export_fact_log()` for deterministic append-only audit export
+//! This module provides the primary user-facing API for ViciaDb:
+//! - `ViciaDb::open()` / `ViciaDb::in_memory()` for database creation
+//! - `ViciaDb::execute()` for implicit (self-contained) transactions
+//! - `ViciaDb::begin_write()` / `WriteTransaction` for explicit transactions
+//! - `ViciaDb::checkpoint()` for manual WAL compaction
+//! - `ViciaDb::backup_to()` for linearized live-writer snapshots
+//! - `ViciaDb::export_fact_log()` for deterministic append-only audit export
 
 #[cfg(not(target_arch = "wasm32"))]
 use crate::graph::types::tx_id_now;
@@ -1151,9 +1151,9 @@ impl Default for ReadViewOptions {
 ///
 /// Every query uses the same transaction and valid-time coordinates. Queries
 /// must have an indexed entity or attribute seed and an explicit result bound;
-/// use [`Minigraf::execute`] for intentionally unbounded or historical Datalog.
+/// use [`ViciaDb::execute`] for intentionally unbounded or historical Datalog.
 pub struct ReadView<'a> {
-    db: &'a Minigraf,
+    db: &'a ViciaDb,
     tx_count: u64,
     valid_at: ValidAt,
 }
@@ -1478,7 +1478,7 @@ impl ReadView<'_> {
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-impl Minigraf {
+impl ViciaDb {
     fn try_projected_read_view_query(&self, query: &DatalogQuery) -> Result<Option<QueryResult>> {
         let Some(reader) = self.inner.projection_reader.as_ref() else {
             return Ok(None);
@@ -1877,7 +1877,7 @@ impl MaintenanceAdvice {
     }
 }
 
-/// Result of [`Minigraf::run_idle_maintenance`].
+/// Result of [`ViciaDb::run_idle_maintenance`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MaintenanceOutcome {
     /// Whether the call first published pending WAL-backed writes.
@@ -1935,7 +1935,7 @@ impl MaintenanceOutcome {
     }
 }
 
-/// Result of a successful [`Minigraf::backup_to`] call.
+/// Result of a successful [`ViciaDb::backup_to`] call.
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct BackupOutcome {
@@ -1964,7 +1964,7 @@ pub(crate) struct SessionStatusSnapshot {
 
 // ─── OpenOptions ─────────────────────────────────────────────────────────────
 
-/// Configuration options for opening a `Minigraf` database.
+/// Configuration options for opening a `ViciaDb` database.
 #[derive(Debug, Clone)]
 pub struct OpenOptions {
     /// Number of WAL entries committed before an automatic checkpoint is triggered.
@@ -2052,8 +2052,8 @@ impl OpenOptions {
     /// # Errors
     ///
     /// Returns an error if the in-memory storage backend fails to initialise.
-    pub fn open_memory(self) -> Result<Minigraf> {
-        Minigraf::in_memory_with_options(self)
+    pub fn open_memory(self) -> Result<ViciaDb> {
+        ViciaDb::in_memory_with_options(self)
     }
 }
 
@@ -2072,8 +2072,8 @@ impl OpenOptionsWithPath {
     ///
     /// Returns an error if the file cannot be opened, the header is corrupt,
     /// or WAL replay fails.
-    pub fn open(self) -> Result<Minigraf> {
-        Minigraf::open_with_options(self.path, self.opts)
+    pub fn open(self) -> Result<ViciaDb> {
+        ViciaDb::open_with_options(self.path, self.opts)
     }
 }
 
@@ -2283,29 +2283,29 @@ impl Drop for Inner {
             return;
         }
         if let Ok(mut ctx) = self.write_lock.lock() {
-            let _ = Minigraf::do_checkpoint(&self.fact_storage, &mut ctx);
+            let _ = ViciaDb::do_checkpoint(&self.fact_storage, &mut ctx);
         }
     }
 }
 
 // ─── Fact size validation (moved to WAL serialization) ────────────────────────
 
-// ─── Minigraf ─────────────────────────────────────────────────────────────────
+// ─── ViciaDb ─────────────────────────────────────────────────────────────────
 
 /// Foreground ledger capability for bounded reads and transact/retract writes.
 ///
 /// This type intentionally has no maintenance, backup, or full-history export
 /// methods. Use [`MaintenanceLedger`] from an idle or disposable-worker
-/// lifetime for those operations. [`Minigraf`] remains the raw compatibility
+/// lifetime for those operations. [`ViciaDb`] remains the raw compatibility
 /// surface.
 ///
 /// ```compile_fail
-/// use minigraf::InteractiveLedger;
+/// use vicia_db::InteractiveLedger;
 /// let ledger = InteractiveLedger::in_memory().unwrap();
 /// ledger.run_idle_maintenance();
 /// ```
 pub struct InteractiveLedger {
-    db: Minigraf,
+    db: ViciaDb,
 }
 
 impl InteractiveLedger {
@@ -2319,7 +2319,7 @@ impl InteractiveLedger {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn open_with_options(path: impl AsRef<Path>, options: OpenOptions) -> Result<Self> {
         Ok(Self {
-            db: Minigraf::open_with_options_and_checkpoint_policy(
+            db: ViciaDb::open_with_options_and_checkpoint_policy(
                 path,
                 options,
                 CheckpointPolicy::ExplicitMaintenance,
@@ -2330,7 +2330,7 @@ impl InteractiveLedger {
     /// Open an in-memory interactive ledger.
     pub fn in_memory() -> Result<Self> {
         Ok(Self {
-            db: Minigraf::in_memory_with_checkpoint_policy(
+            db: ViciaDb::in_memory_with_checkpoint_policy(
                 OpenOptions::default(),
                 CheckpointPolicy::ExplicitMaintenance,
             )?,
@@ -2340,7 +2340,7 @@ impl InteractiveLedger {
     /// Open an in-memory interactive ledger with custom options.
     pub fn in_memory_with_options(options: OpenOptions) -> Result<Self> {
         Ok(Self {
-            db: Minigraf::in_memory_with_checkpoint_policy(
+            db: ViciaDb::in_memory_with_checkpoint_policy(
                 options,
                 CheckpointPolicy::ExplicitMaintenance,
             )?,
@@ -2350,7 +2350,7 @@ impl InteractiveLedger {
     /// Execute one transact or retract command.
     ///
     /// Queries belong to [`Self::read_view`]. Rules, bulk `forget`, and other
-    /// raw commands remain available through [`Minigraf`].
+    /// raw commands remain available through [`ViciaDb`].
     pub fn execute_write(&self, input: &str) -> Result<QueryResult> {
         ensure_interactive_write_command(input)?;
         self.db.execute(input)
@@ -2404,12 +2404,12 @@ impl InteractiveWriteTransaction<'_> {
 /// has been dropped.
 ///
 /// ```compile_fail
-/// use minigraf::MaintenanceLedger;
+/// use vicia_db::MaintenanceLedger;
 /// let ledger = MaintenanceLedger::in_memory().unwrap();
 /// ledger.execute_write("(transact [[:a :item/name \"A\"]])");
 /// ```
 pub struct MaintenanceLedger {
-    db: Minigraf,
+    db: ViciaDb,
 }
 
 impl MaintenanceLedger {
@@ -2417,7 +2417,7 @@ impl MaintenanceLedger {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         Ok(Self {
-            db: Minigraf::open_with_options_and_checkpoint_policy(
+            db: ViciaDb::open_with_options_and_checkpoint_policy(
                 path,
                 OpenOptions::default(),
                 CheckpointPolicy::ExplicitMaintenance,
@@ -2429,7 +2429,7 @@ impl MaintenanceLedger {
     #[cfg(not(target_arch = "wasm32"))]
     pub fn open_with_options(path: impl AsRef<Path>, options: OpenOptions) -> Result<Self> {
         Ok(Self {
-            db: Minigraf::open_with_options_and_checkpoint_policy(
+            db: ViciaDb::open_with_options_and_checkpoint_policy(
                 path,
                 options,
                 CheckpointPolicy::ExplicitMaintenance,
@@ -2440,7 +2440,7 @@ impl MaintenanceLedger {
     /// Open an in-memory maintenance ledger.
     pub fn in_memory() -> Result<Self> {
         Ok(Self {
-            db: Minigraf::in_memory_with_checkpoint_policy(
+            db: ViciaDb::in_memory_with_checkpoint_policy(
                 OpenOptions::default(),
                 CheckpointPolicy::ExplicitMaintenance,
             )?,
@@ -2468,7 +2468,7 @@ impl MaintenanceLedger {
         let mut ctx = self.db.inner.write_lock.lock().map_err(|_| {
             anyhow::anyhow!("write lock is poisoned; database may be in an inconsistent state")
         })?;
-        let checkpoint_outcome = Minigraf::do_checkpoint(&self.db.inner.fact_storage, &mut ctx)?;
+        let checkpoint_outcome = ViciaDb::do_checkpoint(&self.db.inner.fact_storage, &mut ctx)?;
         let checkpoint = MaintenanceCheckpointEffect::from_checkpoint_outcome(checkpoint_outcome);
 
         let WriteContext::File {
@@ -2573,7 +2573,7 @@ fn ensure_interactive_write_command(input: &str) -> Result<()> {
         DatalogCommand::Query(_) => {
             bail!("interactive ledger queries require a bounded ReadView")
         }
-        DatalogCommand::Rule(_) => bail!("rule registration requires the raw Minigraf surface"),
+        DatalogCommand::Rule(_) => bail!("rule registration requires the raw ViciaDb surface"),
         DatalogCommand::Forget(_) => {
             bail!("bulk forget requires the raw or maintenance workflow")
         }
@@ -2582,23 +2582,23 @@ fn ensure_interactive_write_command(input: &str) -> Result<()> {
 
 /// The primary embedded graph database handle.
 ///
-/// `Minigraf` is cheap to clone — all clones share the same underlying database.
+/// `ViciaDb` is cheap to clone — all clones share the same underlying database.
 ///
 /// # File-backed usage
 /// ```no_run
 /// # #[cfg(not(target_arch = "wasm32"))] {
-/// use minigraf::db::Minigraf;
+/// use vicia_db::db::ViciaDb;
 ///
-/// let db = Minigraf::open("mydb.graph").unwrap();
+/// let db = ViciaDb::open("mydb.graph").unwrap();
 /// db.execute(r#"(transact [[:alice :person/name "Alice"]])"#).unwrap();
 /// # }
 /// ```
 ///
 /// # In-memory usage
 /// ```
-/// use minigraf::db::Minigraf;
+/// use vicia_db::db::ViciaDb;
 ///
-/// let db = Minigraf::in_memory().unwrap();
+/// let db = ViciaDb::in_memory().unwrap();
 /// db.execute(r#"(transact [[:alice :person/name "Alice"]])"#).unwrap();
 /// ```
 ///
@@ -2611,7 +2611,7 @@ fn ensure_interactive_write_command(input: &str) -> Result<()> {
 /// depending on entity and attribute name lengths.
 ///
 /// Facts that exceed this limit are rejected at insertion time with a descriptive
-/// error. This check does **not** apply to `Minigraf::in_memory()`.
+/// error. This check does **not** apply to `ViciaDb::in_memory()`.
 ///
 /// ## Workarounds for large payloads
 ///
@@ -2622,14 +2622,14 @@ fn ensure_interactive_write_command(input: &str) -> Result<()> {
 ///   ```
 /// - **Entity decomposition** — split large values across multiple facts using
 ///   a continuation-entity pattern.
-/// - **In-memory database** — `Minigraf::in_memory()` has no fact size limit
+/// - **In-memory database** — `ViciaDb::in_memory()` has no fact size limit
 ///   and is suitable for workloads that do not require persistence.
 #[derive(Clone)]
-pub struct Minigraf {
+pub struct ViciaDb {
     inner: Arc<Inner>,
 }
 
-impl Minigraf {
+impl ViciaDb {
     // ── Constructors ─────────────────────────────────────────────────────────
 
     /// Open or create a file-backed database with default options.
@@ -2702,7 +2702,7 @@ impl Minigraf {
             wal_entry_count,
         };
 
-        Ok(Minigraf {
+        Ok(ViciaDb {
             inner: Arc::new(Inner {
                 fact_storage,
                 rules: Arc::new(RwLock::new(RuleRegistry::new())),
@@ -2752,7 +2752,7 @@ impl Minigraf {
         // we just use the shared FactStorage directly.
         drop(pfs);
 
-        Ok(Minigraf {
+        Ok(ViciaDb {
             inner: Arc::new(Inner {
                 fact_storage,
                 rules: Arc::new(RwLock::new(RuleRegistry::new())),
@@ -2916,8 +2916,8 @@ impl Minigraf {
             // 4. Apply facts to shared FactStorage
             // For Rule registration: acquire lock to serialize rule changes, no WAL needed
             let (stamped, is_retract) = match &cmd {
-                DatalogCommand::Transact(tx) => (Minigraf::materialize_transaction(tx)?, false),
-                DatalogCommand::Retract(tx) => (Minigraf::materialize_retraction(tx)?, true),
+                DatalogCommand::Transact(tx) => (ViciaDb::materialize_transaction(tx)?, false),
+                DatalogCommand::Retract(tx) => (ViciaDb::materialize_retraction(tx)?, true),
                 DatalogCommand::Rule(_) => {
                     // Rule registration: execute while holding write_lock to serialize
                     // rule registry changes (no WAL needed for rules)
@@ -2981,7 +2981,7 @@ impl Minigraf {
             // Trigger auto-checkpoint AFTER facts are in FactStorage so the
             // checkpoint captures the newly written facts.
             if should_checkpoint {
-                Minigraf::do_checkpoint(&self.inner.fact_storage, &mut ctx).map_err(|error| {
+                ViciaDb::do_checkpoint(&self.inner.fact_storage, &mut ctx).map_err(|error| {
                     crate::storage::mark_storage_failure(
                         error,
                         crate::storage::StorageFailureDisposition::Fatal,
@@ -3314,9 +3314,9 @@ impl Minigraf {
             self.inner.options.max_results,
         );
 
-        let triples = Minigraf::resolve_forget_triples(spec, &executor, closure_time)?;
+        let triples = ViciaDb::resolve_forget_triples(spec, &executor, closure_time)?;
         let (facts, count) =
-            Minigraf::materialize_closure(&self.inner.fact_storage, &triples, closure_time)?;
+            ViciaDb::materialize_closure(&self.inner.fact_storage, &triples, closure_time)?;
 
         // Nothing matched: no tx_count consumed, no WAL entry — idempotent.
         if facts.is_empty() {
@@ -3366,7 +3366,7 @@ impl Minigraf {
         }
 
         if should_checkpoint {
-            Minigraf::do_checkpoint(&self.inner.fact_storage, ctx).map_err(|error| {
+            ViciaDb::do_checkpoint(&self.inner.fact_storage, ctx).map_err(|error| {
                 crate::storage::mark_storage_failure(
                     error,
                     crate::storage::StorageFailureDisposition::Fatal,
@@ -3896,7 +3896,7 @@ impl Minigraf {
     /// The returned records include assertions and retractions, including
     /// `tx_id`, `tx_count`, valid-time scope, and the `asserted` bit. Committed
     /// records are returned first, followed by pending in-memory records in the
-    /// same order Minigraf would replay them.
+    /// same order ViciaDb would replay them.
     ///
     /// This is an audit/export surface, not a current-state projection. Use
     /// Datalog queries for net current views.
@@ -4055,8 +4055,8 @@ impl Minigraf {
     ///
     /// # Example
     /// ```no_run
-    /// # use minigraf::Minigraf;
-    /// let db = Minigraf::in_memory().unwrap();
+    /// # use vicia_db::ViciaDb;
+    /// let db = ViciaDb::in_memory().unwrap();
     /// db.repl().run();
     /// ```
     pub fn repl(&self) -> crate::repl::Repl<'_> {
@@ -4509,9 +4509,9 @@ impl Minigraf {
     ///
     /// # Example
     /// ```
-    /// # use minigraf::db::Minigraf;
-    /// # use minigraf::Value;
-    /// let db = Minigraf::in_memory().unwrap();
+    /// # use vicia_db::db::ViciaDb;
+    /// # use vicia_db::Value;
+    /// let db = ViciaDb::in_memory().unwrap();
     /// db.register_aggregate(
     ///     "mysum",
     ///     || 0i64,
@@ -4569,9 +4569,9 @@ impl Minigraf {
     ///
     /// # Example
     /// ```
-    /// # use minigraf::db::Minigraf;
-    /// # use minigraf::Value;
-    /// let db = Minigraf::in_memory().unwrap();
+    /// # use vicia_db::db::ViciaDb;
+    /// # use vicia_db::Value;
+    /// let db = ViciaDb::in_memory().unwrap();
     /// db.register_predicate(
     ///     "email?",
     ///     |v: &Value| matches!(v, Value::String(s) if s.contains('@')),
@@ -4600,9 +4600,9 @@ impl Minigraf {
 ///
 /// # Usage
 /// ```no_run
-/// use minigraf::db::Minigraf;
+/// use vicia_db::db::ViciaDb;
 ///
-/// let db = Minigraf::in_memory().unwrap();
+/// let db = ViciaDb::in_memory().unwrap();
 /// let mut tx = db.begin_write().unwrap();
 /// tx.execute(r#"(transact [[:alice :person/name "Alice"]])"#).unwrap();
 /// tx.execute(r#"(transact [[:alice :person/age 30]])"#).unwrap();
@@ -4640,11 +4640,11 @@ impl<'a> WriteTransaction<'a> {
 
         match cmd {
             DatalogCommand::Transact(tx) => {
-                self.stage_pending_facts(Minigraf::materialize_transaction(&tx)?);
+                self.stage_pending_facts(ViciaDb::materialize_transaction(&tx)?);
                 Ok(QueryResult::Ok)
             }
             DatalogCommand::Retract(tx) => {
-                self.stage_pending_facts(Minigraf::materialize_retraction(&tx)?);
+                self.stage_pending_facts(ViciaDb::materialize_retraction(&tx)?);
                 Ok(QueryResult::Ok)
             }
             DatalogCommand::Query(_) => self.execute_read_command(cmd),
@@ -4654,7 +4654,7 @@ impl<'a> WriteTransaction<'a> {
             // the exact-window retraction keys — reject rather than lose data.
             DatalogCommand::Forget(_) => Err(anyhow::anyhow!(
                 "(forget ...) is not supported inside an explicit WriteTransaction; \
-                 use Minigraf::execute"
+                 use ViciaDb::execute"
             )),
         }
     }
@@ -4769,7 +4769,7 @@ impl<'a> WriteTransaction<'a> {
             // Trigger auto-checkpoint AFTER facts are in FactStorage so the
             // checkpoint captures the newly written facts.
             if should_checkpoint {
-                Minigraf::do_checkpoint(&self.inner.fact_storage, &mut self.guard)?;
+                ViciaDb::do_checkpoint(&self.inner.fact_storage, &mut self.guard)?;
             }
         }
 
@@ -4805,7 +4805,7 @@ impl<'a> WriteTransaction<'a> {
             } => {
                 // Lazily open the WAL writer if not already open.
                 if wal.is_none() {
-                    let wal_path = Minigraf::wal_path_for(db_path);
+                    let wal_path = ViciaDb::wal_path_for(db_path);
                     *wal = Some(WalWriter::open_or_create(&wal_path)?);
                 }
 
@@ -4880,7 +4880,7 @@ mod tests {
 
     #[test]
     fn repl_constructed_from_db() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         let _repl = db.repl();
     }
 
@@ -4888,7 +4888,7 @@ mod tests {
 
     #[test]
     fn test_in_memory_no_wal_file() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
 
         db.execute(r#"(transact [[:alice :person/name "Alice"]])"#)
             .unwrap();
@@ -4949,7 +4949,7 @@ mod tests {
 
     #[test]
     fn test_begin_write_commit_facts_visible() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
 
         {
             let mut tx = db.begin_write().unwrap();
@@ -4969,7 +4969,7 @@ mod tests {
     // Atomic write preparation and shared core transaction identity.
     #[test]
     fn test_write_transaction_mixed_commit_uses_one_transaction_identity() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute("(transact [[:head :value :old]])").unwrap();
 
         let mut tx = db.begin_write().unwrap();
@@ -5001,20 +5001,20 @@ mod tests {
             "(retract [[:head :value :old]])".to_string(),
             "(transact [[:head :value :new] [:event :kind :replace]])".to_string(),
         ];
-        let prepared = Minigraf::materialize_atomic_write_commands(&commands).unwrap();
+        let prepared = ViciaDb::materialize_atomic_write_commands(&commands).unwrap();
         assert_eq!(prepared.command_count, 2);
         assert_eq!(prepared.transacted_fact_count, 2);
         assert_eq!(prepared.retracted_fact_count, 1);
         assert_eq!(prepared.facts.len(), 3);
 
-        let empty = Minigraf::materialize_atomic_write_commands(&[]).unwrap_err();
+        let empty = ViciaDb::materialize_atomic_write_commands(&[]).unwrap_err();
         assert!(empty.to_string().contains("at least one"));
 
         let too_many = vec![
             "(transact [[:bounded :value true]])".to_string();
             BROWSER_ATOMIC_MAX_COMMANDS.saturating_add(1)
         ];
-        let too_many = Minigraf::materialize_atomic_write_commands(&too_many).unwrap_err();
+        let too_many = ViciaDb::materialize_atomic_write_commands(&too_many).unwrap_err();
         assert!(too_many.to_string().contains("at most 256 commands"));
 
         for (kind, command) in [
@@ -5023,7 +5023,7 @@ mod tests {
             ("forget", "(forget [[:head :value :old]])"),
         ] {
             let batch = vec![commands[1].clone(), command.to_string()];
-            let error = Minigraf::materialize_atomic_write_commands(&batch).unwrap_err();
+            let error = ViciaDb::materialize_atomic_write_commands(&batch).unwrap_err();
             assert!(error.to_string().contains(kind));
         }
     }
@@ -5035,7 +5035,7 @@ mod tests {
             .collect::<Vec<_>>()
             .join(" ");
         let command = vec![format!("(transact [{tuples}])")];
-        let error = Minigraf::materialize_atomic_write_commands(&command).unwrap_err();
+        let error = ViciaDb::materialize_atomic_write_commands(&command).unwrap_err();
         assert!(error.to_string().contains("at most 262144 facts"));
     }
 
@@ -5055,7 +5055,7 @@ mod tests {
                 "(transact [[:head :value :same]])".to_string(),
             ],
         ] {
-            let error = Minigraf::materialize_atomic_write_commands(&commands).unwrap_err();
+            let error = ViciaDb::materialize_atomic_write_commands(&commands).unwrap_err();
             assert!(
                 error
                     .to_string()
@@ -5067,7 +5067,7 @@ mod tests {
             "(retract [[:head :value :old]])".to_string(),
             "(transact [[:head :value :new]])".to_string(),
         ];
-        assert!(Minigraf::materialize_atomic_write_commands(&replacement).is_ok());
+        assert!(ViciaDb::materialize_atomic_write_commands(&replacement).is_ok());
     }
 
     #[test]
@@ -5080,7 +5080,7 @@ mod tests {
     // begin_write / rollback
     #[test]
     fn test_begin_write_rollback_no_facts_visible() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
 
         {
             let mut tx = db.begin_write().unwrap();
@@ -5097,7 +5097,7 @@ mod tests {
 
     #[test]
     fn test_drop_without_commit_is_rollback() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
 
         {
             let mut tx = db.begin_write().unwrap();
@@ -5114,7 +5114,7 @@ mod tests {
 
     #[test]
     fn test_write_transaction_read_your_own_writes() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
 
         let mut tx = db.begin_write().unwrap();
         tx.execute(r#"(transact [[:alice :person/name "Alice"]])"#)
@@ -5137,7 +5137,7 @@ mod tests {
 
     #[test]
     fn test_write_transaction_query_with_pending_retraction_and_assertion() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(r#"(transact [[:alice :person/name "Alice"] [:alice :person/age 30]])"#)
             .unwrap();
 
@@ -5162,7 +5162,7 @@ mod tests {
 
     #[test]
     fn test_write_transaction_pending_retraction_only_hides_committed_fact() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(r#"(transact [[:alice :person/age 30]])"#)
             .unwrap();
 
@@ -5188,7 +5188,7 @@ mod tests {
 
     #[test]
     fn test_write_transaction_rule_query_with_pending_write() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute("(rule [(reachable ?x ?y) [?x :edge ?y]])")
             .unwrap();
         db.execute("(rule [(reachable ?x ?y) [?x :edge ?z] (reachable ?z ?y)])")
@@ -5220,7 +5220,7 @@ mod tests {
         use chrono::{SecondsFormat, Utc};
         use std::time::Duration;
 
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         let mut tx = db.begin_write().unwrap();
         tx.execute(r#"(transact [[:alice :person/age 30]])"#)
             .unwrap();
@@ -5314,7 +5314,7 @@ mod tests {
 
     #[test]
     fn test_same_thread_reentrant_write_returns_error() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
 
         let _tx = db.begin_write().unwrap();
 
@@ -5335,7 +5335,7 @@ mod tests {
 
     #[test]
     fn test_thread_local_flag_cleared_after_commit() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
 
         {
             let mut tx = db.begin_write().unwrap();
@@ -5357,7 +5357,7 @@ mod tests {
 
     #[test]
     fn test_thread_local_flag_cleared_after_rollback() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
 
         {
             let tx = db.begin_write().unwrap();
@@ -5376,7 +5376,7 @@ mod tests {
 
     #[test]
     fn test_thread_local_flag_cleared_after_drop() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
 
         {
             let mut tx = db.begin_write().unwrap();
@@ -5397,7 +5397,7 @@ mod tests {
 
     #[test]
     fn test_in_memory_checkpoint_is_noop() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(r#"(transact [[:alice :person/name "Alice"]])"#)
             .unwrap();
         // Should not error
@@ -5413,7 +5413,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("drop-pending.graph");
         {
-            let seed = Minigraf::open(&path).unwrap();
+            let seed = ViciaDb::open(&path).unwrap();
             seed.execute("(transact [[:base :bench/selected 1]])")
                 .unwrap();
             seed.checkpoint().unwrap();
@@ -5421,7 +5421,7 @@ mod tests {
         let base_bytes = std::fs::metadata(&path).unwrap().len();
 
         {
-            let db = Minigraf::open_with_options(
+            let db = ViciaDb::open_with_options(
                 &path,
                 OpenOptions {
                     wal_checkpoint_threshold: usize::MAX,
@@ -5432,7 +5432,7 @@ mod tests {
             db.execute("(transact [[:pending :bench/unrelated 2]])")
                 .unwrap();
             assert_eq!(db.inner.fact_storage.pending_fact_count(), 1);
-            assert!(Minigraf::wal_path_for(&path).exists());
+            assert!(ViciaDb::wal_path_for(&path).exists());
         }
 
         assert_eq!(
@@ -5441,11 +5441,11 @@ mod tests {
             "usize::MAX drop must not append a committed delta segment"
         );
         assert!(
-            Minigraf::wal_path_for(&path).exists(),
+            ViciaDb::wal_path_for(&path).exists(),
             "usize::MAX drop must leave the WAL as pending authority"
         );
 
-        let replayed = Minigraf::open_with_options(
+        let replayed = ViciaDb::open_with_options(
             &path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -5472,7 +5472,7 @@ mod tests {
 
     #[test]
     fn test_idle_maintenance_in_memory_is_noop() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(r#"(transact [[:alice :person/name "Alice"]])"#)
             .unwrap();
 
@@ -5489,7 +5489,7 @@ mod tests {
     fn test_idle_maintenance_flushes_pending_file_writes() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("maintenance-flush.graph");
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -5506,12 +5506,12 @@ mod tests {
         assert_eq!(outcome.delta, MaintenanceDeltaEffect::Noop);
         assert_eq!(outcome.advice, MaintenanceAdvice::None);
         assert!(
-            !Minigraf::wal_path_for(&path).exists(),
+            !ViciaDb::wal_path_for(&path).exists(),
             "maintenance checkpoint must retire WAL after durable publish"
         );
         drop(db);
 
-        let reopened = Minigraf::open(&path).unwrap();
+        let reopened = ViciaDb::open(&path).unwrap();
         let records = reopened.export_fact_log().unwrap();
         assert_eq!(records.len(), 1, "maintenance must persist pending write");
     }
@@ -5520,7 +5520,7 @@ mod tests {
     fn test_idle_maintenance_checkpoints_then_recompacts_threshold_delta() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("maintenance-recompact.graph");
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -5546,7 +5546,7 @@ mod tests {
         assert_eq!(outcome.delta, MaintenanceDeltaEffect::Recompacted);
         assert_eq!(outcome.advice, MaintenanceAdvice::ReduceCheckpointCadence);
         assert!(
-            !Minigraf::wal_path_for(&path).exists(),
+            !ViciaDb::wal_path_for(&path).exists(),
             "maintenance must retire WAL before returning"
         );
         let records = db.export_fact_log().unwrap();
@@ -5562,7 +5562,7 @@ mod tests {
         assert_eq!(second.advice, MaintenanceAdvice::None);
         drop(db);
 
-        let reopened = Minigraf::open(&path).unwrap();
+        let reopened = ViciaDb::open(&path).unwrap();
         let reopened_records = reopened.export_fact_log().unwrap();
         assert_eq!(
             reopened_records.len(),
@@ -5575,7 +5575,7 @@ mod tests {
     fn test_checkpoint_does_not_run_delta_maintenance_on_threshold_delta() {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("checkpoint-no-recompact.graph");
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -5624,7 +5624,7 @@ mod tests {
 
     #[test]
     fn test_idle_maintenance_rejects_same_thread_write_transaction() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         let _tx = db.begin_write().unwrap();
 
         let result = db.run_idle_maintenance();
@@ -5642,7 +5642,7 @@ mod tests {
         let backup_path = dir.path().join("backup.graph");
         let source = "00000000-0000-0000-0000-0000000000a1";
         let target = "00000000-0000-0000-0000-0000000000b2";
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &source_path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -5660,7 +5660,7 @@ mod tests {
         .unwrap();
         let expected = db.export_fact_log().unwrap();
         assert!(
-            Minigraf::wal_path_for(&source_path).exists(),
+            ViciaDb::wal_path_for(&source_path).exists(),
             "fixture must exercise pending WAL checkpointing"
         );
 
@@ -5673,15 +5673,15 @@ mod tests {
         );
         assert_eq!(outcome.bytes % crate::storage::PAGE_SIZE as u64, 0);
         assert!(
-            !Minigraf::wal_path_for(&source_path).exists(),
+            !ViciaDb::wal_path_for(&source_path).exists(),
             "backup must retire the source WAL after checkpoint publish"
         );
         assert!(
-            !Minigraf::wal_path_for(&backup_path).exists(),
+            !ViciaDb::wal_path_for(&backup_path).exists(),
             "backup is an independent checkpointed graph without a WAL"
         );
 
-        let backup = Minigraf::open(&backup_path).unwrap();
+        let backup = ViciaDb::open(&backup_path).unwrap();
         assert_eq!(backup.current_tx_count(), outcome.tx_count);
         assert!(
             backup.export_fact_log().unwrap() == expected,
@@ -5693,12 +5693,12 @@ mod tests {
     fn test_backup_rejects_unsafe_targets_without_overwrite_or_deadlock() {
         let dir = tempfile::tempdir().unwrap();
         let source_path = dir.path().join("source.graph");
-        let db = Minigraf::open(&source_path).unwrap();
+        let db = ViciaDb::open(&source_path).unwrap();
         db.execute(r#"(transact [[:safe :value "source"]])"#)
             .unwrap();
         db.checkpoint().unwrap();
 
-        let memory = Minigraf::in_memory().unwrap();
+        let memory = ViciaDb::in_memory().unwrap();
         assert!(
             memory.backup_to(dir.path().join("memory.graph")).is_err(),
             "in-memory backup must be explicit error"
@@ -5710,7 +5710,7 @@ mod tests {
         assert_eq!(std::fs::read(&existing).unwrap(), b"sentinel");
 
         let stale_wal_target = dir.path().join("stale-wal.graph");
-        let stale_wal = Minigraf::wal_path_for(&stale_wal_target);
+        let stale_wal = ViciaDb::wal_path_for(&stale_wal_target);
         std::fs::write(&stale_wal, b"unrelated-wal").unwrap();
         assert!(db.backup_to(&stale_wal_target).is_err());
         assert!(!stale_wal_target.exists());
@@ -5723,7 +5723,7 @@ mod tests {
         assert!(!stale_lock_target.exists());
         assert_eq!(std::fs::read(&stale_lock).unwrap(), b"occupied");
 
-        let source_wal = Minigraf::wal_path_for(&source_path);
+        let source_wal = ViciaDb::wal_path_for(&source_path);
         assert!(
             !source_wal.exists(),
             "fixture needs absent source WAL for alias check"
@@ -5733,7 +5733,7 @@ mod tests {
             "source WAL pathname must never become a backup"
         );
         assert!(
-            Minigraf::backup_paths_share_namespace(
+            ViciaDb::backup_paths_share_namespace(
                 Path::new("C:/memory/DB.graph.wal"),
                 Path::new("c:/MEMORY/db.GRAPH.WAL"),
                 true,
@@ -5741,7 +5741,7 @@ mod tests {
             "Windows/Apple target validation must conservatively reject case-folded aliases"
         );
         assert!(
-            !Minigraf::backup_paths_share_namespace(
+            !ViciaDb::backup_paths_share_namespace(
                 Path::new("/memory/DB.graph.wal"),
                 Path::new("/memory/db.graph.wal"),
                 false,
@@ -5764,7 +5764,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let source_path = dir.path().join("linear-source.graph");
         let backup_path = dir.path().join("linear-backup.graph");
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &source_path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -5814,7 +5814,7 @@ mod tests {
 
         assert_eq!(outcome.tx_count, 1);
         assert_eq!(db.current_tx_count(), 2);
-        let backup = Minigraf::open(&backup_path).unwrap();
+        let backup = ViciaDb::open(&backup_path).unwrap();
         assert_eq!(backup.current_tx_count(), 1);
         let backup_log = backup.export_fact_log().unwrap();
         assert_eq!(backup_log.len(), 1);
@@ -5831,7 +5831,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let source_path = dir.path().join("conflict-source.graph");
         let backup_path = dir.path().join("conflict-backup.graph");
-        let db = Minigraf::open(&source_path).unwrap();
+        let db = ViciaDb::open(&source_path).unwrap();
         db.execute(r#"(transact [[:safe :value 1]])"#).unwrap();
 
         let result = db.backup_to_with_hook(&backup_path, || {
@@ -5867,13 +5867,13 @@ mod tests {
         let real_path = dir.path().join("real.graph");
         let link_path = dir.path().join("link.graph");
         {
-            let seed = Minigraf::open(&real_path).unwrap();
+            let seed = ViciaDb::open(&real_path).unwrap();
             seed.execute(r#"(transact [[:seed :value 1]])"#).unwrap();
             seed.checkpoint().unwrap();
         }
         std::os::unix::fs::symlink(&real_path, &link_path).unwrap();
-        let db = Minigraf::open(&link_path).unwrap();
-        let lexical_wal = Minigraf::wal_path_for(&link_path);
+        let db = ViciaDb::open(&link_path).unwrap();
+        let lexical_wal = ViciaDb::wal_path_for(&link_path);
         assert!(!lexical_wal.exists());
 
         assert!(
@@ -5893,7 +5893,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let source_path = dir.path().join("hole-source.graph");
         let backup_path = dir.path().join("hole-backup.graph");
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &source_path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -5920,7 +5920,7 @@ mod tests {
             outcome.tx_count, 0,
             "receipt must describe the published header, not the in-memory counter hole"
         );
-        let backup = Minigraf::open(&backup_path).unwrap();
+        let backup = ViciaDb::open(&backup_path).unwrap();
         assert_eq!(backup.current_tx_count(), outcome.tx_count);
         assert_eq!(backup.export_fact_log().unwrap().len(), 0);
     }
@@ -5940,7 +5940,7 @@ mod tests {
             #[cfg(feature = "bench-internals")]
             benchmark_btree_fill_percent: 75,
         };
-        let db = Minigraf::open_with_options(&path, opts).unwrap();
+        let db = ViciaDb::open_with_options(&path, opts).unwrap();
         assert_eq!(db.inner.options.wal_checkpoint_threshold, 5);
     }
 
@@ -5965,7 +5965,7 @@ mod tests {
         };
 
         // Open file-backed db and commit one fact so the main file + WAL both exist
-        let db = Minigraf::open(&db_path).unwrap();
+        let db = ViciaDb::open(&db_path).unwrap();
         db.execute("(transact [[:alice :name \"Alice\"]])").unwrap();
 
         // Checkpoint: flushes Alice to the main file, closes and deletes the WAL.
@@ -6013,7 +6013,7 @@ mod tests {
         let wal_path = dir.path().join("test.graph.wal");
 
         {
-            let db = Minigraf::open(&path).unwrap();
+            let db = ViciaDb::open(&path).unwrap();
             db.execute(r#"(transact [[:alice :person/name "Alice"]])"#)
                 .unwrap();
 
@@ -6027,7 +6027,7 @@ mod tests {
         }
 
         // Reopen after first handle is dropped (releases file lock)
-        let db2 = Minigraf::open(&path).unwrap();
+        let db2 = ViciaDb::open(&path).unwrap();
         let facts = db2.inner.fact_storage.get_asserted_facts().unwrap();
         assert_eq!(facts.len(), 1, "facts must survive checkpoint");
     }
@@ -6046,7 +6046,7 @@ mod tests {
             valid_from: None,
             valid_to: None,
         };
-        let r = Minigraf::materialize_transaction(&tx);
+        let r = ViciaDb::materialize_transaction(&tx);
         assert!(
             r.is_err(),
             "materialize_transaction with non-keyword Real attr must fail"
@@ -6067,7 +6067,7 @@ mod tests {
             valid_from: None,
             valid_to: None,
         };
-        let r = Minigraf::materialize_retraction(&tx);
+        let r = ViciaDb::materialize_retraction(&tx);
         assert!(
             r.is_err(),
             "materialize_retraction with non-keyword Real attr must fail"
@@ -6088,7 +6088,7 @@ mod tests {
             valid_from: None,
             valid_to: None,
         };
-        let r = Minigraf::materialize_transaction(&tx);
+        let r = ViciaDb::materialize_transaction(&tx);
         assert!(
             r.is_err(),
             "materialize_transaction with pseudo-attr must fail"
@@ -6109,7 +6109,7 @@ mod tests {
             valid_from: None,
             valid_to: None,
         };
-        let r = Minigraf::materialize_retraction(&tx);
+        let r = ViciaDb::materialize_retraction(&tx);
         assert!(
             r.is_err(),
             "materialize_retraction with pseudo-attr must fail"
@@ -6124,7 +6124,7 @@ mod tests {
         // We can't easily simulate lock failure in normal test, but we can verify the
         // flag is correctly managed: set after lock acquired, cleared on drop.
 
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
 
         // Normal flow: begin_write succeeds, flag should be set
         {
@@ -6167,7 +6167,7 @@ mod tests {
         let low_opts = OpenOptions::default()
             .max_derived_facts(5)
             .max_results(1_000_000);
-        let db_low = Minigraf::in_memory_with_options(low_opts).unwrap();
+        let db_low = ViciaDb::in_memory_with_options(low_opts).unwrap();
 
         // Add base edges in a chain
         db_low.execute("(transact [[:a :edge :b] [:b :edge :c] [:c :edge :d] [:d :edge :e] [:e :edge :f]])").unwrap();
@@ -6196,7 +6196,7 @@ mod tests {
         let high_opts = OpenOptions::default()
             .max_derived_facts(100_000)
             .max_results(1_000_000);
-        let db_high = Minigraf::in_memory_with_options(high_opts).unwrap();
+        let db_high = ViciaDb::in_memory_with_options(high_opts).unwrap();
 
         db_high.execute("(transact [[:a :edge :b] [:b :edge :c] [:c :edge :d] [:d :edge :e] [:e :edge :f]])").unwrap();
         db_high
@@ -6244,7 +6244,7 @@ mod tests {
 
     #[test]
     fn test_per_query_max_results_via_execute() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(r#"(transact [[:a :v 1] [:b :v 2] [:c :v 3]])"#)
             .unwrap();
 
@@ -6271,7 +6271,7 @@ mod tests {
 
     #[test]
     fn read_view_pins_one_transaction_across_multiple_queries() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(r#"(transact [[:proposal :proposal/status "draft"]])"#)
             .unwrap();
         let view = db.read_view(ReadViewOptions::default()).unwrap();
@@ -6311,7 +6311,7 @@ mod tests {
 
     #[test]
     fn read_view_rejects_competing_authority_and_unbounded_plans() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(r#"(transact [[:card :card/title "One"]])"#)
             .unwrap();
         let view = db.read_view(ReadViewOptions::default()).unwrap();
@@ -6342,7 +6342,7 @@ mod tests {
 
     #[test]
     fn read_view_pins_explicit_valid_time() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(
             r#"(transact {:valid-from "2023-01-01" :valid-to "2023-06-30"} [[:alice :employment/status :active]])"#,
         )
@@ -6367,7 +6367,7 @@ mod tests {
 
     #[test]
     fn read_view_rejects_oversized_complete_result_without_truncation() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(r#"(transact [[:one :card/space :space] [:two :card/space :space]])"#)
             .unwrap();
         let view = db.read_view(ReadViewOptions::default()).unwrap();
@@ -6379,7 +6379,7 @@ mod tests {
     fn current_entities_is_typed_ordered_and_transaction_pinned() {
         let first = uuid::Uuid::from_u128(1);
         let second = uuid::Uuid::from_u128(2);
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(&format!(
             r#"(transact [[#uuid "{first}" :card/title "First"] [#uuid "{first}" :card/space #uuid "{second}"] [#uuid "{second}" :card/title "Second"]])"#
         ))
@@ -6416,7 +6416,7 @@ mod tests {
     #[test]
     fn current_entities_preserves_valid_time_and_retraction_semantics() {
         let entity = uuid::Uuid::from_u128(7);
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(&format!(
             r#"(transact {{:valid-from "2023-01-01" :valid-to "2023-06-30"}} [[#uuid "{entity}" :status/value :active]])"#
         ))
@@ -6455,7 +6455,7 @@ mod tests {
     #[test]
     fn current_entities_rejects_incomplete_or_unbounded_requests() {
         let entity = uuid::Uuid::from_u128(9);
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(&format!(
             r#"(transact [[#uuid "{entity}" :tag/value "one"] [#uuid "{entity}" :tag/value "two"]])"#
         ))
@@ -6498,7 +6498,7 @@ mod tests {
     #[test]
     fn current_entities_isolates_exact_attribute_and_resolves_float() {
         let entity = uuid::Uuid::from_u128(10);
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(&format!(
             r#"(transact [[#uuid "{entity}" :metric/value 1.25] [#uuid "{entity}" :metric/value-extra 9.5]])"#
         ))
@@ -6520,7 +6520,7 @@ mod tests {
     #[test]
     fn current_entities_honors_scoped_and_unscoped_retractions() {
         let entity = uuid::Uuid::from_u128(11);
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(&format!(
             r#"(transact {{:valid-from "2020-01-01" :valid-to "2021-01-01"}} [[#uuid "{entity}" :status/value :old]])"#
         ))
@@ -6572,7 +6572,7 @@ mod tests {
         let path = directory.path().join("current-entities.graph");
         let target = uuid::Uuid::from_u128(32);
         {
-            let db = Minigraf::open(&path).unwrap();
+            let db = ViciaDb::open(&path).unwrap();
             let facts = (1u128..=64)
                 .map(|id| {
                     format!(
@@ -6586,7 +6586,7 @@ mod tests {
             db.checkpoint().unwrap();
         }
 
-        let db = Minigraf::open(&path).unwrap();
+        let db = ViciaDb::open(&path).unwrap();
         db.execute(&format!(
             r#"(transact [[#uuid "{target}" :card/title "delta"]])"#
         ))
@@ -6611,7 +6611,7 @@ mod tests {
         let first = uuid::Uuid::from_u128(2);
         let second = uuid::Uuid::from_u128(1);
         let unrelated = uuid::Uuid::from_u128(3);
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(&format!(
             r#"(transact [[#uuid "{first}" :edge/to #uuid "{target}"] [#uuid "{second}" :edge/to #uuid "{target}"] [#uuid "{unrelated}" :edge/to-extra #uuid "{target}"]])"#
         ))
@@ -6633,7 +6633,7 @@ mod tests {
 
     #[test]
     fn read_view_separates_source_work_from_complete_result_limit() {
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         let fact_count = READ_VIEW_MAX_ROWS + 1;
         let facts = (0..fact_count)
             .map(|index| {
@@ -6698,14 +6698,14 @@ mod tests {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("bounded-selective-read.graph");
         {
-            let db = Minigraf::open(&path).unwrap();
+            let db = ViciaDb::open(&path).unwrap();
             for command in fixture.setup_commands() {
                 db.execute(&command).unwrap();
             }
             db.checkpoint().unwrap();
         }
 
-        let db = Minigraf::open(&path).unwrap();
+        let db = ViciaDb::open(&path).unwrap();
         let view = db
             .read_view(ReadViewOptions {
                 valid_at: ReadViewValidAt::AnyValidTime,
@@ -6797,7 +6797,7 @@ mod tests {
     fn current_refs_honors_valid_time_and_retraction_scope() {
         let target = uuid::Uuid::from_u128(101);
         let source = uuid::Uuid::from_u128(4);
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(&format!(
             r#"(transact {{:valid-from "2020-01-01" :valid-to "2021-01-01"}} [[#uuid "{source}" :edge/to #uuid "{target}"]])"#
         ))
@@ -6848,7 +6848,7 @@ mod tests {
         let path = directory.path().join("current-refs.graph");
         let target = uuid::Uuid::from_u128(102);
         {
-            let db = Minigraf::open(&path).unwrap();
+            let db = ViciaDb::open(&path).unwrap();
             let facts = (1u128..=64)
                 .map(|id| {
                     format!(
@@ -6861,7 +6861,7 @@ mod tests {
             db.execute(&format!("(transact [{facts}])")).unwrap();
             db.checkpoint().unwrap();
         }
-        let db = Minigraf::open(&path).unwrap();
+        let db = ViciaDb::open(&path).unwrap();
         let delta = uuid::Uuid::from_u128(65);
         db.execute(&format!(
             r#"(transact [[#uuid "{delta}" :edge/to #uuid "{target}"]])"#
@@ -6890,14 +6890,14 @@ mod tests {
         let pending = uuid::Uuid::from_u128(1);
         let valid_time = r#"{:valid-from "2020-01-01" :valid-to "2030-01-01"}"#;
         {
-            let db = Minigraf::open(&path).unwrap();
+            let db = ViciaDb::open(&path).unwrap();
             db.execute(&format!(
                 r#"(transact {valid_time} [[#uuid "{committed}" :edge/to #uuid "{target}"]])"#
             ))
             .unwrap();
             db.checkpoint().unwrap();
         }
-        let db = Minigraf::open(&path).unwrap();
+        let db = ViciaDb::open(&path).unwrap();
         db.execute(&format!(
             r#"(transact {valid_time} [[#uuid "{pending}" :edge/to #uuid "{target}"]])"#
         ))
@@ -6935,7 +6935,7 @@ mod tests {
     #[test]
     fn current_refs_rejects_invalid_or_incomplete_requests() {
         let target = uuid::Uuid::from_u128(103);
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(&format!(
             r#"(transact [[#uuid "{}" :edge/to #uuid "{target}"] [#uuid "{}" :edge/to #uuid "{target}"]])"#,
             uuid::Uuid::from_u128(1),
@@ -6989,7 +6989,7 @@ mod tests {
         ))
         .unwrap();
         assert_eq!(fixture.schema, "vicia.vetch-current-reader-fixture.v1");
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         db.execute(&fixture.transaction).unwrap();
         let view = db.read_view(ReadViewOptions::default()).unwrap();
 
@@ -7075,7 +7075,7 @@ mod tests {
 
         // Write a fact and checkpoint so the main file is clean and WAL is gone.
         {
-            let db = Minigraf::open(&path).unwrap();
+            let db = ViciaDb::open(&path).unwrap();
             db.execute(r#"(transact [[:alice :person/name "Alice"]])"#)
                 .unwrap();
             db.checkpoint().unwrap();
@@ -7089,7 +7089,7 @@ mod tests {
 
         // Open a second handle, do a read-only query, then drop it.
         {
-            let db2 = Minigraf::open(&path).unwrap();
+            let db2 = ViciaDb::open(&path).unwrap();
             let result = db2
                 .execute(r#"(query [:find ?name :where [?e :person/name ?name]])"#)
                 .unwrap();
@@ -7120,12 +7120,12 @@ mod tests {
 // #[wasm_bindgen_test] instead, which is a separate harness.
 #[cfg(all(target_os = "wasi", test))]
 mod wasi_tests {
-    use crate::db::Minigraf;
+    use crate::db::ViciaDb;
     use crate::query::datalog::executor::QueryResult;
 
     #[test]
     fn in_memory_smoke() {
-        let db = Minigraf::in_memory().expect("open in-memory db");
+        let db = ViciaDb::in_memory().expect("open in-memory db");
         db.execute("(transact [[:e1 :name \"hello\"]])")
             .expect("transact");
         let r = db
@@ -7207,7 +7207,7 @@ mod capability_tests {
                 .execute_write(r#"(transact [[:card/a :card/title "A"]])"#)
                 .unwrap();
             assert!(
-                Minigraf::wal_path_for(&path).exists(),
+                ViciaDb::wal_path_for(&path).exists(),
                 "interactive writes must not checkpoint at the WAL threshold"
             );
 
@@ -7217,11 +7217,11 @@ mod capability_tests {
                 .unwrap();
             transaction.commit().unwrap();
             assert!(
-                Minigraf::wal_path_for(&path).exists(),
+                ViciaDb::wal_path_for(&path).exists(),
                 "interactive transaction commits must not checkpoint"
             );
         }
-        let wal_path = Minigraf::wal_path_for(&path);
+        let wal_path = ViciaDb::wal_path_for(&path);
         assert!(
             wal_path.exists(),
             "interactive drop must leave durable WAL work for maintenance"
@@ -7257,7 +7257,7 @@ mod capability_tests {
                 )
                 .unwrap();
         }
-        assert!(Minigraf::wal_path_for(&path).exists());
+        assert!(ViciaDb::wal_path_for(&path).exists());
 
         let maintenance = MaintenanceLedger::open(&path).unwrap();
         let attributes = vec![":card/title".to_owned(), ":card/rank".to_owned()];
@@ -7268,7 +7268,7 @@ mod capability_tests {
         assert_eq!(first.attribute_count, 2);
         assert_eq!(first.tx_count, 1);
         assert_eq!(first.row_count, 3);
-        assert!(!Minigraf::wal_path_for(&path).exists());
+        assert!(!ViciaDb::wal_path_for(&path).exists());
         for attribute in &attributes {
             let candidate = maintenance
                 .db
@@ -7296,7 +7296,7 @@ mod capability_tests {
         assert_eq!(third.generation, second.generation + 1);
 
         drop(maintenance);
-        let reopened = Minigraf::open(&path).unwrap();
+        let reopened = ViciaDb::open(&path).unwrap();
         let page0 = std::fs::read(&path).unwrap();
         let header =
             crate::storage::FileHeader::from_bytes(&page0[..crate::storage::PAGE_SIZE]).unwrap();
@@ -7449,7 +7449,7 @@ mod capability_tests {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("projection-routing-corrupt.graph");
         let receipts = {
-            let db = Minigraf::open(&path).unwrap();
+            let db = ViciaDb::open(&path).unwrap();
             db.execute(
                 r#"(transact [[#uuid "00000000-0000-0000-0000-000000000211" :card/rank 3]
                               [#uuid "00000000-0000-0000-0000-000000000212" :card/rank 7]])"#,
@@ -7535,10 +7535,10 @@ mod capability_tests {
     }
 
     #[test]
-    fn raw_minigraf_retains_threshold_checkpoint_compatibility() {
+    fn raw_vicia_db_retains_threshold_checkpoint_compatibility() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("raw-auto-checkpoint.graph");
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &path,
             OpenOptions {
                 wal_checkpoint_threshold: 1,
@@ -7549,8 +7549,8 @@ mod capability_tests {
         db.execute(r#"(transact [[:card/a :card/title "A"]])"#)
             .unwrap();
         assert!(
-            !Minigraf::wal_path_for(&path).exists(),
-            "raw Minigraf must retain legacy automatic checkpointing"
+            !ViciaDb::wal_path_for(&path).exists(),
+            "raw ViciaDb must retain legacy automatic checkpointing"
         );
     }
 
@@ -7723,7 +7723,7 @@ mod capability_tests {
         const BEFORE: i64 = BOUNDARY - 1;
         const AFTER: i64 = BOUNDARY + 1;
 
-        let db = Minigraf::in_memory().unwrap();
+        let db = ViciaDb::in_memory().unwrap();
         let future = uuid::Uuid::from_u128(101);
         let expiring = uuid::Uuid::from_u128(102);
         let overlap = uuid::Uuid::from_u128(103);
@@ -7807,7 +7807,7 @@ mod capability_tests {
         let expected_rows;
         let receipt;
         {
-            let db = Minigraf::open(&path).unwrap();
+            let db = ViciaDb::open(&path).unwrap();
             db.execute(
                 r#"(transact [[#uuid "00000000-0000-0000-0000-000000000001" :projection/value 10]
                               [#uuid "00000000-0000-0000-0000-000000000002" :projection/value 20]])"#,
@@ -7845,7 +7845,7 @@ mod capability_tests {
         );
         assert_eq!(header.page_count, receipt.published_page_count);
 
-        let db = Minigraf::open(&path).unwrap();
+        let db = ViciaDb::open(&path).unwrap();
         let loaded = db
             .benchmark_load_current_projection_page_image(ATTRIBUTE, FLOOR)
             .unwrap()
@@ -7875,7 +7875,7 @@ mod capability_tests {
                 .is_err(),
             "projection publication must not retire or bypass a pending WAL"
         );
-        assert!(Minigraf::wal_path_for(&path).exists());
+        assert!(ViciaDb::wal_path_for(&path).exists());
     }
 
     #[test]
@@ -7890,7 +7890,7 @@ mod capability_tests {
         let second;
         let expected;
         {
-            let db = Minigraf::open(&path).unwrap();
+            let db = ViciaDb::open(&path).unwrap();
             db.execute(
                 r#"(transact [[#uuid "00000000-0000-0000-0000-000000000011" :projection/value 11]])"#,
             )
@@ -7924,7 +7924,7 @@ mod capability_tests {
         };
         corrupt_page(second.image_page_start);
         {
-            let db = Minigraf::open(&path).unwrap();
+            let db = ViciaDb::open(&path).unwrap();
             let recovered = db
                 .benchmark_load_current_projection_page_image(ATTRIBUTE, FLOOR)
                 .unwrap()
@@ -7936,7 +7936,7 @@ mod capability_tests {
         }
 
         corrupt_page(first.image_page_start);
-        let db = Minigraf::open(&path).unwrap();
+        let db = ViciaDb::open(&path).unwrap();
         assert!(
             db.benchmark_load_current_projection_page_image(ATTRIBUTE, FLOOR)
                 .is_err(),
@@ -7961,7 +7961,7 @@ mod capability_tests {
         const FLOOR: i64 = 0;
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("projection-lineage.graph");
-        let db = Minigraf::open(&path).unwrap();
+        let db = ViciaDb::open(&path).unwrap();
         db.execute(
             r#"(transact [[#uuid "00000000-0000-0000-0000-000000000021" :projection/value 21]])"#,
         )
@@ -8048,7 +8048,7 @@ mod capability_tests {
         let path = directory.path().join("projection-unpublished-tail.graph");
         let published_page_count;
         {
-            let db = Minigraf::open(&path).unwrap();
+            let db = ViciaDb::open(&path).unwrap();
             db.execute(
                 r#"(transact [[#uuid "00000000-0000-0000-0000-000000000031" :projection/value 31]])"#,
             )
@@ -8075,7 +8075,7 @@ mod capability_tests {
             file.sync_all().unwrap();
         }
 
-        let db = Minigraf::open(&path).unwrap();
+        let db = ViciaDb::open(&path).unwrap();
         let candidate = db
             .benchmark_build_current_projection(ATTRIBUTE, FLOOR)
             .unwrap();

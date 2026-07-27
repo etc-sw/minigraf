@@ -1,6 +1,6 @@
 use anyhow::{Context, Result, bail};
 use cozo::{DataValue, DbInstance, Num, ScriptMutability};
-use minigraf::{OpenOptions, QueryResult};
+use vicia_db::{OpenOptions, QueryResult};
 use redb::{Database, ReadableDatabase, ReadableTable, TableDefinition};
 use serde::Serialize;
 use sqlite::{Connection, State};
@@ -632,7 +632,7 @@ fn run_vicia(dir: &Path, config: Config) -> Result<RunMeasurements> {
     })
 }
 
-fn vicia_insert(db: &minigraf::Minigraf, start: u64, end: u64) -> Result<()> {
+fn vicia_insert(db: &vicia_db::ViciaDb, start: u64, end: u64) -> Result<()> {
     let mut command = String::from("(transact [");
     for entity in start..end {
         command.push_str(&format!("[:cmp/e{entity} :cmp/value {entity}]"));
@@ -642,7 +642,7 @@ fn vicia_insert(db: &minigraf::Minigraf, start: u64, end: u64) -> Result<()> {
     Ok(())
 }
 
-fn vicia_point(db: &minigraf::Minigraf, entity: u64) -> Result<i64> {
+fn vicia_point(db: &vicia_db::ViciaDb, entity: u64) -> Result<i64> {
     let result = db.execute(&format!(
         "(query [:find ?v :where [:cmp/e{entity} :cmp/value ?v]])"
     ))?;
@@ -656,7 +656,7 @@ fn vicia_point(db: &minigraf::Minigraf, entity: u64) -> Result<i64> {
         .context("Vicia point query returned no integer")
 }
 
-fn vicia_scan(db: &minigraf::Minigraf) -> Result<(u64, i128)> {
+fn vicia_scan(db: &vicia_db::ViciaDb) -> Result<(u64, i128)> {
     let result = db.execute("(query [:find ?v :where [?e :cmp/value ?v]])")?;
     let QueryResult::QueryResults { results, .. } = result else {
         bail!("Vicia full scan returned a non-query result");
@@ -673,7 +673,7 @@ fn vicia_scan(db: &minigraf::Minigraf) -> Result<(u64, i128)> {
     fold_materialized_values(values)
 }
 
-fn vicia_aggregate(db: &minigraf::Minigraf) -> Result<(u64, i128)> {
+fn vicia_aggregate(db: &vicia_db::ViciaDb) -> Result<(u64, i128)> {
     let result = db.execute("(query [:find (count ?v) (sum ?v) :where [?e :cmp/value ?v]])")?;
     let QueryResult::QueryResults { results, .. } = result else {
         bail!("Vicia aggregate returned a non-query result");

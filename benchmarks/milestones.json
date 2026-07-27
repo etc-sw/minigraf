@@ -18,7 +18,7 @@
           "id": "nightly",
           "tier": "nightly-shared-runner",
           "acceptanceEligible": false,
-          "command": "cargo bench --bench minigraf_bench -- <catalogued-filter>",
+          "command": "cargo bench --bench vicia_db_bench -- <catalogued-filter>",
           "budgets": []
         }
       ]

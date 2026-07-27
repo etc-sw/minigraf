@@ -22,14 +22,14 @@ fn pest_accepts(input: &str) -> bool {
     DatalogGrammar::parse(Rule::command, input.trim()).is_ok()
 }
 
-/// Returns true when the real Minigraf parser accepts the input.
+/// Returns true when the real ViciaDb parser accepts the input.
 ///
 /// Uses `db.prepare()` for `(query ...)` commands so that bind-slot
 /// templates parse correctly without needing substituted values at test time.
 /// Uses `db.execute()` for transact / retract / rule.
 fn parser_accepts(input: &str) -> bool {
     let input = input.trim();
-    let Ok(db) = minigraf::Minigraf::in_memory() else {
+    let Ok(db) = vicia_db::ViciaDb::in_memory() else {
         return false;
     };
     if input.starts_with("(query") {

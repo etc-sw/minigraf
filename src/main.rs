@@ -1,12 +1,12 @@
-#[cfg(any(not(target_arch = "wasm32"), target_os = "wasi"))]
-use minigraf::Minigraf;
 #[cfg(not(target_arch = "wasm32"))]
-use minigraf::OpenOptions;
+use vicia_db::OpenOptions;
+#[cfg(any(not(target_arch = "wasm32"), target_os = "wasi"))]
+use vicia_db::ViciaDb;
 
 fn main() -> anyhow::Result<()> {
     #[cfg(target_os = "wasi")]
     {
-        let db = Minigraf::in_memory()?;
+        let db = ViciaDb::in_memory()?;
         db.repl().run();
         Ok(())
     }
@@ -40,20 +40,20 @@ fn main() -> anyhow::Result<()> {
             let mut options = OpenOptions::new();
             if session_flag {
                 // The framed protocol owns checkpoint timing explicitly. The
-                // sentinel also suppresses raw Minigraf's best-effort Drop
+                // sentinel also suppresses raw ViciaDb's best-effort Drop
                 // checkpoint so fatal exit always leaves acknowledged writes
                 // under WAL replay authority.
                 options.wal_checkpoint_threshold = usize::MAX;
             }
             options.path(path).open()?
         } else {
-            Minigraf::in_memory()?
+            ViciaDb::in_memory()?
         };
 
         if session_flag {
             let stdin = std::io::stdin();
             let stdout = std::io::stdout();
-            let mut session = minigraf::session::Session::new(db);
+            let mut session = vicia_db::session::Session::new(db);
             return session.run(stdin.lock(), stdout.lock());
         }
 

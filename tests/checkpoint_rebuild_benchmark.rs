@@ -1,10 +1,10 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use anyhow::Result;
-use minigraf::{Minigraf, OpenOptions};
 use std::path::{Path, PathBuf};
 use std::time::{Duration, Instant};
 use uuid::Uuid;
+use vicia_db::{OpenOptions, ViciaDb};
 
 const COMMITTED_FACT_COUNTS: &[usize] = &[10_000, 100_000, 1_000_000];
 const PENDING_FACT_COUNTS: &[usize] = &[1, 10, 100, 1_000];
@@ -139,7 +139,7 @@ fn copy_checkpointed_base(src: &Path, dst: &Path) -> Result<()> {
     Ok(())
 }
 
-fn open_no_auto_checkpoint(path: &Path) -> Result<Minigraf> {
+fn open_no_auto_checkpoint(path: &Path) -> Result<ViciaDb> {
     OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..Default::default()
@@ -149,7 +149,7 @@ fn open_no_auto_checkpoint(path: &Path) -> Result<Minigraf> {
     .map_err(db_error)
 }
 
-fn insert_committed_mix(db: &Minigraf, fact_count: usize) -> Result<()> {
+fn insert_committed_mix(db: &ViciaDb, fact_count: usize) -> Result<()> {
     for batch_start in (0..fact_count).step_by(BATCH_SIZE) {
         let batch_end = (batch_start + BATCH_SIZE).min(fact_count);
         let mut command = String::from("(transact [");
@@ -163,7 +163,7 @@ fn insert_committed_mix(db: &Minigraf, fact_count: usize) -> Result<()> {
 }
 
 fn add_pending_fact_mix(
-    db: &Minigraf,
+    db: &ViciaDb,
     committed_facts: usize,
     pending_facts: usize,
 ) -> Result<(usize, usize)> {
@@ -195,11 +195,7 @@ fn add_pending_fact_mix(
     Ok((pending_assertions, pending_retractions))
 }
 
-fn add_second_delta_fact(
-    db: &Minigraf,
-    committed_facts: usize,
-    pending_facts: usize,
-) -> Result<()> {
+fn add_second_delta_fact(db: &ViciaDb, committed_facts: usize, pending_facts: usize) -> Result<()> {
     let index = committed_facts
         .checked_add(pending_facts)
         .and_then(|n| n.checked_add(1_000_000_000))

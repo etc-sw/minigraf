@@ -1,8 +1,8 @@
-use minigraf::{Minigraf, QueryResult, Value};
 use uuid::Uuid;
+use vicia_db::{QueryResult, Value, ViciaDb};
 
-/// Helper: execute a Datalog command via `Minigraf::execute`, panicking on error
-fn exec(db: &Minigraf, input: &str) -> QueryResult {
+/// Helper: execute a Datalog command via `ViciaDb::execute`, panicking on error
+fn exec(db: &ViciaDb, input: &str) -> QueryResult {
     db.execute(input)
         .unwrap_or_else(|e| panic!("execution error for {:?}: {}", input, e))
 }
@@ -10,7 +10,7 @@ fn exec(db: &Minigraf, input: &str) -> QueryResult {
 /// Test 3-pattern join: find entities with name, age, and city
 #[test]
 fn test_three_pattern_join() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     exec(
         &db,
@@ -41,7 +41,7 @@ fn test_three_pattern_join() {
 /// Test 4-pattern join with multiple entities
 #[test]
 fn test_four_pattern_join() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     exec(
         &db,
@@ -78,7 +78,7 @@ fn test_four_pattern_join() {
 /// Test self-join: find friends of friends
 #[test]
 fn test_self_join_friends_of_friends() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     exec(
         &db,
@@ -110,7 +110,7 @@ fn test_self_join_friends_of_friends() {
 /// Test entity reference join: find people working at specific company
 #[test]
 fn test_entity_reference_join() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     exec(
         &db,
@@ -152,7 +152,7 @@ fn test_entity_reference_join() {
 /// Test query with no results
 #[test]
 fn test_query_no_results() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     exec(&db, r#"(transact [[:alice :person/name "Alice"]])"#);
 
@@ -173,7 +173,7 @@ fn test_query_no_results() {
 /// Test query with partial matches (some entities match, some don't)
 #[test]
 fn test_query_partial_matches() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     exec(
         &db,
@@ -202,7 +202,7 @@ fn test_query_partial_matches() {
 /// Test query with same variable used multiple times
 #[test]
 fn test_query_variable_reuse() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     exec(
         &db,
@@ -230,7 +230,7 @@ fn test_query_variable_reuse() {
 /// Test query with multiple entities, complex filtering
 #[test]
 fn test_complex_multi_entity_query() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     exec(
         &db,
@@ -277,7 +277,7 @@ fn test_complex_multi_entity_query() {
 /// Test query returning multiple variable bindings per entity
 #[test]
 fn test_multiple_values_same_attribute() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     exec(
         &db,
@@ -318,7 +318,7 @@ fn test_multiple_values_same_attribute() {
 /// Test empty database query
 #[test]
 fn test_query_empty_database() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     let result = exec(
         &db,
@@ -336,7 +336,7 @@ fn test_query_empty_database() {
 /// Test UUID entity references (verify #uuid literals work in queries)
 #[test]
 fn test_uuid_entity_reference() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     let alice = Uuid::new_v4();
     let bob = Uuid::new_v4();

@@ -366,13 +366,13 @@ fn read_u64(bytes: &[u8], offset: usize) -> Result<u64> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{Minigraf, OpenOptions};
+    use crate::{OpenOptions, ViciaDb};
 
     #[test]
     fn accounts_for_every_published_page() -> Result<()> {
         let directory = tempfile::tempdir()?;
         let path = directory.path().join("layout.graph");
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &path,
             OpenOptions::default().benchmark_btree_fill_percent(100),
         )?;

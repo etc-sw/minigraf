@@ -10,7 +10,7 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::{Minigraf, QueryResult, Value};
+use vicia_db::{QueryResult, Value, ViciaDb};
 
 fn count_results(r: QueryResult) -> usize {
     match r {
@@ -19,7 +19,7 @@ fn count_results(r: QueryResult) -> usize {
     }
 }
 
-fn query_strings(db: &Minigraf, q: &str) -> Vec<String> {
+fn query_strings(db: &ViciaDb, q: &str) -> Vec<String> {
     match db.execute(q).unwrap() {
         QueryResult::QueryResults { results, .. } => results
             .into_iter()
@@ -39,7 +39,7 @@ fn query_strings(db: &Minigraf, q: &str) -> Vec<String> {
 /// Source: XTDB "Basic Queries" documentation.
 #[test]
 fn xtdb_basic_find_by_attribute_value() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:pablo    :profession "painter"]
@@ -60,7 +60,7 @@ fn xtdb_basic_find_by_attribute_value() {
 /// Source: XTDB "Joins" documentation.
 #[test]
 fn xtdb_multi_attribute_join() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:e1 :role "admin"] [:e1 :active true]
@@ -81,7 +81,7 @@ fn xtdb_multi_attribute_join() {
 /// Source: XTDB "Joins" — entity reference traversal.
 #[test]
 fn xtdb_entity_reference_join() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:alice :dept :dept-eng]
@@ -104,7 +104,7 @@ fn xtdb_entity_reference_join() {
 /// Source: XTDB "Transactions" — retract.
 #[test]
 fn xtdb_retraction_removes_specific_fact() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(r#"(transact [[:alice :name "Alice"] [:alice :role "admin"]])"#)
         .unwrap();
 
@@ -127,7 +127,7 @@ fn xtdb_retraction_removes_specific_fact() {
 /// XTDB concept: retracted fact is not visible after retraction.
 #[test]
 fn xtdb_retracted_fact_not_visible() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(r#"(transact [[:item :status "active"]])"#)
         .unwrap();
     db.execute(r#"(retract [[:item :status "active"]])"#)
@@ -146,7 +146,7 @@ fn xtdb_retracted_fact_not_visible() {
 /// Source: XTDB "Bitemporality" — transaction-time queries.
 #[test]
 fn xtdb_as_of_returns_past_state() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // tx 1: alice has role "user"
     db.execute(r#"(transact [[:alice :role "user"]])"#).unwrap();
@@ -178,7 +178,7 @@ fn xtdb_as_of_returns_past_state() {
 /// Source: XTDB "Bitemporality" — valid-time queries.
 #[test]
 fn xtdb_valid_at_query() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // Assert a fact with valid-time range.
     db.execute(r#"(transact {:valid-from "2023-01-01" :valid-to "2023-12-31"} [[:contract :status "active"]])"#)
@@ -208,7 +208,7 @@ fn xtdb_valid_at_query() {
 /// Source: XTDB "Queries" — not clauses.
 #[test]
 fn xtdb_not_excludes_matching_entities() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:alice :person true] [:alice :banned true]
@@ -231,7 +231,7 @@ fn xtdb_not_excludes_matching_entities() {
 /// Source: XTDB "Aggregates" documentation.
 #[test]
 fn xtdb_count_aggregate() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:a :tag "rust"] [:b :tag "rust"] [:c :tag "go"] [:d :tag "rust"]
@@ -260,7 +260,7 @@ fn xtdb_count_aggregate() {
 /// Source: XTDB "Rules" — transitive closure.
 #[test]
 fn xtdb_recursive_ancestor_rule() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:alice :parent :bob]
@@ -289,18 +289,18 @@ fn xtdb_recursive_ancestor_rule() {
 // SKIPPED CASES
 // ═════════════════════════════════════════════════════════════════════════════
 //
-// The following XTDB features are intentionally out of scope for Minigraf:
+// The following XTDB features are intentionally out of scope for ViciaDb:
 //
-// 1. XTDB SQL compatibility — Minigraf uses Datalog only (not SQL/GQL).
+// 1. XTDB SQL compatibility — ViciaDb uses Datalog only (not SQL/GQL).
 //    XTDB v2 added SQL; we do not implement SQL.
 //
-// 2. XTDB distributed transaction log — Minigraf is embedded single-file;
+// 2. XTDB distributed transaction log — ViciaDb is embedded single-file;
 //    no distributed transaction semantics apply.
 //
-// 3. XTDB Arrow/Parquet integration — Minigraf uses postcard serialization;
+// 3. XTDB Arrow/Parquet integration — ViciaDb uses postcard serialization;
 //    columnar formats are out of scope.
 //
-// 4. XTDB evict! (GDPR deletion) — Minigraf does not yet implement hard
+// 4. XTDB evict! (GDPR deletion) — ViciaDb does not yet implement hard
 //    deletion (tracked separately). These tests would fail.
 //
-// 5. XTDB multi-node consistency — Minigraf is single-process only.
+// 5. XTDB multi-node consistency — ViciaDb is single-process only.

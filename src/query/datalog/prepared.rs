@@ -55,17 +55,17 @@ fn bind_value_type_name(bv: &BindValue) -> &'static str {
 /// A parsed and validated query template with named bind slots (`$name`).
 ///
 /// Parse once, execute many times with different values — more efficient than
-/// calling [`crate::db::Minigraf::execute`] with a freshly formatted string on
+/// calling [`crate::db::ViciaDb::execute`] with a freshly formatted string on
 /// each invocation.
 ///
-/// Obtain via [`crate::db::Minigraf::prepare`]; execute via [`PreparedQuery::execute`].
+/// Obtain via [`crate::db::ViciaDb::prepare`]; execute via [`PreparedQuery::execute`].
 ///
 /// # Example
 ///
 /// ```
-/// # use minigraf::{Minigraf, BindValue, Value};
+/// # use vicia_db::{ViciaDb, BindValue, Value};
 /// # use uuid::Uuid;
-/// let db = Minigraf::in_memory().unwrap();
+/// let db = ViciaDb::in_memory().unwrap();
 /// db.execute(r#"(transact [[:alice :person/age 30] [:bob :person/age 25]])"#).unwrap();
 ///
 /// let pq = db.prepare("(query [:find ?name :where [?e :person/age $age]])").unwrap();

@@ -1,9 +1,9 @@
 //! Integration tests for Phase 7.2b: arithmetic and predicate expression clauses.
 
-use minigraf::{Minigraf, QueryResult, Value as MgValue};
+use vicia_db::{QueryResult, Value as MgValue, ViciaDb};
 
-fn open() -> Minigraf {
-    Minigraf::in_memory().expect("open")
+fn open() -> ViciaDb {
+    ViciaDb::in_memory().expect("open")
 }
 
 fn count(result: QueryResult) -> usize {

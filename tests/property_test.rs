@@ -1,16 +1,16 @@
 //! Cross-feature property tests (#221).
 //!
-//! Compares Minigraf query results against a deliberately simple reference
+//! Compares ViciaDb query results against a deliberately simple reference
 //! evaluator for randomly-generated small graphs.
 //!
 //! Run: cargo test --test property_test
 //! More cases: PROPTEST_CASES=500 cargo test --test property_test
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::QueryResult;
-use minigraf::db::Minigraf;
 use proptest::prelude::*;
 use uuid::Uuid;
+use vicia_db::QueryResult;
+use vicia_db::db::ViciaDb;
 
 #[derive(Debug, Clone)]
 struct TestFact {
@@ -78,14 +78,14 @@ fn ref_eval(facts: &[TestFact], query: &TestQuery) -> Vec<usize> {
     matched
 }
 
-// ── Minigraf evaluator ────────────────────────────────────────────────────────
+// ── ViciaDb evaluator ────────────────────────────────────────────────────────
 
-fn minigraf_eval(facts: &[TestFact], query: &TestQuery, max_entity: usize) -> Vec<usize> {
+fn vicia_db_eval(facts: &[TestFact], query: &TestQuery, max_entity: usize) -> Vec<usize> {
     // Pre-compute UUID → index mapping for all possible entity indices.
     let uuid_to_idx: std::collections::HashMap<Uuid, usize> =
         (0..max_entity).map(|i| (entity_uuid(i), i)).collect();
 
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     for fact in facts {
         let entity_kw = format!(":e{}", fact.entity);
@@ -119,7 +119,7 @@ fn minigraf_eval(facts: &[TestFact], query: &TestQuery, max_entity: usize) -> Ve
                 .into_iter()
                 .flat_map(|r| r.into_iter())
                 .filter_map(|v| match v {
-                    minigraf::Value::Ref(uuid) => uuid_to_idx.get(&uuid).copied(),
+                    vicia_db::Value::Ref(uuid) => uuid_to_idx.get(&uuid).copied(),
                     _ => None,
                 })
                 .collect();
@@ -162,7 +162,7 @@ fn arb_fact(max_entity: usize) -> impl Strategy<Value = TestFact> {
 }
 
 proptest! {
-    /// Minigraf results must match the reference evaluator for basic queries.
+    /// ViciaDb results must match the reference evaluator for basic queries.
     #[test]
     fn basic_query_matches_reference(facts in prop::collection::vec(arb_fact(8), 3..20)) {
         let query = TestQuery {
@@ -171,7 +171,7 @@ proptest! {
             negation_attr: None,
         };
         let ref_result = ref_eval(&facts, &query);
-        let mg_result = minigraf_eval(&facts, &query, 8);
+        let mg_result = vicia_db_eval(&facts, &query, 8);
         prop_assert_eq!(ref_result, mg_result);
     }
 
@@ -184,7 +184,7 @@ proptest! {
             negation_attr: Some(":active".to_string()),
         };
         let ref_result = ref_eval(&facts, &query);
-        let mg_result = minigraf_eval(&facts, &query, 8);
+        let mg_result = vicia_db_eval(&facts, &query, 8);
 
         let neg_entities: std::collections::HashSet<usize> = facts
             .iter()
@@ -211,8 +211,8 @@ proptest! {
             negation_attr: None,
         };
         let ref_result = ref_eval(&facts, &query);
-        let mg_result = minigraf_eval(&facts, &query, 8);
+        let mg_result = vicia_db_eval(&facts, &query, 8);
         prop_assert!(ref_result.is_empty(), "reference: impossible path must be empty");
-        prop_assert!(mg_result.is_empty(), "minigraf: impossible path must be empty");
+        prop_assert!(mg_result.is_empty(), "vicia-db: impossible path must be empty");
     }
 }

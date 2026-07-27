@@ -1,9 +1,9 @@
 //! Integration tests for stratified negation (Phase 7.1a).
 //! Covers the 10 scenarios from the spec testing plan.
 
-use minigraf::{Minigraf, OpenOptions};
+use vicia_db::{OpenOptions, ViciaDb};
 
-fn in_memory_db() -> Minigraf {
+fn in_memory_db() -> ViciaDb {
     OpenOptions::new().open_memory().unwrap()
 }
 
@@ -50,7 +50,7 @@ fn test_not_excludes_base_fact() {
     // Bob's name "Bob" would appear if ?n were in :find — but it's not.
     // Instead, assert we get exactly one result row (bob).
     match result {
-        minigraf::QueryResult::QueryResults { ref results, .. } => {
+        vicia_db::QueryResult::QueryResults { ref results, .. } => {
             assert_eq!(
                 results.len(),
                 1,
@@ -88,7 +88,7 @@ fn test_not_multiple_clauses_conjunction() {
         .unwrap();
 
     match result {
-        minigraf::QueryResult::QueryResults { ref results, .. } => {
+        vicia_db::QueryResult::QueryResults { ref results, .. } => {
             assert_eq!(
                 results.len(),
                 1,
@@ -126,7 +126,7 @@ fn test_not_negates_derived_rule() {
         .unwrap();
 
     match result {
-        minigraf::QueryResult::QueryResults { ref results, .. } => {
+        vicia_db::QueryResult::QueryResults { ref results, .. } => {
             assert_eq!(
                 results.len(),
                 1,
@@ -168,7 +168,7 @@ fn test_multi_stratum_not_on_derived_predicate() {
     // Entity IDs are UUIDs (hex); string-contains checks on "alice"/"bob" don't work.
     // Verify the count: only bob should be eligible (1 result), not alice.
     match result {
-        minigraf::QueryResult::QueryResults { ref results, .. } => {
+        vicia_db::QueryResult::QueryResults { ref results, .. } => {
             assert_eq!(
                 results.len(),
                 1,
@@ -217,7 +217,7 @@ fn test_not_with_as_of_time_travel() {
         .unwrap();
 
     match result_tx1 {
-        minigraf::QueryResult::QueryResults { ref results, .. } => {
+        vicia_db::QueryResult::QueryResults { ref results, .. } => {
             assert_eq!(
                 results.len(),
                 1,
@@ -228,7 +228,7 @@ fn test_not_with_as_of_time_travel() {
     }
 
     match result_tx2 {
-        minigraf::QueryResult::QueryResults { ref results, .. } => {
+        vicia_db::QueryResult::QueryResults { ref results, .. } => {
             assert_eq!(
                 results.len(),
                 0,
@@ -282,7 +282,7 @@ fn test_not_with_valid_at() {
         .unwrap();
 
     match result_2023 {
-        minigraf::QueryResult::QueryResults { ref results, .. } => {
+        vicia_db::QueryResult::QueryResults { ref results, .. } => {
             assert_eq!(
                 results.len(),
                 1,
@@ -293,7 +293,7 @@ fn test_not_with_valid_at() {
     }
 
     match result_2024 {
-        minigraf::QueryResult::QueryResults { ref results, .. } => {
+        vicia_db::QueryResult::QueryResults { ref results, .. } => {
             assert_eq!(
                 results.len(),
                 0,
@@ -397,7 +397,7 @@ fn test_not_in_rule_body() {
         .unwrap();
 
     match result {
-        minigraf::QueryResult::QueryResults { ref results, .. } => {
+        vicia_db::QueryResult::QueryResults { ref results, .. } => {
             assert_eq!(
                 results.len(),
                 1,

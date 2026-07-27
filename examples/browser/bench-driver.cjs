@@ -29,7 +29,7 @@ const CHROME = process.env.CHROME_PATH;
 const PAGE =
   process.env.BENCH_PAGE ?? "http://localhost:8123/examples/browser/bench.html";
 const PROFILE =
-  process.env.BENCH_PROFILE ?? path.join(os.tmpdir(), "minigraf-bench-profile");
+  process.env.BENCH_PROFILE ?? path.join(os.tmpdir(), "vicia-db-bench-profile");
 
 async function withPage(fn, { extraArgs = [], forwardConsole = false } = {}) {
   const browser = await puppeteer.launch({
@@ -281,10 +281,10 @@ async function workerSmokeMain() {
   await withPage(async (page) => {
     const result = await page.evaluate(async () => {
       const moduleUrl = new URL(
-        "../../minigraf-wasm/minigraf.js",
+        "../../vicia-db-wasm/vicia_db.js",
         location.href,
       ).href;
-      const dbName = `minigraf-worker-smoke-${Date.now()}`;
+      const dbName = `vicia-db-worker-smoke-${Date.now()}`;
       const source = `
         import init, { BrowserDb } from ${JSON.stringify(moduleUrl)};
         try {
@@ -552,7 +552,7 @@ async function projectionMaintenanceMain() {
     process.exit(1);
   }
   const fixturePath = path.resolve(process.cwd(), fixture.replace(/^\//, ""));
-  const wasmPath = path.resolve(process.cwd(), "minigraf-wasm/minigraf_bg.wasm");
+  const wasmPath = path.resolve(process.cwd(), "vicia-db-wasm/vicia_db_bg.wasm");
   const evidence = {
     schema: "vicia.browser-projection-maintenance.v1",
     fixture,
@@ -656,7 +656,7 @@ async function ledgerCallerMain() {
   );
   const receiptPath = process.env.VICIA_BENCH_RECEIPT;
   if (receiptPath) {
-    const wasmPath = path.join(process.cwd(), "minigraf-wasm", "minigraf_bg.wasm");
+    const wasmPath = path.join(process.cwd(), "vicia-db-wasm", "vicia_db_bg.wasm");
     fs.mkdirSync(path.dirname(receiptPath), { recursive: true });
     fs.writeFileSync(receiptPath, JSON.stringify({
       schema: "vicia.vetch-ledger-caller-browser-receipt.v1",
@@ -692,7 +692,7 @@ async function validTimeDiffMain() {
     process.exit(1);
   }
   const fixturePath = path.resolve(process.cwd(), fixture.replace(/^\//, ""));
-  const wasmPath = path.resolve(process.cwd(), "minigraf-wasm/minigraf_bg.wasm");
+  const wasmPath = path.resolve(process.cwd(), "vicia-db-wasm/vicia_db_bg.wasm");
   const evidence = {
     schema: "vicia.browser-valid-time-diff.v1",
     fixture,

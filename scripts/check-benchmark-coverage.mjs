@@ -2,7 +2,7 @@
 
 import { readFileSync } from "node:fs";
 
-const sourcePath = process.argv[2] ?? "benches/minigraf_bench.rs";
+const sourcePath = process.argv[2] ?? "benches/vicia_db_bench.rs";
 const workflowPath = process.argv[3] ?? ".github/workflows/bench.yml";
 const source = readFileSync(sourcePath, "utf8");
 const workflow = readFileSync(workflowPath, "utf8");

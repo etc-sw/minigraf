@@ -13,7 +13,7 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use crate::db::Minigraf;
+use crate::db::ViciaDb;
 use crate::graph::types::{FactRecord, FactValidTime, VALID_TIME_FOREVER};
 use crate::json_value::to_tagged_json;
 use crate::query::datalog::executor::QueryResult;
@@ -25,14 +25,14 @@ use crate::storage::{StorageFailureDisposition, storage_failure_disposition};
 
 /// A single caller-owned protocol session over any line-based transport.
 pub struct Session {
-    db: Minigraf,
+    db: ViciaDb,
     last_checkpoint_unix_ms: Option<i64>,
     last_checkpoint_outcome: Option<&'static str>,
 }
 
 impl Session {
     /// Wrap an open database in a protocol session.
-    pub fn new(db: Minigraf) -> Self {
+    pub fn new(db: ViciaDb) -> Self {
         Self {
             db,
             last_checkpoint_unix_ms: None,

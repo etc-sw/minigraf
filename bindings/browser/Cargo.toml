@@ -12,10 +12,10 @@ name = "vicia_db_browser"
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-vicia_db = { package = "minigraf", path = "../.." }
+vicia-db = { path = "../.." }
 
 [features]
-browser = ["vicia_db/browser"]
+browser = ["vicia-db/browser"]
 
 [workspace]
 members = ["."]

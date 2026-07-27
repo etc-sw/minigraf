@@ -46,7 +46,7 @@ fn main() -> anyhow::Result<()> {
     let _ = std::fs::remove_file(&out);
     let _ = std::fs::remove_file(format!("{out}.wal"));
 
-    let db = minigraf::OpenOptions {
+    let db = vicia_db::OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..Default::default()
     }

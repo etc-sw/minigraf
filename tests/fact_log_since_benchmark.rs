@@ -10,9 +10,9 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use anyhow::Result;
-use minigraf::{Minigraf, OpenOptions};
 use std::path::Path;
 use std::time::{Duration, Instant};
+use vicia_db::{OpenOptions, ViciaDb};
 
 const BASE_FACTS: usize = 1_000_000;
 const BATCH_SIZE: usize = 1_000;
@@ -25,7 +25,7 @@ fn db_error(error: impl std::fmt::Display) -> anyhow::Error {
     anyhow::anyhow!("{}", error)
 }
 
-fn open_no_auto_checkpoint(path: &Path) -> Result<Minigraf> {
+fn open_no_auto_checkpoint(path: &Path) -> Result<ViciaDb> {
     OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..Default::default()
@@ -35,7 +35,7 @@ fn open_no_auto_checkpoint(path: &Path) -> Result<Minigraf> {
     .map_err(db_error)
 }
 
-fn insert_batch(db: &Minigraf, start: usize, end: usize) -> Result<()> {
+fn insert_batch(db: &ViciaDb, start: usize, end: usize) -> Result<()> {
     let mut command = String::from("(transact [");
     for i in start..end {
         command.push_str(&format!("[:bench/e{i} :bench/value {i}]"));
@@ -45,7 +45,7 @@ fn insert_batch(db: &Minigraf, start: usize, end: usize) -> Result<()> {
     Ok(())
 }
 
-fn timed_since_tail(db: &Minigraf, since: u64) -> Result<(Duration, usize)> {
+fn timed_since_tail(db: &ViciaDb, since: u64) -> Result<(Duration, usize)> {
     let start = Instant::now();
     let tail = db.export_fact_log_since(since).map_err(db_error)?;
     Ok((start.elapsed(), tail.len()))

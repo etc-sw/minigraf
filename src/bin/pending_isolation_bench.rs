@@ -6,16 +6,16 @@ use anyhow::{Context, Result, bail};
 use bench_support::process_memory::{
     MemoryBreakdown, current_rss_bytes, memory_breakdown, peak_rss_bytes, trim_allocator,
 };
-use minigraf::{
-    CurrentAttributeCursorDiagnostics, Minigraf, OpenOptions, PendingMemoryDiagnostics,
-    QueryResult, Value, WalReplayMemoryDiagnostics,
-};
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use vicia_db::{
+    CurrentAttributeCursorDiagnostics, OpenOptions, PendingMemoryDiagnostics, QueryResult, Value,
+    ViciaDb, WalReplayMemoryDiagnostics,
+};
 
 const SCHEMA: &str = "vicia.pending-isolation.v3";
 const BASE_FACTS: u64 = 1_000_000;
@@ -469,7 +469,7 @@ fn append_pending(path: &Path, kind: PendingKind, facts: u64) -> Result<()> {
 }
 
 fn write_facts(
-    db: &Minigraf,
+    db: &ViciaDb,
     kind: PendingKind,
     start: u64,
     facts: u64,
@@ -494,7 +494,7 @@ fn write_facts(
     Ok(())
 }
 
-fn open_without_auto_checkpoint(path: &Path) -> Result<Minigraf> {
+fn open_without_auto_checkpoint(path: &Path) -> Result<ViciaDb> {
     let mut options = OpenOptions::new();
     options.wal_checkpoint_threshold = usize::MAX;
     options.max_results = usize::try_from(BASE_FACTS + SELECTED_CONTROL_FACTS + 1)?;
@@ -587,7 +587,7 @@ fn audit_memory(path: &Path) -> Result<MemoryAudit> {
     })
 }
 
-fn aggregate_sample(db: &Minigraf) -> Result<(AggregateSample, (u64, i128))> {
+fn aggregate_sample(db: &ViciaDb) -> Result<(AggregateSample, (u64, i128))> {
     let started = Instant::now();
     let result =
         db.execute("(query [:find (count ?v) (sum ?v) :where [?e :bench/selected ?v]])")?;

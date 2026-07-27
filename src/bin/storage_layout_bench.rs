@@ -1,10 +1,6 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use anyhow::{Context, Result, bail};
-use minigraf::{
-    CheckpointConstructionDiagnostics, LeafReadDiagnostics, Minigraf, OpenOptions, QueryResult,
-    StorageLayoutDiagnostics, inspect_storage_layout,
-};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -12,6 +8,10 @@ use std::process::Command;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use vicia_db::{
+    CheckpointConstructionDiagnostics, LeafReadDiagnostics, OpenOptions, QueryResult,
+    StorageLayoutDiagnostics, ViciaDb, inspect_storage_layout,
+};
 
 const SCHEMA: &str = "vicia.storage-layout.v3";
 const POINT_DENSITY_SCHEMA: &str = "vicia.point-path-density.v1";
@@ -421,7 +421,7 @@ struct CheckpointSample {
 fn build(path: &Path, facts: u64, fill: u8) -> Result<CheckpointSample> {
     let _ = fs::remove_file(path);
     let _ = fs::remove_file(format!("{}.wal", path.display()));
-    let db = Minigraf::open_with_options(
+    let db = ViciaDb::open_with_options(
         path,
         OpenOptions {
             wal_checkpoint_threshold: usize::MAX,
@@ -488,7 +488,7 @@ fn combine_checkpoint_samples(mut samples: Vec<CheckpointSample>) -> Result<Chec
 }
 
 fn measure(path: &Path) -> Result<QuerySample> {
-    let db = Minigraf::open(path)?;
+    let db = ViciaDb::open(path)?;
     let point = "(query [:find ?v :where [:layout/e5000 :layout/value ?v]])";
     db.execute(point)?;
     let started = Instant::now();
@@ -516,7 +516,7 @@ fn measure(path: &Path) -> Result<QuerySample> {
 }
 
 fn measure_point_density(path: &Path) -> Result<PointDensitySample> {
-    let db = Minigraf::open(path)?;
+    let db = ViciaDb::open(path)?;
     let point = "(query [:find ?v :where [:layout/e5000 :layout/value ?v]])";
     point_value(db.execute(point)?)?;
     db.set_leaf_read_diagnostics_enabled(true);
@@ -576,7 +576,7 @@ fn combine_query_samples(samples: Vec<QuerySample>) -> Result<QueryMeasurement> 
     })
 }
 
-fn aggregate(db: &Minigraf) -> Result<(u64, i128)> {
+fn aggregate(db: &ViciaDb) -> Result<(u64, i128)> {
     let QueryResult::QueryResults { results, .. } =
         db.execute("(query [:find (count ?v) (sum ?v) :where [?e :layout/value ?v]])")?
     else {

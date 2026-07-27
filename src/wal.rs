@@ -1,4 +1,4 @@
-//! Write-Ahead Log (WAL) for Minigraf.
+//! Write-Ahead Log (WAL) for ViciaDb.
 //!
 //! The WAL sidecar file (`<db>.wal`) stores committed transaction entries as
 //! CRC32-protected binary records. Facts go to the WAL before the main file,
@@ -111,7 +111,7 @@ pub struct WalEntry {
 
 /// Appends committed transaction entries to the WAL sidecar file.
 ///
-/// Created by `Minigraf::open()` for file-backed databases.
+/// Created by `ViciaDb::open()` for file-backed databases.
 /// Not used for in-memory databases.
 pub struct WalWriter {
     file: File,

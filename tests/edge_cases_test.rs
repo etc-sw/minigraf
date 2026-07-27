@@ -6,7 +6,7 @@
 //! - Stale WAL after checkpoint is replayed idempotently (no duplicate facts)
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::{Minigraf, OpenOptions, QueryResult};
+use vicia_db::{OpenOptions, QueryResult, ViciaDb};
 
 // ── Oversized fact — file-backed, execute() path ──────────────────────────────
 
@@ -69,7 +69,7 @@ fn test_oversized_fact_rejected_via_write_transaction() {
 
 #[test]
 fn test_oversized_fact_accepted_in_memory() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     let large_value = "x".repeat(8192);
     let cmd = format!("(transact [[:e :attr \"{}\"]])", large_value);
     assert!(

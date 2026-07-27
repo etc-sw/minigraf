@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 
 const declarationPath = process.argv[2];
 if (!declarationPath) {
-  throw new Error("usage: validate-browser-capability-surface.mjs <minigraf.d.ts>");
+  throw new Error("usage: validate-browser-capability-surface.mjs <vicia_db.d.ts>");
 }
 const source = readFileSync(declarationPath, "utf8");
 

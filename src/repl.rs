@@ -1,15 +1,15 @@
-use crate::db::Minigraf;
+use crate::db::ViciaDb;
 use std::io::{self, BufRead, IsTerminal, Write};
 
-/// An interactive REPL for a [`Minigraf`] database.
+/// An interactive REPL for a [`ViciaDb`] database.
 ///
-/// Construct via [`Minigraf::repl`] and call [`Repl::run`] to start the session.
+/// Construct via [`ViciaDb::repl`] and call [`Repl::run`] to start the session.
 pub struct Repl<'a> {
-    db: &'a Minigraf,
+    db: &'a ViciaDb,
 }
 
 impl<'a> Repl<'a> {
-    pub(crate) fn new(db: &'a Minigraf) -> Self {
+    pub(crate) fn new(db: &'a ViciaDb) -> Self {
         Repl { db }
     }
 
@@ -44,7 +44,7 @@ impl<'a> Repl<'a> {
     fn run_impl<R: BufRead>(&self, mut reader: R, interactive: bool) {
         if interactive {
             println!(
-                "Minigraf v{} - Interactive Datalog Console",
+                "ViciaDb v{} - Interactive Datalog Console",
                 env!("CARGO_PKG_VERSION")
             );
             println!();
@@ -83,7 +83,7 @@ impl<'a> Repl<'a> {
 
         loop {
             if interactive && !is_multiline && prompt_needed {
-                print!("minigraf> ");
+                print!("vicia-db> ");
                 io::stdout().flush().ok();
                 prompt_needed = false;
             }
@@ -240,7 +240,7 @@ impl<'a> Repl<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::Minigraf;
+    use crate::db::ViciaDb;
 
     #[test]
     fn run_public_method_exits_on_non_tty_stdin() {
@@ -252,7 +252,7 @@ mod tests {
         if io::stdin().is_terminal() {
             return;
         }
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         db.repl().run();
     }
 
@@ -260,28 +260,28 @@ mod tests {
     fn eof_in_interactive_mode_exits_cleanly() {
         // Exercises the `if interactive { println!(); }` branch in the Ok(0) arm.
         // An empty Cursor reaches EOF immediately; interactive=true triggers the newline path.
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(std::io::Cursor::new(b""), true);
     }
 
     #[test]
     fn eof_in_non_interactive_mode_exits_cleanly() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(std::io::Cursor::new(b""), false);
     }
 
     #[test]
     fn exit_command_terminates_loop() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(std::io::Cursor::new(b"EXIT\n"), false);
     }
 
     #[test]
     fn comment_and_blank_lines_are_skipped() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(
             std::io::Cursor::new(b"# hash comment\n; edn comment\n\nEXIT\n"),
@@ -291,7 +291,7 @@ mod tests {
 
     #[test]
     fn query_with_no_results_runs_without_panic() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(
             std::io::Cursor::new(b"(query [:find ?e :where [?e :x 1]])\nEXIT\n"),
@@ -301,7 +301,7 @@ mod tests {
 
     #[test]
     fn transact_and_query_with_results() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(
             std::io::Cursor::new(
@@ -315,7 +315,7 @@ mod tests {
 
     #[test]
     fn retract_command_runs_without_panic() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(
             std::io::Cursor::new(
@@ -329,7 +329,7 @@ mod tests {
 
     #[test]
     fn multiline_command_is_buffered_until_complete() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         // The first line is an incomplete command (unmatched paren); the second
         // line completes it — exercises the `is_multiline = true` branch.
@@ -342,7 +342,7 @@ mod tests {
     #[test]
     fn interactive_mode_prints_output_after_command() {
         // interactive=true exercises the `println!()` after a successful command.
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(
             std::io::Cursor::new(b"(query [:find ?e :where [?e :x 1]])\nEXIT\n"),
@@ -371,14 +371,14 @@ mod tests {
             fn consume(&mut self, _amt: usize) {}
         }
 
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(ErrorReader, false);
     }
 
     #[test]
     fn query_integer_result_covers_format_value_integer() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(
             std::io::Cursor::new(
@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn query_float_result_covers_format_value_float() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(
             std::io::Cursor::new(
@@ -406,7 +406,7 @@ mod tests {
 
     #[test]
     fn query_keyword_result_covers_format_value_keyword() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(
             std::io::Cursor::new(
@@ -420,7 +420,7 @@ mod tests {
 
     #[test]
     fn query_boolean_result_covers_format_value_boolean() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(
             std::io::Cursor::new(
@@ -434,7 +434,7 @@ mod tests {
 
     #[test]
     fn rule_definition_covers_result_ok_arm() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_impl(
             std::io::Cursor::new(
@@ -447,7 +447,7 @@ mod tests {
 
     #[test]
     fn multiline_command_in_interactive_mode_covers_continuation_prompt() {
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         // First line is incomplete (unmatched paren) → no continuation prompt (suppressed in multiline mode).
         repl.run_impl(
@@ -577,7 +577,7 @@ mod tests {
         .expect("write init");
         tmp.flush().expect("flush");
 
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_with_init(tmp.path());
         let result = db
@@ -596,7 +596,7 @@ mod tests {
     fn run_with_init_missing_file_prints_error() {
         // A non-existent init path should print an error to stderr but not panic.
         // run_with_init no longer starts the interactive loop, so no stdin blocking.
-        let db = Minigraf::in_memory().expect("in-memory db");
+        let db = ViciaDb::in_memory().expect("in-memory db");
         let repl = db.repl();
         repl.run_with_init(std::path::Path::new("/nonexistent/path/rules.datalog"));
     }

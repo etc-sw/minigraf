@@ -13,7 +13,7 @@ This no-bundler demo runs the recommended persistent browser shape:
 From the repository root:
 
 ```bash
-wasm-pack build --target web --out-dir minigraf-wasm -- --features browser
+wasm-pack build --target web --out-dir vicia-db-wasm -- --features browser
 python3 -m http.server 8080
 ```
 
@@ -50,5 +50,5 @@ fixtures, and migration recovery without a capability replacement. It is not
 the default persistent application example. See
 `docs/API_COMPATIBILITY_AND_MIGRATION.md` for the replacement-first 2.0 policy.
 
-The generated `minigraf-wasm/` directory is a local build artifact. The browser
+The generated `vicia-db-wasm/` directory is a local build artifact. The browser
 package is browser-only; use `@minigraf/node` for server-side Node.js.

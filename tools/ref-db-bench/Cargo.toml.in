@@ -11,7 +11,7 @@ anyhow = "1"
 cozo = { path = "@DB_REF_DIR@/cozo/cozo-core", default-features = false, features = ["storage-sqlite", "graph-algo"] }
 fjall = { path = "@DB_REF_DIR@/fjall" }
 grafeo = { path = "@DB_REF_DIR@/grafeo/crates/grafeo", features = ["storage"] }
-minigraf = { path = "../.." }
+vicia-db = { path = "../.." }
 redb = { path = "@DB_REF_DIR@/redb" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"

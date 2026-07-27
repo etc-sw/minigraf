@@ -13,12 +13,12 @@
 //!   smoke    — 10K-fact base, 20 slices (fast correctness pass)
 
 use anyhow::{Result, bail};
-use minigraf::{Minigraf, OpenOptions, QueryResult};
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::{Duration, Instant, SystemTime};
 use uuid::Uuid;
+use vicia_db::{OpenOptions, QueryResult, ViciaDb};
 
 #[path = "helpers/receipt.rs"]
 mod receipt;
@@ -225,7 +225,7 @@ fn push_base_fact(command: &mut String, index: usize) {
     }
 }
 
-fn open_no_auto_checkpoint(path: &Path) -> Result<Minigraf> {
+fn open_no_auto_checkpoint(path: &Path) -> Result<ViciaDb> {
     OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..Default::default()
@@ -239,7 +239,7 @@ fn deterministic_uuid(index: usize) -> Uuid {
     Uuid::from_u128(index as u128 + 1)
 }
 
-fn assert_query_count(db: &Minigraf, query: &str, expected: usize, label: &str) -> Result<()> {
+fn assert_query_count(db: &ViciaDb, query: &str, expected: usize, label: &str) -> Result<()> {
     match db.execute(query).map_err(db_error)? {
         QueryResult::QueryResults { results, .. } => {
             if results.len() != expected {

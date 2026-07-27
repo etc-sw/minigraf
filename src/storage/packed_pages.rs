@@ -43,7 +43,7 @@ pub const PACKED_HEADER_SIZE: usize = 12;
 /// attribute string, counters, timestamps, boolean flag).
 ///
 /// File-backed databases reject facts that exceed this limit at insertion time.
-/// In-memory databases (`Minigraf::in_memory()`) have no size constraint.
+/// In-memory databases (`ViciaDb::in_memory()`) have no size constraint.
 pub const MAX_FACT_BYTES: usize = PAGE_SIZE - PACKED_HEADER_SIZE - 4;
 
 /// Pack a slice of facts into packed pages.

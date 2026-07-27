@@ -9,7 +9,7 @@ publish = false
 [dependencies]
 anyhow = "1"
 cozo = "0.7.6"
-minigraf = { path = "../.." }
+vicia-db = { path = "../.." }
 redb = "4.1.0"
 sqlite = "0.32.0"
 serde = { version = "1", features = ["derive"] }

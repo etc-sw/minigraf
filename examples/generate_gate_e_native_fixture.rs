@@ -9,9 +9,9 @@ fn main() {}
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> anyhow::Result<()> {
-    use minigraf::Minigraf;
     use serde::Deserialize;
     use std::path::PathBuf;
+    use vicia_db::ViciaDb;
 
     #[derive(Deserialize)]
     struct Corpus {
@@ -34,7 +34,7 @@ fn main() -> anyhow::Result<()> {
     let _ = std::fs::remove_file(staging.with_extension("graph.lock"));
 
     {
-        let db = Minigraf::open(&staging)?;
+        let db = ViciaDb::open(&staging)?;
         for operation in corpus.setup {
             db.execute(&operation.datalog)?;
             if operation.checkpoint_after {

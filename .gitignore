@@ -8,6 +8,14 @@
 tools/ref-db-bench/Cargo.toml
 tools/ref-db-bench/Cargo.lock
 tools/ref-db-bench/target/
+# The sibling workspaces build into their own target/ — /target above is
+# root-anchored and does not cover them. Their Cargo.lock files are tracked
+# where they pin a published surface (bindings/browser, tools/cross-db-bench)
+# and ignored where they do not (fuzz, like ref-db-bench above).
+fuzz/Cargo.lock
+fuzz/target/
+tools/cross-db-bench/target/
+bindings/browser/target/
 .codex
 .opencode/
 .claude/

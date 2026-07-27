@@ -9,8 +9,8 @@
 //! Nightly CI runs this via .github/workflows/smoke.yml.
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::db::Minigraf;
-use minigraf::{BindValue, QueryResult, Value};
+use vicia_db::db::ViciaDb;
+use vicia_db::{BindValue, QueryResult, Value};
 
 fn count_results(r: QueryResult) -> usize {
     match r {
@@ -40,7 +40,7 @@ fn smoke_large_graph_10_cycles() {
     // ── Phase 1: Load 5,000 facts ─────────────────────────────────────────────
     eprintln!("smoke: loading {} entities × 10 attributes", NUM_ENTITIES);
     {
-        let db = Minigraf::open(&path).unwrap();
+        let db = ViciaDb::open(&path).unwrap();
 
         // Batch transact in groups of 50 entities to keep individual transactions small.
         for batch_start in (0..NUM_ENTITIES).step_by(50) {
@@ -73,7 +73,7 @@ fn smoke_large_graph_10_cycles() {
     for cycle in 0..NUM_CYCLES {
         eprintln!("smoke: cycle {}/{}", cycle + 1, NUM_CYCLES);
 
-        let db = Minigraf::open(&path).unwrap();
+        let db = ViciaDb::open(&path).unwrap();
 
         // Invariant 1: all 500 entities must be queryable by :name.
         let n_names = count_results(
@@ -171,7 +171,7 @@ fn smoke_large_graph_10_cycles() {
 
     // ── Phase 3: Final reopen and full invariant check ────────────────────────
     eprintln!("smoke: final reopen and invariant verification");
-    let db_final = Minigraf::open(&path).unwrap();
+    let db_final = ViciaDb::open(&path).unwrap();
 
     let n_final = count_results(
         db_final

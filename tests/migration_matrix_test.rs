@@ -1,10 +1,10 @@
 //! Migration matrix tests (#215).
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::QueryResult;
-use minigraf::db::Minigraf;
 use std::io::Write;
 use std::ops::Range;
+use vicia_db::QueryResult;
+use vicia_db::db::ViciaDb;
 
 const PAGE_SIZE: usize = 4096;
 const MAGIC_NUMBER: [u8; 4] = *b"MGRF";
@@ -41,11 +41,11 @@ fn current_format_round_trip_is_idempotent() -> TestResult {
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("db.graph");
     {
-        let db = Minigraf::open(&path)?;
+        let db = ViciaDb::open(&path)?;
         db.execute(r#"(transact [[:e1 :name "Alice"]])"#)?;
         db.checkpoint()?;
     }
-    let db2 = Minigraf::open(&path)?;
+    let db2 = ViciaDb::open(&path)?;
     let n = count_results(db2.execute("(query [:find ?n :where [?e :name ?n]])")?)?;
     assert_eq!(n, 1, "round-trip: Alice must survive close/reopen");
     Ok(())
@@ -58,7 +58,7 @@ fn v7_fixture_migrates_to_current_index_format() -> TestResult {
     let path = dir.path().join("fixture-v7.graph");
     std::fs::write(&path, fixture)?;
 
-    let db = Minigraf::open(&path)?;
+    let db = ViciaDb::open(&path)?;
     let n = count_results(db.execute("(query [:find ?name :where [?e :name ?name]])")?)?;
     assert_eq!(n, 1, "v7 fixture fact must remain queryable");
     drop(db);
@@ -82,7 +82,7 @@ fn v3_empty_migrates_without_error() -> TestResult {
     let mut f = std::fs::File::create(&path)?;
     f.write_all(&page)?;
     drop(f);
-    Minigraf::open(&path)?;
+    ViciaDb::open(&path)?;
     Ok(())
 }
 
@@ -95,7 +95,7 @@ fn corrupt_magic_fails_loudly() -> TestResult {
     write_range(&mut page, 4..8, &7u32.to_le_bytes())?;
     let mut f = std::fs::File::create(&path)?;
     f.write_all(&page)?;
-    let result = Minigraf::open(&path);
+    let result = ViciaDb::open(&path);
     let msg = match result {
         Ok(_) => return Err(std::io::Error::other("corrupt magic must produce an error").into()),
         Err(err) => err.to_string(),
@@ -116,7 +116,7 @@ fn unsupported_version_fails_loudly() -> TestResult {
     write_range(&mut page, 4..8, &99u32.to_le_bytes())?;
     let mut f = std::fs::File::create(&path)?;
     f.write_all(&page)?;
-    let result = Minigraf::open(&path);
+    let result = ViciaDb::open(&path);
     if result.is_ok() {
         return Err(std::io::Error::other("unsupported version must produce an error").into());
     }
@@ -128,16 +128,16 @@ fn wal_replay_after_migration_is_idempotent() -> TestResult {
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("replay.graph");
     {
-        let db = Minigraf::open(&path)?;
+        let db = ViciaDb::open(&path)?;
         db.execute(r#"(transact [[:e1 :color "red"]])"#)?;
         db.checkpoint()?;
     }
     {
-        let db = Minigraf::open(&path)?;
+        let db = ViciaDb::open(&path)?;
         db.execute(r#"(transact [[:e2 :color "blue"]])"#)?;
         std::mem::forget(db);
     }
-    let db3 = Minigraf::open(&path)?;
+    let db3 = ViciaDb::open(&path)?;
     let n = count_results(db3.execute("(query [:find ?c :where [?e :color ?c]])")?)?;
     assert_eq!(n, 2, "WAL replay after checkpoint must be idempotent");
     Ok(())

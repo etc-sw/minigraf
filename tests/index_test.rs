@@ -9,15 +9,15 @@
 //! - Explicit write transactions work correctly with indexes
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::db::Minigraf;
-use minigraf::{QueryResult, Value};
+use vicia_db::db::ViciaDb;
+use vicia_db::{QueryResult, Value};
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
-fn open_temp_db() -> (Minigraf, tempfile::TempDir) {
+fn open_temp_db() -> (ViciaDb, tempfile::TempDir) {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("test.graph");
-    let db = Minigraf::open(&db_path).unwrap();
+    let db = ViciaDb::open(&db_path).unwrap();
     (db, dir)
 }
 
@@ -46,7 +46,7 @@ fn test_query_correct_after_transact_and_reload() {
 
     // First session: write facts, then drop (triggers auto-checkpoint)
     {
-        let db = Minigraf::open(&db_path).unwrap();
+        let db = ViciaDb::open(&db_path).unwrap();
         db.execute(
             r#"(transact [[:alice :person/name "Alice"]
                                   [:bob :person/name "Bob"]])"#,
@@ -56,7 +56,7 @@ fn test_query_correct_after_transact_and_reload() {
 
     // Second session: reopen and query — indexes rebuilt from disk
     {
-        let db = Minigraf::open(&db_path).unwrap();
+        let db = ViciaDb::open(&db_path).unwrap();
         let n = count_results(
             db.execute(r#"(query [:find ?name :where [?e :person/name ?name]])"#)
                 .unwrap(),

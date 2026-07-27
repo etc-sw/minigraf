@@ -1,12 +1,12 @@
 import init, {
   BrowserMaintenanceLedger,
-} from "../../minigraf-wasm/minigraf.js";
+} from "../../vicia-db-wasm/vicia_db.js";
 
 self.addEventListener("message", async ({ data }) => {
   try {
     await init();
     const response = await navigator.locks.request(
-      `minigraf:${data.dbName}`,
+      `vicia-db:${data.dbName}`,
       async () => withMaintenanceLedger(data.dbName, data),
     );
     const transfer = response.bytes ? [response.bytes.buffer] : [];

@@ -1,12 +1,12 @@
-use minigraf::{Minigraf, QueryResult};
 use std::sync::Arc;
 use std::thread;
 use uuid::Uuid;
+use vicia_db::{QueryResult, ViciaDb};
 
 /// Test concurrent rule registration from multiple threads
 #[test]
 fn test_concurrent_rule_registration() {
-    let db = Arc::new(Minigraf::in_memory().unwrap());
+    let db = Arc::new(ViciaDb::in_memory().unwrap());
 
     // Spawn 5 threads, each registering different rules
     let handles: Vec<_> = (0..5)
@@ -36,7 +36,7 @@ fn test_concurrent_rule_registration() {
 /// Test concurrent queries with rules
 #[test]
 fn test_concurrent_rule_queries() {
-    let db = Arc::new(Minigraf::in_memory().unwrap());
+    let db = Arc::new(ViciaDb::in_memory().unwrap());
 
     // Setup: create a chain of UUID entities
     let nodes: Vec<Uuid> = (0..10).map(|_| Uuid::new_v4()).collect();
@@ -88,7 +88,7 @@ fn test_concurrent_rule_queries() {
 /// Test concurrent transact + rule registration
 #[test]
 fn test_concurrent_transact_and_rules() {
-    let db = Arc::new(Minigraf::in_memory().unwrap());
+    let db = Arc::new(ViciaDb::in_memory().unwrap());
 
     // Spawn threads that mix transact and rule operations
     let handles: Vec<_> = (0..10)
@@ -130,7 +130,7 @@ fn test_concurrent_transact_and_rules() {
 /// Test concurrent read-heavy workload
 #[test]
 fn test_concurrent_read_heavy() {
-    let db = Arc::new(Minigraf::in_memory().unwrap());
+    let db = Arc::new(ViciaDb::in_memory().unwrap());
 
     let a = Uuid::new_v4();
     let b = Uuid::new_v4();
@@ -178,7 +178,7 @@ fn test_concurrent_read_heavy() {
 /// Test concurrent recursive evaluation (stress test)
 #[test]
 fn test_concurrent_recursive_evaluation() {
-    let db = Arc::new(Minigraf::in_memory().unwrap());
+    let db = Arc::new(ViciaDb::in_memory().unwrap());
 
     // Create a complex graph with multiple chains
     let mut all_facts = String::from("(transact [");
@@ -237,7 +237,7 @@ fn test_concurrent_recursive_evaluation() {
 /// Test no deadlocks with mixed operations
 #[test]
 fn test_no_deadlocks_mixed_operations() {
-    let db = Arc::new(Minigraf::in_memory().unwrap());
+    let db = Arc::new(ViciaDb::in_memory().unwrap());
 
     let a = Uuid::new_v4();
     let b = Uuid::new_v4();
@@ -301,7 +301,7 @@ fn test_no_deadlocks_mixed_operations() {
 /// Test thread safety with RwLock
 #[test]
 fn test_rwlock_consistency() {
-    let db = Arc::new(Minigraf::in_memory().unwrap());
+    let db = Arc::new(ViciaDb::in_memory().unwrap());
 
     // Many writers registering rules
     let write_handles: Vec<_> = (0..10)
@@ -358,7 +358,7 @@ fn stress_readers_during_writer() {
     };
     use std::thread;
 
-    let db = Arc::new(minigraf::db::Minigraf::in_memory().unwrap());
+    let db = Arc::new(vicia_db::db::ViciaDb::in_memory().unwrap());
     let stop = Arc::new(AtomicBool::new(false));
 
     db.execute(r#"(transact [[:seed :k "v"]])"#).unwrap();
@@ -395,7 +395,7 @@ fn stress_readers_during_writer() {
 
 #[test]
 fn failed_write_followed_by_successful_write() {
-    let db = minigraf::db::Minigraf::in_memory().unwrap();
+    let db = vicia_db::db::ViciaDb::in_memory().unwrap();
     let bad = db.execute("(transact [[NOT VALID SYNTAX");
     assert!(bad.is_err(), "invalid input must return Err");
     db.execute(r#"(transact [[:e1 :ok true]])"#).unwrap();
@@ -403,7 +403,7 @@ fn failed_write_followed_by_successful_write() {
         .execute("(query [:find ?e :where [?e :ok true]])")
         .unwrap()
     {
-        minigraf::QueryResult::QueryResults { results, .. } => results.len(),
+        vicia_db::QueryResult::QueryResults { results, .. } => results.len(),
         _ => 0,
     };
     assert_eq!(n, 1, "fact after failed write must be visible");
@@ -411,7 +411,7 @@ fn failed_write_followed_by_successful_write() {
 
 #[test]
 fn rollback_after_partial_work() {
-    let db = minigraf::db::Minigraf::in_memory().unwrap();
+    let db = vicia_db::db::ViciaDb::in_memory().unwrap();
     {
         let mut tx = db.begin_write().unwrap();
         tx.execute(r#"(transact [[:a :x 1] [:b :x 2] [:c :x 3]])"#)
@@ -419,7 +419,7 @@ fn rollback_after_partial_work() {
         tx.rollback();
     }
     let n = match db.execute("(query [:find ?v :where [?e :x ?v]])").unwrap() {
-        minigraf::QueryResult::QueryResults { results, .. } => results.len(),
+        vicia_db::QueryResult::QueryResults { results, .. } => results.len(),
         _ => 0,
     };
     assert_eq!(n, 0, "rolled-back multi-fact tx must leave no state");
@@ -432,7 +432,7 @@ fn open_write_checkpoint_query_loop_per_thread() {
     let handles: Vec<_> = (0..4)
         .map(|thread_id| {
             thread::spawn(move || {
-                let db = minigraf::db::Minigraf::in_memory().unwrap();
+                let db = vicia_db::db::ViciaDb::in_memory().unwrap();
                 for i in 0..20 {
                     db.execute(&format!(
                         r#"(transact [[:t{thread_id}e{i} :thread {thread_id}]])"#
@@ -445,7 +445,7 @@ fn open_write_checkpoint_query_loop_per_thread() {
                     ))
                     .unwrap()
                 {
-                    minigraf::QueryResult::QueryResults { results, .. } => results.len(),
+                    vicia_db::QueryResult::QueryResults { results, .. } => results.len(),
                     _ => 0,
                 };
                 assert_eq!(n, 20, "expected 20 facts per thread");
@@ -466,7 +466,7 @@ fn stress_open_write_loop_nightly() {
     let handles: Vec<_> = (0..8)
         .map(|tid| {
             thread::spawn(move || {
-                let db = minigraf::db::Minigraf::in_memory().unwrap();
+                let db = vicia_db::db::ViciaDb::in_memory().unwrap();
                 for i in 0..200 {
                     db.execute(&format!(r#"(transact [[:nt{tid}e{i} :n {i}]])"#))
                         .unwrap();
@@ -475,7 +475,7 @@ fn stress_open_write_loop_nightly() {
                     .execute(&format!("(query [:find ?e :where [?e :n {}]])", 199))
                     .unwrap()
                 {
-                    minigraf::QueryResult::QueryResults { results, .. } => results.len(),
+                    vicia_db::QueryResult::QueryResults { results, .. } => results.len(),
                     _ => 0,
                 };
                 assert!(n >= 1, "last fact must be visible in nightly run");

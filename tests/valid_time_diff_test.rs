@@ -1,5 +1,5 @@
-use minigraf::{
-    Minigraf, ReadViewOptions, ReadViewValidAt, ValidTimeDiffChange, ValidTimeDiffRequest, Value,
+use vicia_db::{
+    ReadViewOptions, ReadViewValidAt, ValidTimeDiffChange, ValidTimeDiffRequest, Value, ViciaDb,
 };
 
 const T_2018_07: i64 = 1_530_403_200_000;
@@ -12,7 +12,7 @@ const T_2021_07: i64 = 1_625_097_600_000;
 const T_2022_01: i64 = 1_640_995_200_000;
 const T_2022_07: i64 = 1_656_633_600_000;
 
-fn view_any(db: &Minigraf) -> minigraf::ReadView<'_> {
+fn view_any(db: &ViciaDb) -> vicia_db::ReadView<'_> {
     db.read_view(ReadViewOptions {
         as_of: None,
         valid_at: ReadViewValidAt::AnyValidTime,
@@ -21,13 +21,13 @@ fn view_any(db: &Minigraf) -> minigraf::ReadView<'_> {
 }
 
 fn run_diff(
-    view: &minigraf::ReadView<'_>,
+    view: &vicia_db::ReadView<'_>,
     attribute: &str,
     entities: Option<&[uuid::Uuid]>,
     before: i64,
     after: i64,
     limit: usize,
-) -> minigraf::ValidTimeDiffPage {
+) -> vicia_db::ValidTimeDiffPage {
     view.valid_time_diff(ValidTimeDiffRequest {
         attribute,
         entities,
@@ -42,7 +42,7 @@ fn run_diff(
 #[test]
 fn appeared_disappeared_and_untouched_values_between_two_instants() {
     let entity = uuid::Uuid::from_u128(1);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!(
         r#"(transact {{:valid-from "2020-01-01" :valid-to "2021-01-01"}} [[#uuid "{entity}" :status/value :old]])"#
     ))
@@ -89,7 +89,7 @@ fn appeared_disappeared_and_untouched_values_between_two_instants() {
 #[test]
 fn multi_valued_attribute_emits_only_changed_values() {
     let entity = uuid::Uuid::from_u128(2);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!(
         r#"(transact {{:valid-from "2020-01-01"}} [[#uuid "{entity}" :card/tag :one] [#uuid "{entity}" :card/tag :two]])"#
     ))
@@ -115,7 +115,7 @@ fn multi_valued_attribute_emits_only_changed_values() {
 #[test]
 fn scoped_and_unscoped_retractions_shape_the_diff() {
     let entity = uuid::Uuid::from_u128(3);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!(
         r#"(transact {{:valid-from "2020-01-01" :valid-to "2022-01-01"}} [[#uuid "{entity}" :status/value :old]])"#
     ))
@@ -168,7 +168,7 @@ fn scoped_and_unscoped_retractions_shape_the_diff() {
 #[test]
 fn interval_internal_churn_is_invisible() {
     let entity = uuid::Uuid::from_u128(5);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!(
         r#"(transact {{:valid-from "2020-03-01" :valid-to "2020-09-01"}} [[#uuid "{entity}" :status/value :blip]])"#
     ))
@@ -192,7 +192,7 @@ fn interval_internal_churn_is_invisible() {
 #[test]
 fn boundary_instants_use_half_open_windows() {
     let entity = uuid::Uuid::from_u128(6);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!(
         r#"(transact {{:valid-from "2021-01-01" :valid-to "2022-01-01"}} [[#uuid "{entity}" :status/value :window]])"#
     ))
@@ -224,7 +224,7 @@ fn boundary_instants_use_half_open_windows() {
 #[test]
 fn backdated_corrections_and_view_pinning() {
     let entity = uuid::Uuid::from_u128(7);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!(
         r#"(transact {{:valid-from "2019-01-01"}} [[#uuid "{entity}" :status/value :backdated]])"#
     ))
@@ -288,7 +288,7 @@ fn committed_delta_and_pending_layers_merge_in_diff() {
     let path = directory.path().join("valid-time-diff.graph");
     let entity = uuid::Uuid::from_u128(8);
     {
-        let db = Minigraf::open(&path).expect("open database");
+        let db = ViciaDb::open(&path).expect("open database");
         db.execute(&format!(
             r#"(transact {{:valid-from "2020-01-01"}} [[#uuid "{entity}" :card/tag :base]])"#
         ))
@@ -300,7 +300,7 @@ fn committed_delta_and_pending_layers_merge_in_diff() {
         .expect("delta write");
         db.checkpoint().expect("delta checkpoint");
     }
-    let db = Minigraf::open(&path).expect("reopen database");
+    let db = ViciaDb::open(&path).expect("reopen database");
     db.execute(&format!(
         r#"(transact {{:valid-from "2022-01-01"}} [[#uuid "{entity}" :card/tag :pending]])"#
     ))
@@ -335,7 +335,7 @@ fn entity_set_scope_preserves_request_order_and_dedup() {
     let first = uuid::Uuid::from_u128(20);
     let second = uuid::Uuid::from_u128(10);
     let silent = uuid::Uuid::from_u128(30);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     for entity in [first, second] {
         db.execute(&format!(
             r#"(transact {{:valid-from "2021-01-01"}} [[#uuid "{entity}" :card/tag :hit]])"#
@@ -360,7 +360,7 @@ fn entity_set_scope_preserves_request_order_and_dedup() {
 fn attribute_scope_visits_entities_in_index_order() {
     let low = uuid::Uuid::from_u128(1);
     let high = uuid::Uuid::from_u128(2);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     for entity in [high, low] {
         db.execute(&format!(
             r#"(transact {{:valid-from "2021-01-01"}} [[#uuid "{entity}" :card/tag :hit]])"#
@@ -379,7 +379,7 @@ fn attribute_scope_visits_entities_in_index_order() {
 
 #[test]
 fn attribute_scope_continuation_pages_without_loss_or_duplication() {
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     let entities = (1u128..=12).map(uuid::Uuid::from_u128).collect::<Vec<_>>();
     for entity in &entities {
         db.execute(&format!(
@@ -422,7 +422,7 @@ fn attribute_scope_continuation_pages_without_loss_or_duplication() {
 
 #[test]
 fn entity_set_continuation_pages_without_loss_or_duplication() {
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     let entities = (1u128..=12).map(uuid::Uuid::from_u128).collect::<Vec<_>>();
     for entity in &entities {
         db.execute(&format!(
@@ -457,7 +457,7 @@ fn entity_set_continuation_pages_without_loss_or_duplication() {
 
 #[test]
 fn continuation_is_rejected_for_a_different_request_or_view() {
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     let entities = (1u128..=12).map(uuid::Uuid::from_u128).collect::<Vec<_>>();
     for entity in &entities {
         db.execute(&format!(
@@ -539,7 +539,7 @@ fn continuation_is_rejected_for_a_different_request_or_view() {
 #[test]
 fn single_entity_group_exceeding_limit_fails_closed() {
     let entity = uuid::Uuid::from_u128(40);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!(
         r#"(transact {{:valid-from "2021-01-01"}} [[#uuid "{entity}" :card/tag :one] [#uuid "{entity}" :card/tag :two] [#uuid "{entity}" :card/tag :three] [#uuid "{entity}" :card/tag :four]])"#
     ))
@@ -563,7 +563,7 @@ fn single_entity_group_exceeding_limit_fails_closed() {
 #[test]
 fn request_validation_rejects_bad_shapes() {
     let entity = uuid::Uuid::from_u128(50);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!(
         r#"(transact [[#uuid "{entity}" :card/tag :hit]])"#
     ))
@@ -665,7 +665,7 @@ fn request_validation_rejects_bad_shapes() {
 fn all_value_types_round_trip() {
     let entity = uuid::Uuid::from_u128(60);
     let target = uuid::Uuid::from_u128(61);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!(
         r#"(transact {{:valid-from "2021-01-01"}} [[#uuid "{entity}" :mixed/value "text"] [#uuid "{entity}" :mixed/value 42] [#uuid "{entity}" :mixed/value 1.5] [#uuid "{entity}" :mixed/value true] [#uuid "{entity}" :mixed/value #uuid "{target}"] [#uuid "{entity}" :mixed/value :kw/tag]])"#
     ))
@@ -703,7 +703,7 @@ fn all_value_types_round_trip() {
 #[test]
 fn source_entry_budget_fails_closed() {
     let entity = uuid::Uuid::from_u128(70);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     for chunk in 0..7 {
         let facts = (0..10_000)
             .map(|index| {
@@ -739,7 +739,7 @@ fn source_entry_budget_fails_closed() {
 fn page_bytes_budget_fails_closed() {
     let entity = uuid::Uuid::from_u128(80);
     let payload = "v".repeat(1_700);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     for chunk in 0..5 {
         let facts = (0..1_000)
             .map(|index| {
@@ -781,7 +781,7 @@ fn measure_valid_time_diff_1m() {
     let directory = tempfile::tempdir().expect("temporary directory");
     let path = directory.path().join("valid-time-diff-1m.graph");
     {
-        let db = minigraf::OpenOptions {
+        let db = vicia_db::OpenOptions {
             wal_checkpoint_threshold: usize::MAX,
             ..Default::default()
         }
@@ -813,7 +813,7 @@ fn measure_valid_time_diff_1m() {
         db.checkpoint().expect("checkpoint");
     }
 
-    let db = minigraf::OpenOptions {
+    let db = vicia_db::OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..Default::default()
     }
@@ -881,7 +881,7 @@ fn measure_valid_time_diff_fixture() {
     let path = directory.path().join("fixture.graph");
     std::fs::copy(&fixture, &path).expect("copy fixture");
 
-    let db = minigraf::OpenOptions {
+    let db = vicia_db::OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..Default::default()
     }

@@ -1,10 +1,10 @@
 //! Integration-level error-path tests for Phase 7.5.
-//! Drives the full Minigraf::execute() API with invalid programs/data and
+//! Drives the full ViciaDb::execute() API with invalid programs/data and
 //! asserts that errors propagate correctly to the caller.
 
-use minigraf::{Minigraf, OpenOptions};
+use vicia_db::{OpenOptions, ViciaDb};
 
-fn db() -> Minigraf {
+fn db() -> ViciaDb {
     OpenOptions::new().open_memory().unwrap()
 }
 

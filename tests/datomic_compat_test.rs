@@ -10,7 +10,7 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::{BindValue, Minigraf, QueryResult, Value};
+use vicia_db::{BindValue, QueryResult, Value, ViciaDb};
 
 fn count_results(r: QueryResult) -> usize {
     match r {
@@ -25,7 +25,7 @@ fn count_results(r: QueryResult) -> usize {
 /// Datomic doc reference: "Datomic Data Model" — datoms.
 #[test]
 fn datomic_entity_attributes_are_independent_facts() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:user42 :user/name "Jane"]
@@ -59,7 +59,7 @@ fn datomic_entity_attributes_are_independent_facts() {
 /// Datomic doc reference: "Schema" — EAV model; each datom is an independent fact.
 #[test]
 fn datomic_multiple_entities_same_attribute() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:article1 :tag "rust"]
@@ -80,10 +80,10 @@ fn datomic_multiple_entities_same_attribute() {
 
 /// Datomic concept: transaction time (tx-id) is queryable via :as-of.
 /// Datomic doc reference: "Time" — transaction entity.
-/// Minigraf equivalent: :as-of by tx_count.
+/// ViciaDb equivalent: :as-of by tx_count.
 #[test]
 fn datomic_transaction_time_as_of() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // tx 1
     db.execute(r#"(transact [[:inv :qty 10]])"#).unwrap();
@@ -115,10 +115,10 @@ fn datomic_transaction_time_as_of() {
 
 /// Datomic concept: retract-entity removes all facts about an entity.
 /// Datomic doc reference: "Transactions" — :db/retractEntity.
-/// Minigraf equivalent: retract each attribute individually.
+/// ViciaDb equivalent: retract each attribute individually.
 #[test]
 fn datomic_retract_all_entity_facts() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:ghost :name "Ghost"]
@@ -150,7 +150,7 @@ fn datomic_retract_all_entity_facts() {
 /// Datomic doc reference: "Queries" — :find with multiple variables.
 #[test]
 fn datomic_multi_variable_find() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:p1 :person/name "Alice"] [:p1 :person/age 30]
@@ -174,7 +174,7 @@ fn datomic_multi_variable_find() {
 /// Datomic doc reference: "Queries" — binding constants.
 #[test]
 fn datomic_ground_value_binding() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:a :score 10] [:b :score 20] [:c :score 10] [:d :score 30]
@@ -191,10 +191,10 @@ fn datomic_ground_value_binding() {
 
 /// Datomic concept: :in clause (parameterized query / prepared statements).
 /// Datomic doc reference: "Queries" — :in bindings.
-/// Minigraf equivalent: prepared queries with $slot bindings.
+/// ViciaDb equivalent: prepared queries with $slot bindings.
 #[test]
 fn datomic_parameterized_query_prepared() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:x :val 42] [:y :val 7] [:z :val 42]
@@ -223,7 +223,7 @@ fn datomic_parameterized_query_prepared() {
 /// Datomic doc reference: "Rules".
 #[test]
 fn datomic_named_rule_reuse() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:a :likes :b] [:b :likes :c] [:c :likes :a]
@@ -253,7 +253,7 @@ fn datomic_named_rule_reuse() {
 /// Datomic doc reference: "Queries" — expression clauses.
 #[test]
 fn datomic_predicate_expression_filter() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(
         r#"(transact [
         [:a :age 25] [:b :age 35] [:c :age 15] [:d :age 40]
@@ -274,19 +274,19 @@ fn datomic_predicate_expression_filter() {
 //
 // The following Datomic concepts are intentionally out of scope or divergent:
 //
-// 1. Pull API — Datomic has a pull syntax for shaped reads. Minigraf uses
+// 1. Pull API — Datomic has a pull syntax for shaped reads. ViciaDb uses
 //    pattern-matching :find/:where queries. No pull syntax planned.
 //
-// 2. :db/ident — Datomic uses schema-defined attribute identities. Minigraf
+// 2. :db/ident — Datomic uses schema-defined attribute identities. ViciaDb
 //    uses string keywords directly without a separate schema registry.
 //
 // 3. :db/unique — Datomic enforces uniqueness constraints at schema level.
-//    Minigraf does not enforce attribute uniqueness (multiple values allowed).
+//    ViciaDb does not enforce attribute uniqueness (multiple values allowed).
 //
 // 4. Transaction functions — Datomic supports arbitrary Clojure functions
-//    in transactions. Out of scope for Minigraf.
+//    in transactions. Out of scope for ViciaDb.
 //
-// 5. Excision / hard delete — Datomic's `d/excise`. Not implemented in Minigraf.
+// 5. Excision / hard delete — Datomic's `d/excise`. Not implemented in ViciaDb.
 //
-// 6. Peer vs. Client API — Datomic has two access modes. Minigraf is always
+// 6. Peer vs. Client API — Datomic has two access modes. ViciaDb is always
 //    embedded; no distinction applies.

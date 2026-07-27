@@ -7,15 +7,15 @@
 //! Builder chain for file-backed DBs: `OpenOptions::new().page_cache_size(256).path(p).open()`
 //! — `page_cache_size()` must precede `path()` due to type-state design.
 
-use minigraf::{Minigraf, OpenOptions};
 use std::sync::Arc;
+use vicia_db::{OpenOptions, ViciaDb};
 
 // ── Value-only fixture ────────────────────────────────────────────────────────
 
 /// In-memory DB with `n` value facts: `:e{i} :val {i}` for i in 0..n.
 /// Inserted in batches of 100.
-pub fn populate_in_memory(n: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_in_memory(n: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     insert_val_facts(&db, n);
     Arc::new(db)
 }
@@ -49,7 +49,7 @@ pub fn populate_file_no_checkpoint(n: usize, path: &str) {
 /// Open an existing file-backed DB with auto-checkpoint suppressed.
 /// Used by insert_file and concurrent_file groups so WAL fsyncs are
 /// not interrupted by checkpoint spikes during measurement.
-pub fn open_file_no_checkpoint(path: &str) -> Arc<Minigraf> {
+pub fn open_file_no_checkpoint(path: &str) -> Arc<ViciaDb> {
     let db = OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..Default::default()
@@ -67,8 +67,8 @@ pub fn open_file_no_checkpoint(path: &str) -> Arc<Minigraf> {
 /// Nodes: `:n0 :next :n1`, `:n1 :next :n2`, …, `:n{depth-1} :next :n{depth}`.
 /// Rules: `(reach ?from ?to)` — transitive closure over `:next`.
 /// Query: `(query [:find ?to :where (reach :n0 ?to)])` returns all reachable nodes.
-pub fn chain_graph(depth: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn chain_graph(depth: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     // Insert edges in batches of 200
     for chunk_start in (0..depth).step_by(200) {
         let chunk_end = (chunk_start + 200).min(depth);
@@ -90,8 +90,8 @@ pub fn chain_graph(depth: usize) -> Arc<Minigraf> {
 ///
 /// Each node at depth d has `width` children. Root is `:n0`.
 /// Rules: same `(reach ?from ?to)` transitive closure.
-pub fn fanout_graph(width: usize, depth: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn fanout_graph(width: usize, depth: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     let mut edges: Vec<(usize, usize)> = Vec::new();
     let mut current_level = vec![0usize];
     let mut next_id = 1usize;
@@ -128,8 +128,8 @@ pub fn fanout_graph(width: usize, depth: usize) -> Arc<Minigraf> {
 ///   `:e{i} :val {i}` (value fact)
 ///   `:e{i} :next :e{i+1}` (chain ref, for i < n-1)
 /// Query: `(query [:find ?v :where [:e0 :next ?m] [?m :next ?end] [?end :val ?v]])`
-pub fn populate_for_join(n: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_for_join(n: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     for batch_start in (0..n).step_by(50) {
         let batch_end = (batch_start + 50).min(n);
         let mut cmd = String::from("(transact [");
@@ -155,8 +155,8 @@ pub fn populate_for_join(n: usize) -> Arc<Minigraf> {
 ///
 /// Used for `not` benchmarks:
 ///   `(query [:find ?e :where [?e :val ?v] (not [?e :banned true])])`
-pub fn populate_with_not_exclusion(n: usize, excluded: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_with_not_exclusion(n: usize, excluded: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     insert_val_facts(&db, n);
     // Insert banned markers in batches of 100
     for batch_start in (0..excluded).step_by(100) {
@@ -181,8 +181,8 @@ pub fn populate_with_not_exclusion(n: usize, excluded: usize) -> Arc<Minigraf> {
 ///
 /// Used for `not-join` benchmarks:
 ///   `(query [:find ?e :where [?e :val ?v] (not-join [?e] [?e :dep ?d] [?d :status :bad])])`
-pub fn populate_with_not_join_exclusion(n: usize, excluded: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_with_not_join_exclusion(n: usize, excluded: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     insert_val_facts(&db, n);
     // Mark the "bad" dependency
     db.execute("(transact [[:d-bad :status :bad]])").unwrap();
@@ -210,8 +210,8 @@ pub fn populate_with_not_join_exclusion(n: usize, excluded: usize) -> Arc<Minigr
 ///
 /// Used for rule-body negation benchmarks:
 ///   `(query [:find ?e :where (eligible ?e)])`
-pub fn populate_with_not_rule(n: usize, excluded: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_with_not_rule(n: usize, excluded: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     insert_val_facts(&db, n);
     for batch_start in (0..excluded).step_by(100) {
         let batch_end = (batch_start + 100).min(excluded);
@@ -239,8 +239,8 @@ pub fn populate_with_not_rule(n: usize, excluded: usize) -> Arc<Minigraf> {
 ///
 /// Used for `or` benchmarks:
 ///   `(query [:find ?e :where [?e :val ?v] (or [?e :tag-a true] [?e :tag-b true])])`
-pub fn populate_with_or_tags(n: usize, a_count: usize, b_count: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_with_or_tags(n: usize, a_count: usize, b_count: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     insert_val_facts(&db, n);
     // Insert :tag-a for first a_count entities
     for batch_start in (0..a_count).step_by(100) {
@@ -277,8 +277,8 @@ pub fn populate_with_or_tags(n: usize, a_count: usize, b_count: usize) -> Arc<Mi
 ///
 /// Used for rule-body `or` benchmarks:
 ///   `(query [:find ?e :where (tagged ?e)])`
-pub fn populate_with_or_rule(n: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_with_or_rule(n: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     insert_val_facts(&db, n);
     let half = n / 2;
     for batch_start in (0..half).step_by(100) {
@@ -316,8 +316,8 @@ pub fn populate_with_or_rule(n: usize) -> Arc<Minigraf> {
 /// Used for aggregation benchmarks, e.g.:
 ///   `(query [:find (count ?e) :where [?e :val ?v]])`
 ///   `(query [:find ?dept (count ?e) :where [?e :dept ?dept]])`
-pub fn populate_with_dept(n: usize, dept_count: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_with_dept(n: usize, dept_count: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     for batch_start in (0..n).step_by(50) {
         let batch_end = (batch_start + 50).min(n);
         let mut cmd = String::from("(transact [");
@@ -337,8 +337,8 @@ pub fn populate_with_dept(n: usize, dept_count: usize) -> Arc<Minigraf> {
 /// Schema:
 ///   `:e{i} :val {i}` for i in 0..n
 ///   `:e{i} :name "entity{i}"` for i in 0..n
-pub fn populate_with_names(n: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_with_names(n: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     for batch_start in (0..n).step_by(50) {
         let batch_end = (batch_start + 50).min(n);
         let mut cmd = String::from("(transact [");
@@ -359,8 +359,8 @@ pub fn populate_with_names(n: usize) -> Arc<Minigraf> {
 ///   `:e{i} :val {i % (n * (100 - dup_fraction) / 100)}` for i in 0..n
 ///
 /// Used for count-distinct benchmarks to exercise the distinct-dedup path.
-pub fn populate_with_duplicates(n: usize, dup_fraction: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_with_duplicates(n: usize, dup_fraction: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     let unique_count = n * (100 - dup_fraction) / 100;
     for batch_start in (0..n).step_by(50) {
         let batch_end = (batch_start + 50).min(n);
@@ -382,8 +382,8 @@ pub fn populate_with_duplicates(n: usize, dup_fraction: usize) -> Arc<Minigraf> 
 ///   `:e{i} :val "item-{i}"` for i in 0..n
 ///
 /// Used for regex_filter benchmark.
-pub fn populate_with_string_vals(n: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_with_string_vals(n: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     for batch_start in (0..n).step_by(50) {
         let batch_end = (batch_start + 50).min(n);
         let mut cmd = String::from("(transact [");
@@ -405,8 +405,8 @@ pub const DECAY_THRESHOLD: i64 = 1_000_000;
 /// In-memory DB with `n` entities carrying one `:touched/at` integer
 /// timestamp each. Every 5th entity (20%) is decayed (timestamp below
 /// [`DECAY_THRESHOLD`]); the rest are recent. Inserted in batches of 100.
-pub fn populate_with_touch_timestamps(n: usize) -> Arc<Minigraf> {
-    let db = Minigraf::in_memory().unwrap();
+pub fn populate_with_touch_timestamps(n: usize) -> Arc<ViciaDb> {
+    let db = ViciaDb::in_memory().unwrap();
     const BATCH: usize = 100;
     for batch_start in (0..n).step_by(BATCH) {
         let batch_end = (batch_start + BATCH).min(n);
@@ -427,7 +427,7 @@ pub fn populate_with_touch_timestamps(n: usize) -> Arc<Minigraf> {
 
 // ── Internal helpers ──────────────────────────────────────────────────────────
 
-fn insert_val_facts(db: &Minigraf, n: usize) {
+fn insert_val_facts(db: &ViciaDb, n: usize) {
     const BATCH: usize = 100;
     for batch_start in (0..n).step_by(BATCH) {
         let batch_end = (batch_start + BATCH).min(n);

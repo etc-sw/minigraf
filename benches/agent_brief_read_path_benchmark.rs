@@ -1,12 +1,12 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use anyhow::{Result, bail};
-use minigraf::{BindValue, Minigraf, OpenOptions, QueryResult};
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::{Duration, Instant, SystemTime};
 use uuid::Uuid;
+use vicia_db::{BindValue, OpenOptions, QueryResult, ViciaDb};
 
 #[path = "helpers/receipt.rs"]
 mod receipt;
@@ -293,11 +293,7 @@ fn verify_base_fact_count(path: &Path, expected: usize) -> Result<u64> {
     Ok(db.current_tx_count())
 }
 
-fn add_receipt_batch(
-    db: &Minigraf,
-    scenario: BriefScenario,
-    checkpoint_index: usize,
-) -> Result<()> {
+fn add_receipt_batch(db: &ViciaDb, scenario: BriefScenario, checkpoint_index: usize) -> Result<()> {
     let mut command = String::from("(transact [");
     for fact_index in 0..scenario.facts_per_checkpoint {
         let entity = receipt_entity(scenario, checkpoint_index, fact_index);
@@ -325,7 +321,7 @@ fn push_base_fact(command: &mut String, index: usize) {
     }
 }
 
-fn open_no_auto_checkpoint(path: &Path) -> Result<Minigraf> {
+fn open_no_auto_checkpoint(path: &Path) -> Result<ViciaDb> {
     OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..Default::default()
@@ -383,7 +379,7 @@ fn as_of_query_for(entity: Uuid, tx_count: u64) -> String {
     )
 }
 
-fn assert_query_count(db: &Minigraf, query: &str, expected: usize, label: &str) -> Result<()> {
+fn assert_query_count(db: &ViciaDb, query: &str, expected: usize, label: &str) -> Result<()> {
     assert_query_result_count(db.execute(query).map_err(db_error)?, expected, label)
 }
 

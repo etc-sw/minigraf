@@ -1,8 +1,8 @@
-use minigraf::db::Minigraf;
-use minigraf::{QueryResult, Value};
+use vicia_db::db::ViciaDb;
+use vicia_db::{QueryResult, Value};
 
-fn setup_employees() -> Minigraf {
-    let db = Minigraf::in_memory().expect("in-memory db");
+fn setup_employees() -> ViciaDb {
+    let db = ViciaDb::in_memory().expect("in-memory db");
     db.execute(concat!(
         r#"(transact ["#,
         r#"  [:e1 :employee/name "Alice"]"#,
@@ -66,7 +66,7 @@ fn row_number_assigns_sequential_positions() {
 
 #[test]
 fn rank_assigns_same_rank_to_ties() {
-    let db = Minigraf::in_memory().expect("in-memory db");
+    let db = ViciaDb::in_memory().expect("in-memory db");
     db.execute(concat!(
         r#"(transact ["#,
         r#"  [:a :item/score 10]"#,
@@ -276,7 +276,7 @@ fn mixed_aggregate_and_window_in_same_find() {
 
 #[test]
 fn single_row_result_window_equals_row_value() {
-    let db = Minigraf::in_memory().expect("in-memory db");
+    let db = ViciaDb::in_memory().expect("in-memory db");
     db.execute(r#"(transact [[:x :score 42]])"#)
         .expect("transact");
     let result = db
@@ -294,7 +294,7 @@ fn single_row_result_window_equals_row_value() {
 
 #[test]
 fn empty_result_no_panic() {
-    let db = Minigraf::in_memory().expect("in-memory db");
+    let db = ViciaDb::in_memory().expect("in-memory db");
     let result = db
         .execute(
             r#"(query [:find ?v (sum ?v :over (:order-by ?v))
@@ -309,7 +309,7 @@ fn empty_result_no_panic() {
 
 #[test]
 fn lag_rejected_at_parse_time() {
-    let db = Minigraf::in_memory().expect("in-memory db");
+    let db = ViciaDb::in_memory().expect("in-memory db");
     let result = db.execute(r#"(query [:find (lag ?v :over (:order-by ?v)) :where [?e :x ?v]])"#);
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("not supported"));
@@ -317,7 +317,7 @@ fn lag_rejected_at_parse_time() {
 
 #[test]
 fn lead_rejected_at_parse_time() {
-    let db = Minigraf::in_memory().expect("in-memory db");
+    let db = ViciaDb::in_memory().expect("in-memory db");
     let result = db.execute(r#"(query [:find (lead ?v :over (:order-by ?v)) :where [?e :x ?v]])"#);
     assert!(result.is_err());
     assert!(result.unwrap_err().to_string().contains("not supported"));

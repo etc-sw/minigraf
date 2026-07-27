@@ -1,10 +1,10 @@
 use anyhow::{Context, Result, bail};
-use minigraf::{CurrentAttributeCursorDiagnostics, LeafReadDiagnostics, OpenOptions, QueryResult};
 use serde::Serialize;
 use std::env;
 use std::fs;
 use std::path::Path;
 use std::time::Instant;
+use vicia_db::{CurrentAttributeCursorDiagnostics, LeafReadDiagnostics, OpenOptions, QueryResult};
 
 const BATCH: u64 = 1_000;
 const POINT_BATCH: usize = 200;

@@ -369,9 +369,9 @@ fn read_u64(bytes: &[u8], offset: usize) -> Result<u64, String> {
 mod native_tests {
     use super::*;
     use crate::json_value::to_tagged_json;
-    use crate::{Minigraf, QueryResult, Value};
+    use crate::{QueryResult, Value, ViciaDb};
 
-    fn assert_query(db: &Minigraf, case: &QueryCase) {
+    fn assert_query(db: &ViciaDb, case: &QueryCase) {
         let result = db
             .execute(&case.datalog)
             .expect("Gate E query must execute");
@@ -391,7 +391,7 @@ mod native_tests {
         assert_eq!(actual, expected, "query rows: {}", case.id);
     }
 
-    fn assert_probe(db: &Minigraf, probe: &Probe, case_id: &str) {
+    fn assert_probe(db: &ViciaDb, probe: &Probe, case_id: &str) {
         let result = db
             .execute(&probe.datalog)
             .expect("corruption probe must execute");
@@ -405,11 +405,11 @@ mod native_tests {
         assert_eq!(actual, probe.rows, "corruption fallback probe: {case_id}");
     }
 
-    fn with_fixture(bytes: &[u8], test: impl FnOnce(&Minigraf)) {
+    fn with_fixture(bytes: &[u8], test: impl FnOnce(&ViciaDb)) {
         let dir = tempfile::tempdir().expect("temporary Gate E directory");
         let path = dir.path().join("fixture.graph");
         std::fs::write(&path, bytes).expect("write Gate E fixture");
-        let db = Minigraf::open(&path).expect("open Gate E fixture");
+        let db = ViciaDb::open(&path).expect("open Gate E fixture");
         test(&db);
     }
 
@@ -457,7 +457,7 @@ mod native_tests {
                 let dir = tempfile::tempdir().expect("temporary corruption directory");
                 let path = dir.path().join(format!("{producer}-{}.graph", case.id));
                 std::fs::write(&path, &mutated).expect("write corrupted fixture");
-                let opened = Minigraf::open(&path);
+                let opened = ViciaDb::open(&path);
                 match case.expected.as_str() {
                     "reject" => {
                         assert!(
@@ -485,7 +485,7 @@ mod native_tests {
                         let backup_result = db.backup_to(&backup);
                         if case.exportable {
                             backup_result.expect("complete fallback image must be exportable");
-                            let reopened = Minigraf::open(&backup)
+                            let reopened = ViciaDb::open(&backup)
                                 .expect("native backup of fallback image must reopen");
                             assert_probe(&reopened, probe, &case.id);
                         } else {

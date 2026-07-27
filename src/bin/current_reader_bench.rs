@@ -1,11 +1,11 @@
 use anyhow::{Result, bail};
-use minigraf::{
-    CurrentEntitiesRequest, CurrentRefsRequest, Minigraf, OpenOptions, ReadViewOptions, Value,
-};
 use serde::Serialize;
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 use uuid::Uuid;
+use vicia_db::{
+    CurrentEntitiesRequest, CurrentRefsRequest, OpenOptions, ReadViewOptions, Value, ViciaDb,
+};
 
 const BATCH_SIZE: usize = 1_000;
 
@@ -15,7 +15,7 @@ struct ReadReceipt {
     rows: usize,
     p50_ms: f64,
     p95_ms: f64,
-    diagnostics: minigraf::LeafReadDiagnostics,
+    diagnostics: vicia_db::LeafReadDiagnostics,
 }
 
 fn main() -> Result<()> {
@@ -150,7 +150,7 @@ fn build_fixture(path: &Path, facts: usize) -> Result<()> {
     Ok(())
 }
 
-fn open(path: &Path) -> Result<Minigraf> {
+fn open(path: &Path) -> Result<ViciaDb> {
     OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..Default::default()

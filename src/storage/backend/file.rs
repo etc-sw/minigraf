@@ -380,7 +380,7 @@ mod tests {
     #[test]
     fn test_file_backend_create() {
         let dir = tempfile::tempdir().unwrap();
-        let temp_path = dir.path().join("test_minigraf_create.graph");
+        let temp_path = dir.path().join("test_vicia_db_create.graph");
 
         let backend = FileBackend::open(&temp_path).unwrap();
         assert_eq!(backend.backend_name(), "file");
@@ -391,7 +391,7 @@ mod tests {
     #[test]
     fn test_file_backend_existing_file_not_new() {
         let dir = tempfile::tempdir().unwrap();
-        let temp_path = dir.path().join("test_minigraf_existing.graph");
+        let temp_path = dir.path().join("test_vicia_db_existing.graph");
 
         {
             let backend = FileBackend::open(&temp_path).unwrap();
@@ -445,7 +445,7 @@ mod tests {
     #[test]
     fn test_file_backend_write_read() {
         let dir = tempfile::tempdir().unwrap();
-        let temp_path = dir.path().join("test_minigraf_write_read.graph");
+        let temp_path = dir.path().join("test_vicia_db_write_read.graph");
 
         let mut backend = FileBackend::open(&temp_path).unwrap();
 
@@ -510,7 +510,7 @@ mod tests {
     #[test]
     fn test_file_backend_page_count() {
         let dir = tempfile::tempdir().unwrap();
-        let temp_path = dir.path().join("test_minigraf_page_count.graph");
+        let temp_path = dir.path().join("test_vicia_db_page_count.graph");
 
         let mut backend = FileBackend::open(&temp_path).unwrap();
         assert_eq!(backend.page_count().unwrap(), 1);

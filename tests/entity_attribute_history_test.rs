@@ -1,8 +1,8 @@
-use minigraf::{
-    EntityAttributeHistoryRequest, FactValidTime, Minigraf, ReadViewOptions, ReadViewValidAt, Value,
+use vicia_db::{
+    EntityAttributeHistoryRequest, FactValidTime, ReadViewOptions, ReadViewValidAt, Value, ViciaDb,
 };
 
-fn history_view(db: &Minigraf) -> minigraf::ReadView<'_> {
+fn history_view(db: &ViciaDb) -> vicia_db::ReadView<'_> {
     db.read_view(ReadViewOptions {
         as_of: None,
         valid_at: ReadViewValidAt::AnyValidTime,
@@ -20,7 +20,7 @@ fn exact_history_pages_more_than_ten_thousand_rows_without_loss() {
             uuid::Uuid::from_u128(value)
         ));
     }
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!("(transact [{facts}])"))
         .expect("root-link transaction");
     let view = history_view(&db);
@@ -67,7 +67,7 @@ fn exact_history_pages_more_than_ten_thousand_rows_without_loss() {
 #[test]
 fn exact_history_preserves_scoped_and_unscoped_retractions() {
     let entity = uuid::Uuid::from_u128(2);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!(
         r#"(transact {{:valid-from "2020-01-01" :valid-to "2021-01-01"}} [[#uuid "{entity}" :status/value :old]])"#
     ))
@@ -120,7 +120,7 @@ fn exact_history_merges_committed_and_pending_rows() {
     let path = directory.path().join("entity-attribute-history.graph");
     let entity = uuid::Uuid::from_u128(3);
     {
-        let db = Minigraf::open(&path).expect("open database");
+        let db = ViciaDb::open(&path).expect("open database");
         db.execute(&format!(
             r#"(transact [[#uuid "{entity}" :card/event "committed"] [#uuid "{entity}" :card/event 1.25]])"#
         ))
@@ -128,7 +128,7 @@ fn exact_history_merges_committed_and_pending_rows() {
         db.checkpoint().expect("checkpoint");
     }
 
-    let db = Minigraf::open(&path).expect("reopen database");
+    let db = ViciaDb::open(&path).expect("reopen database");
     db.execute(&format!(
         r#"(transact [[#uuid "{entity}" :card/event "pending"]])"#
     ))
@@ -163,7 +163,7 @@ fn exact_history_merges_committed_and_pending_rows() {
 fn exact_history_rejects_wrong_view_range_cursor_and_limit() {
     let entity = uuid::Uuid::from_u128(4);
     let other = uuid::Uuid::from_u128(5);
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!(
         r#"(transact [[#uuid "{entity}" :card/event "one"] [#uuid "{entity}" :card/event "two"]])"#
     ))
@@ -227,7 +227,7 @@ fn exact_history_rejects_pages_larger_than_eight_mib() {
         .map(|index| format!(r#"[#uuid "{entity}" :chunk/body "{index:04}-{payload}"]"#))
         .collect::<Vec<_>>()
         .join(" ");
-    let db = Minigraf::in_memory().expect("in-memory database");
+    let db = ViciaDb::in_memory().expect("in-memory database");
     db.execute(&format!("(transact [{facts}])"))
         .expect("large transaction");
     assert!(
