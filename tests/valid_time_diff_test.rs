@@ -856,3 +856,71 @@ fn measure_valid_time_diff_1m() {
     measure("entity_set_128", Some(&receipt_entities));
     measure("attribute_scope", None);
 }
+
+/// Native re-measurement against an externally generated fixture, so a browser
+/// receipt and a native number can be attributed to the same file rather than
+/// to two differently shaped fixtures. Generate with:
+/// `cargo run --release --example generate_bench_fixture -- 1000000 <out.graph> 128`
+/// then run:
+/// `VICIA_DIFF_FIXTURE=<out.graph> cargo test --test valid_time_diff_test --release -- --ignored measure_valid_time_diff_fixture --nocapture`
+#[test]
+#[ignore = "external fixture measurement; run explicitly in release mode"]
+fn measure_valid_time_diff_fixture() {
+    const RECEIPT_ENTITY_BASE: u128 = 0x9000_0000;
+    const SAMPLES: usize = 20;
+
+    let fixture = std::env::var("VICIA_DIFF_FIXTURE")
+        .expect("set VICIA_DIFF_FIXTURE to a generate_bench_fixture output");
+    let receipt_entity_count: usize = std::env::var("VICIA_DIFF_ENTITIES")
+        .map(|value| value.parse().expect("VICIA_DIFF_ENTITIES must be a number"))
+        .unwrap_or(128);
+
+    // Copy before opening: open may write a WAL sidecar or migrate in place,
+    // and the fixture hash recorded in a receipt must stay stable.
+    let directory = tempfile::tempdir().expect("temporary directory");
+    let path = directory.path().join("fixture.graph");
+    std::fs::copy(&fixture, &path).expect("copy fixture");
+
+    let db = minigraf::OpenOptions {
+        wal_checkpoint_threshold: usize::MAX,
+        ..Default::default()
+    }
+    .path(&path)
+    .open()
+    .expect("open fixture");
+    let receipt_entities = (0..receipt_entity_count)
+        .map(|index| uuid::Uuid::from_u128(RECEIPT_ENTITY_BASE + index as u128))
+        .collect::<Vec<_>>();
+    let view = view_any(&db);
+
+    let measure = |label: &str, entities: Option<&[uuid::Uuid]>| {
+        let mut samples = Vec::with_capacity(SAMPLES);
+        for iteration in 0..=SAMPLES {
+            let started = std::time::Instant::now();
+            let page = run_diff(
+                &view,
+                ":status/value",
+                entities,
+                T_2020_07,
+                T_2021_07,
+                1_000,
+            );
+            let elapsed = started.elapsed();
+            assert_eq!(page.rows.len(), receipt_entity_count * 2, "exact diff rows");
+            assert!(page.next.is_none(), "no continuation expected");
+            if iteration > 0 {
+                samples.push(elapsed.as_secs_f64() * 1_000.0);
+            }
+        }
+        samples.sort_by(|left, right| left.total_cmp(right));
+        let p50 = samples[samples.len() / 2];
+        let p95 = samples[(samples.len() * 95).div_ceil(100).saturating_sub(1)];
+        let max = samples[samples.len() - 1];
+        println!(
+            "valid_time_diff_fixture {label}: p50 {p50:.3} ms, p95 {p95:.3} ms, max {max:.3} ms"
+        );
+    };
+
+    measure("entity_set", Some(&receipt_entities));
+    measure("attribute_scope", None);
+}

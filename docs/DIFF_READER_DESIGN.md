@@ -311,3 +311,159 @@ Applicable rows from the roadmap correctness matrix, plus diff-specific rows:
 | A-2 (done) | Native `valid_time_diff` tests-first per §6, receipt per §7. | 17-test matrix green in `tests/valid_time_diff_test.rs`; 1M measurement receipt in `docs/BENCHMARKS.md`. |
 | A-3 (done) | Browser mirror + real-Chrome regression; package only via standard sequence. | `BrowserReadView.validTimeDiff()` on the shared `ValidTimeDiffScan`; 6 browser cases green in real Chrome (87 total, was 81). Package sync NOT run. |
 | A-4 | Handoff to Codex lane: capability transition + refs so recall_diff can build. | vetch-memory records updated; no vicia-db code. |
+
+---
+
+## 11. Closed Defect — Browser Yield Clamp (fixed 2026-07-27)
+
+A-3 shipped correct but not fast. The browser performance receipt existed,
+failed its latency gates, and the cause was measured. This section was the
+working brief for the fix; §11.6 records the outcome.
+
+### 11.1 What is wrong
+
+`yield_browser_task()` (`src/browser/mod.rs:38`) awaits a
+`window.setTimeout(resolve, 0)`. Chrome clamps nested timeouts to 4 ms once
+the nesting level passes five, and every paged browser read drives its scan
+in exactly that shape — resolve, step, schedule again — so each `Yielded`
+step costs ~4 ms of pure scheduling.
+
+`ValidTimeDiffScan::step_entity_set` (`src/db.rs:897`) returns `Yielded` once
+per entity. A 128-entity diff therefore pays ~127 x 4 ms before any storage
+work is counted.
+
+Measured on `bench-1m-diff.graph`, Chrome for Testing 150.0.7871.115:
+
+| Entities | warm p50 | per entity |
+|---:|---:|---:|
+| 1 | 0.1 ms | 0.100 ms |
+| 8 | 28.8 ms | 3.600 ms |
+| 32 | 126.7 ms | 3.959 ms |
+| 128 | 518.1 ms | 4.048 ms |
+
+One entity needs no yield and costs 0.1 ms; the per-entity cost converges on
+the clamp constant. Warm is *slower* than cold (518.9 vs 429.4 ms) because
+the cold path's page-fault branch stages and retries **without** yielding,
+skipping some clamped hops — which is itself a hint that the yield, not the
+IndexedDB fetch, is the expensive part.
+
+This is not diff-specific. Any paged read whose scan yields per unit pays it:
+`query`, `currentEntities`, `entityAttributeHistory`, `refsTo`,
+`validTimeDiff`. The diff receipt is simply the first measurement shaped to
+expose it, because 128 entities means 128 yields.
+
+### 11.2 What to try
+
+Replace the timeout with a scheduling primitive that is not clamped, keeping
+the same contract: give the event loop a real chance to run so the tab stays
+responsive during a long scan.
+
+1. **`scheduler.yield()` when available.** Purpose-built for this, keeps
+   continuation priority, no clamp. Not in every engine — needs a fallback.
+2. **`MessageChannel` postMessage.** The long-standing workaround: a task,
+   not a microtask, and not clamped. Works in Window and Worker scopes.
+   Nothing to feature-detect beyond existence.
+3. **Do not** reach for `queueMicrotask` or a resolved promise. A microtask
+   does not yield to the event loop at all, so rendering and input would be
+   starved for the whole scan — that trades a latency number for the exact
+   responsiveness property the yield exists to provide.
+
+Recommended shape: try `scheduler.yield()`, fall back to `MessageChannel`,
+fall back to `setTimeout(0)` only where neither exists. Note that
+`yield_browser_task` currently requires `web_sys::window()` and errors
+without it; a `MessageChannel` path also removes that Window dependency,
+which matters because `maintenance-worker.js` runs the same code in a Worker.
+
+A second, independent question worth deciding at the same time: whether
+`step_entity_set` should yield once per entity at all. Yielding every N
+entities (or on an elapsed-time budget) would cut the hop count regardless of
+which primitive wins, and is closer to how a scan should pace itself. Prefer
+fixing the primitive first and measuring, so the two effects stay separable.
+
+### 11.3 Expected result
+
+If the diagnosis is right, the per-entity constant collapses from 4.05 ms to
+roughly the cost of a task hop (tens of microseconds), and:
+
+- entity-set warm p50: **518.9 ms → single-digit ms**, dominated by the 128
+  exact EAVT ranges rather than by scheduling. Native is 0.408 ms; a browser
+  figure of ~10x native, in line with the attribute scope's observed 9x, is
+  the number to expect.
+- entity-set cold: should become *slower* than warm, not faster, because the
+  page-fault work will finally dominate. `coldPaysPageFaults` flipping to
+  pass is the sharpest single signal that the fix worked.
+- attribute scope: roughly unchanged (0.8 ms warm), it yields few times.
+- other paged reads: free improvement, unmeasured today.
+
+If the per-entity cost does *not* collapse, the diagnosis is wrong and the
+cost is in the EAVT range work — in that case compare against the native
+0.408 ms baseline before touching anything else.
+
+### 11.4 How to verify
+
+```bash
+# 1. fixture + native baseline (recorded: entity set p50 0.408-0.421 ms)
+cargo run --release --example generate_bench_fixture -- \
+  1000000 target/bench-fixtures/bench-1m-diff.graph 128
+VICIA_DIFF_FIXTURE=target/bench-fixtures/bench-1m-diff.graph \
+  cargo test --test valid_time_diff_test --release -- \
+  --ignored measure_valid_time_diff_fixture --nocapture
+
+# 2. rebuild wasm, serve repo root
+wasm-pack build --target web --out-dir minigraf-wasm --features browser
+python3 -m http.server 8123
+
+# 3. browser receipt on a CLEAN tree (trackedClean must be true)
+CHROME_PATH=/opt/chrome-for-testing/150.0.7871.115/chrome-linux64/chrome \
+NODE_PATH=$(npm root -g) \
+BENCH_PAGE=http://localhost:8123/examples/browser/bench.html \
+BENCH_PROFILE=/tmp/vicia-diff-profile \
+  node examples/browser/bench-driver.cjs valid-time-diff \
+  /target/bench-fixtures/bench-1m-diff.graph 20 > receipt.json
+node scripts/validate-browser-valid-time-diff-receipt.mjs receipt.json
+
+# 4. the scaling probe is the diagnostic, not the gate:
+#    window.benchValidTimeDiff("entity_set", 5, N) for N in 1,8,16,32,64,128
+```
+
+Also required before landing: `cargo test` (1412 passing at `69dfd89`) and
+`scripts/test-browser-wasm.sh` with `CHROMEDRIVER` set (87 passing), because
+the yield primitive is on every paged read path, not just the diff.
+
+### 11.5 State at handoff
+
+- Branch `wsl/diff-reader-receipt`, worktree `.worktrees/diff-reader-receipt`,
+  three commits on top of `main` at `6fe7d56`: `b87be4c` (fixture + native
+  baseline), `9dcf7d9` (harness + validator), `69dfd89` (receipt + docs).
+- Nothing is pushed. `main` is also unpushed since `6fe7d56`.
+- The non-admitted receipt is committed at
+  `benchmarks/baselines/browser-valid-time-diff/2026-07-27-hal7800-a3/receipt.json`.
+  Replace it with an admitted one; do not edit it in place.
+- `puppeteer-core` is installed globally (`npm root -g`). Chrome for Testing
+  150.0.7871.115 is at `/opt/chrome-for-testing/`.
+- Unrelated pre-existing debt, unchanged and not caused by this line: 23
+  wasm-target clippy errors identical on `main`, and CI runs no clippy at all.
+
+### 11.6 Outcome (2026-07-27)
+
+Fixed as diagnosed. `yield_browser_task` now resolves one primitive per thread
+— `scheduler.yield()` where the realm has it, else a per-yield
+`MessageChannel` hop, else the old `setTimeout(0)`. Chrome for Testing 150
+takes the `scheduler.yield()` path.
+
+The A-3 receipt is admitted at commit `cafdb98`:
+`benchmarks/baselines/browser-valid-time-diff/2026-07-27-hal7800-a3-admitted/receipt.json`,
+all six gates pass. Entity-set warm p50 518.9 ms → 2.0 ms (4.9x native's
+0.408 ms, in line with the 8.6x the attribute scope shows), warm p95 3.8 ms,
+cold 8.5 ms. `coldPaysPageFaults` flipped to pass in both scopes, which §11.3
+named as the sharpest single signal. Per-entity cost fell from 4.048 ms to
+0.017 ms at 128 entities and now *decreases* with scope size. Full tables in
+`docs/BENCHMARKS.md`, "Browser measurement — ADMITTED".
+
+Two wasm tests guard the primitive: one asserts the resolved primitive is not
+the clamped fallback, one asserts 64 warmed hops finish under 100 ms (clamped
+they cost ≥ 256 ms).
+
+Still open, and deliberately not folded in: whether `step_entity_set` should
+yield once per entity at all. It is now a pacing question worth ~0.017 ms per
+entity, not a latency defect.

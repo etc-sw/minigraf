@@ -2480,6 +2480,154 @@ AEVT range. Every sample returned the exact 256 rows with no continuation.
 cargo test --test valid_time_diff_test --release -- --ignored --nocapture
 ```
 
+### Shared-fixture native baseline (2026-07-27)
+
+The A-2 receipt above builds its own in-test fixture, which the browser cannot
+open. To make a browser diff number interpretable, the same measurement is
+repeated against a fixture file the browser can import. `bench-1m-diff.graph`
+is `generate_bench_fixture 1000000 <out> 128`: the standard 1,000,000-fact
+`:bench/base-{i}` browser base plus the same 128 `:status/value` receipt
+entities, same UUIDs (`0x9000_0000 + i`) and same instants as the A-2 test, so
+one request shape serves both sides.
+
+Fixture: 309,190,656 bytes, 1,000,256 facts, SHA256
+`5eefb0c6da1714f830506f29851cc1b4e5ecc29e170d9b12b754b4026fc9caaa`. Copied to
+a temporary path before opening so the measured file's hash stays stable.
+1 warmup plus 20 timed samples, release build on the A0 host (AMD Ryzen 7
+7800X3D, WSL2 ext4); four consecutive runs.
+
+| Scope | p50 | p95 | max |
+|---|---:|---:|---:|
+| 128-entity exact set | 0.408–0.421 ms | 0.428–0.458 ms | 0.435–0.479 ms |
+| Whole-attribute range | 0.093–0.098 ms | 0.105–0.110 ms | 0.109–0.121 ms |
+
+Both scopes come in roughly 2x faster than the A-2 table. The diff work is
+identical — 128 exact EAVT ranges, or the 256-entry `:status/value` AEVT range
+— so the difference is base shape, not diff cost: A-2's base is 1,000,000
+single-attribute `:bulk/noise` entities, while this base spreads four
+attributes over its entities and yields a different index layout. This is the
+number a browser run on this fixture must be compared against, not the A-2
+table. Every sample returned the exact 256 rows with no continuation.
+
+The generator is not byte-reproducible in either mode — `tx_id` is wall-clock,
+so a rebuild produces a different file. Receipts pin the SHA256 of the one
+file they measured.
+
+```bash
+cargo run --release --example generate_bench_fixture -- \
+  1000000 /tmp/bench-fixtures/bench-1m-diff.graph 128
+VICIA_DIFF_FIXTURE=/tmp/bench-fixtures/bench-1m-diff.graph \
+  cargo test --test valid_time_diff_test --release -- \
+  --ignored measure_valid_time_diff_fixture --nocapture
+```
+
+### Browser measurement — NOT ADMITTED (2026-07-27, superseded)
+
+Kept as the diagnostic record. The admitted receipt is the next section; the
+defect this run found was fixed in `yield_browser_task`.
+
+A-3 browser evidence for `BrowserReadView.validTimeDiff()`, taken against the
+same `bench-1m-diff.graph` as the native baseline above, in Chrome for Testing
+150.0.7871.115 on the A0 host. The receipt is preserved at
+`benchmarks/baselines/browser-valid-time-diff/2026-07-27-hal7800-a3/receipt.json`
+with `admitted: false`. It is recorded because it is the artifact that found
+the defect below, not because it clears the gate.
+
+Import staged 75,486 IndexedDB pages, `headerNodeCount` 1,000,256. Each scope
+was measured in its own fresh browser, 1 cold call plus 20 warm samples.
+
+| Scope | cold | warm p50 | warm p95 | native p50 |
+|---|---:|---:|---:|---:|
+| 128-entity exact set | 429.4 ms | 518.9 ms | 520.3 ms | 0.408 ms |
+| Whole-attribute range | 5.9 ms | 0.8 ms | 1.1 ms | 0.093 ms |
+
+| Gate | Result |
+|---|---|
+| `exactAuthority` | pass — both scopes returned exactly 256 rows, 128 appeared / 128 disappeared, no continuation |
+| `rss` / `pss` | pass — peak delta well under 1 GiB on a 309 MB fixture |
+| `coldPaysPageFaults` | **fail** — entity-set warm is *slower* than cold |
+| `coldLatency` / `warmLatency` | **fail** — entity-set scope |
+
+The attribute scope behaves as designed: ~9x the native cost, which is the
+expected WASM-plus-IndexedDB tax, and it warms up.
+
+**The entity-set number is scheduler overhead, not storage work.** Varying the
+entity count on the same fixture pins the per-entity cost at Chrome's nested
+`setTimeout` clamp:
+
+| Entities | warm p50 | per entity |
+|---:|---:|---:|
+| 1 | 0.1 ms | 0.100 ms |
+| 8 | 28.8 ms | 3.600 ms |
+| 16 | 61.5 ms | 3.844 ms |
+| 32 | 126.7 ms | 3.959 ms |
+| 64 | 257.4 ms | 4.022 ms |
+| 128 | 518.1 ms | 4.048 ms |
+
+`ValidTimeDiffScan::step_entity_set` returns `Yielded` once per entity, and
+`yield_browser_task` (`src/browser/mod.rs`) resolves a `setTimeout(…, 0)`.
+Chrome clamps nested timeouts to 4 ms past five levels, so a 128-entity diff
+pays ~127 x 4 ms of pure scheduling. A single-entity diff, which completes in
+one step with no yield, costs 0.1 ms. That is also why warm exceeds cold:
+a cold call takes the page-fault branch, which stages a page and retries
+*without* yielding, skipping some of the clamped hops.
+
+Correctness is unaffected — every sample returned the exact expected page.
+The fix is to the yield primitive, which is shared by every paged browser
+read, so it is tracked as its own change rather than folded into this
+measurement.
+
+### Browser measurement — ADMITTED (2026-07-27)
+
+Same fixture, same host, same Chrome for Testing 150.0.7871.115, re-measured
+after `yield_browser_task` stopped using the clamped `setTimeout(…, 0)` and
+started resolving `scheduler.yield()` (with a `MessageChannel` fallback).
+Receipt: `benchmarks/baselines/browser-valid-time-diff/2026-07-27-hal7800-a3-admitted/receipt.json`,
+`admitted: true`, source commit `cafdb98`, tree clean. Import staged the same
+75,486 IndexedDB pages, `headerNodeCount` 1,000,256.
+
+| Scope | cold | warm p50 | warm p95 | native p50 | vs native |
+|---|---:|---:|---:|---:|---:|
+| 128-entity exact set | 8.5 ms | 2.0 ms | 3.8 ms | 0.408 ms | 4.9x |
+| Whole-attribute range | 6.5 ms | 0.8 ms | 1.3 ms | 0.093 ms | 8.6x |
+
+All six gates pass. The entity-set scope went from 518.9 ms warm p50 to 2.0 ms
+— 259x — with no change to the storage path, and `coldPaysPageFaults` flipped
+to pass in both scopes (cold 8.5 ms > warm 2.0 ms), which is the signal that
+page-fault work, not scheduling, now dominates the cold call. Peak RSS delta
+53 MiB / PSS 47 MiB on the 309 MB fixture. The attribute scope is unchanged at
+0.8 ms warm p50, as expected: it yields a handful of times, so it never paid
+much clamp.
+
+The per-entity constant collapsed with it:
+
+| Entities | warm p50 | per entity | was (clamped) |
+|---:|---:|---:|---:|
+| 1 | 0.1 ms | 0.100 ms | 0.100 ms |
+| 8 | 0.3 ms | 0.038 ms | 3.600 ms |
+| 16 | 0.4 ms | 0.025 ms | 3.844 ms |
+| 32 | 0.8 ms | 0.025 ms | 3.959 ms |
+| 64 | 1.2 ms | 0.019 ms | 4.022 ms |
+| 128 | 2.2 ms | 0.017 ms | 4.048 ms |
+
+Per-entity cost now *falls* with scope size instead of converging on 4 ms —
+fixed per-call overhead amortising over real range work, which is the shape a
+scan should have. Whether `step_entity_set` should still yield once per entity
+is a separate, now much cheaper, question.
+
+```bash
+# serve the repo root first: python3 -m http.server 8123
+cargo run --release --example generate_bench_fixture -- \
+  1000000 target/bench-fixtures/bench-1m-diff.graph 128
+wasm-pack build --target web --out-dir minigraf-wasm --features browser
+CHROME_PATH=<chrome> NODE_PATH=<dir with puppeteer-core> \
+BENCH_PAGE=http://localhost:8123/examples/browser/bench.html \
+BENCH_PROFILE=/tmp/vicia-diff-profile \
+  node examples/browser/bench-driver.cjs valid-time-diff \
+  /target/bench-fixtures/bench-1m-diff.graph 20 > receipt.json
+node scripts/validate-browser-valid-time-diff-receipt.mjs receipt.json
+```
+
 ---
 
 ## Reproducing

@@ -1,0 +1,171 @@
+{
+  "schema": "vicia.browser-valid-time-diff.v1",
+  "fixture": "/target/bench-fixtures/bench-1m-diff.graph",
+  "samples": 20,
+  "chrome": "/opt/chrome-for-testing/150.0.7871.115/chrome-linux64/chrome",
+  "chromeVersion": "Google Chrome for Testing 150.0.7871.115",
+  "profile": "/tmp/vicia-diff-profile",
+  "request": {
+    "attribute": ":status/value",
+    "entityCount": 128,
+    "validAtBefore": 1593561600000,
+    "validAtAfter": 1625097600000,
+    "limit": 1000
+  },
+  "import": {
+    "result": {
+      "fixtureBytes": 309190656,
+      "fetchMs": 672.8,
+      "openEmptyMs": 32.3,
+      "importMs": 7332,
+      "totalMs": 8037.1,
+      "heapBeforeBytes": 1013226,
+      "heapAfterBytes": 310292601,
+      "stats": {
+        "idbCount": 75486,
+        "headerVersion": 12,
+        "headerPageCount": 75486,
+        "headerNodeCount": 1000256
+      }
+    },
+    "rss": {
+      "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+      "beforeBytes": 3598094336,
+      "peakBytes": 5793591296,
+      "afterBytes": 5113077760,
+      "peakDeltaBytes": 2195496960
+    },
+    "pss": {
+      "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+      "beforeBytes": 671389696,
+      "peakBytes": 2854573056,
+      "afterBytes": 2103973888,
+      "peakDeltaBytes": 2183183360
+    },
+    "private": {
+      "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+      "beforeBytes": 483860480,
+      "peakBytes": 2664292352,
+      "afterBytes": 1913602048,
+      "peakDeltaBytes": 2180431872
+    }
+  },
+  "scopes": {
+    "entity_set": {
+      "result": {
+        "scope": "entity_set",
+        "samples": 20,
+        "txCursor": "1256",
+        "openMs": 10.5,
+        "coldMs": 8.5,
+        "rows": 256,
+        "appeared": 128,
+        "disappeared": 128,
+        "warmP50Ms": 2,
+        "warmP95Ms": 3.8,
+        "warmMaxMs": 4.7,
+        "heapBeforeBytes": 941905,
+        "heapAfterOpenBytes": 1390264,
+        "heapAfterColdBytes": 1868361,
+        "heapAfterWarmBytes": 2388545,
+        "stats": {
+          "idbCount": 75486,
+          "headerVersion": 12,
+          "headerPageCount": 75486,
+          "headerNodeCount": 1000256
+        }
+      },
+      "rss": {
+        "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+        "beforeBytes": 3811831808,
+        "peakBytes": 3867279360,
+        "afterBytes": 3867279360,
+        "peakDeltaBytes": 55447552
+      },
+      "pss": {
+        "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+        "beforeBytes": 699591680,
+        "peakBytes": 748882944,
+        "afterBytes": 748882944,
+        "peakDeltaBytes": 49291264
+      },
+      "private": {
+        "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+        "beforeBytes": 511676416,
+        "peakBytes": 557494272,
+        "afterBytes": 557494272,
+        "peakDeltaBytes": 45817856
+      }
+    },
+    "attribute_scope": {
+      "result": {
+        "scope": "attribute_scope",
+        "samples": 20,
+        "txCursor": "1256",
+        "openMs": 14.6,
+        "coldMs": 6.5,
+        "rows": 256,
+        "appeared": 128,
+        "disappeared": 128,
+        "warmP50Ms": 0.8,
+        "warmP95Ms": 1.3,
+        "warmMaxMs": 1.4,
+        "heapBeforeBytes": 941909,
+        "heapAfterOpenBytes": 1390268,
+        "heapAfterColdBytes": 1616023,
+        "heapAfterWarmBytes": 1835751,
+        "stats": {
+          "idbCount": 75486,
+          "headerVersion": 12,
+          "headerPageCount": 75486,
+          "headerNodeCount": 1000256
+        }
+      },
+      "rss": {
+        "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+        "beforeBytes": 4027072512,
+        "peakBytes": 4078522368,
+        "afterBytes": 4078522368,
+        "peakDeltaBytes": 51449856
+      },
+      "pss": {
+        "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+        "beforeBytes": 728540160,
+        "peakBytes": 772225024,
+        "afterBytes": 772225024,
+        "peakDeltaBytes": 43684864
+      },
+      "private": {
+        "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+        "beforeBytes": 538992640,
+        "peakBytes": 579284992,
+        "afterBytes": 579284992,
+        "peakDeltaBytes": 40292352
+      }
+    }
+  },
+  "source": {
+    "commit": "cafdb98d3328c1bd777badc344b94e347488a2e2",
+    "trackedClean": true,
+    "fixtureSha256": "5eefb0c6da1714f830506f29851cc1b4e5ecc29e170d9b12b754b4026fc9caaa",
+    "wasmSha256": "ebed410cc15fb4edacad3dd48f4626720606f3c9dc17cf71e706bfb7817fca64"
+  },
+  "environment": {
+    "platform": "linux",
+    "release": "6.6.87.2-microsoft-standard-WSL2",
+    "cpu": "AMD Ryzen 7 7800X3D 8-Core Processor",
+    "logicalCpus": 16,
+    "totalMemoryBytes": 33655283712,
+    "node": "v23.11.1"
+  },
+  "admissionEligible": true,
+  "gates": {
+    "exactAuthority": true,
+    "coldPaysPageFaults": true,
+    "coldLatency": true,
+    "warmLatency": true,
+    "rss": true,
+    "pss": true
+  },
+  "admitted": true
+}

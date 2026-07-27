@@ -643,3 +643,125 @@ window.benchProjectionMaintenance = async (attributes) => {
     void terminated;
   }
 };
+
+// ── A-3 valid-time diff read ────────────────────────────────────────────────
+// Browser counterpart of `measure_valid_time_diff_fixture`
+// (tests/valid_time_diff_test.rs). The fixture must carry the valid-time
+// receipt entities: `generate_bench_fixture <facts> <out.graph> 128`.
+// Entity ids, attribute, and instants are the native test's, so a browser
+// number and a native number describe the same request over the same file.
+//
+// Each scope is measured in its own fresh browser by the driver, so its first
+// call is genuinely cold and pays the IndexedDB page faults that the paged
+// diff path resolves through fetch-and-retry.
+
+const DIFF_ATTRIBUTE = ":status/value";
+const DIFF_ENTITY_BASE = 0x9000_0000;
+const DIFF_ENTITY_COUNT = 128;
+const DIFF_VALID_AT_BEFORE = 1_593_561_600_000; // 2020-07-01, inside the :old window
+const DIFF_VALID_AT_AFTER = 1_625_097_600_000; // 2021-07-01, inside the :new window
+const DIFF_LIMIT = 1_000;
+
+function diffEntityIds(count) {
+  const ids = [];
+  for (let index = 0; index < count; index++) {
+    const hex = (BigInt(DIFF_ENTITY_BASE) + BigInt(index))
+      .toString(16)
+      .padStart(32, "0");
+    ids.push(
+      `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-` +
+        `${hex.slice(16, 20)}-${hex.slice(20)}`,
+    );
+  }
+  return ids;
+}
+
+// One diff call, asserting the exact expected shape. A wrong row count, a
+// wrong appeared/disappeared split, or an unexpected continuation throws
+// rather than being averaged into a latency number.
+async function timedDiff(view, entities, expectedRows) {
+  const started = performance.now();
+  // The valid instants are i64 on the Rust side, so wasm-bindgen requires
+  // BigInt rather than Number here.
+  const page = await view.validTimeDiff(
+    DIFF_ATTRIBUTE,
+    entities,
+    BigInt(DIFF_VALID_AT_BEFORE),
+    BigInt(DIFF_VALID_AT_AFTER),
+    undefined,
+    DIFF_LIMIT,
+  );
+  const elapsed = performance.now() - started;
+  if (page.rows.length !== expectedRows) {
+    throw new Error(
+      `valid-time diff returned ${page.rows.length} rows, expected ${expectedRows}`,
+    );
+  }
+  if (page.next != null) {
+    throw new Error("valid-time diff returned an unexpected continuation");
+  }
+  const appeared = page.rows.filter((row) => row.change === "appeared").length;
+  const disappeared = page.rows.length - appeared;
+  if (appeared !== expectedRows / 2 || disappeared !== expectedRows / 2) {
+    throw new Error(
+      `valid-time diff change mix ${appeared}/${disappeared}, expected an even split`,
+    );
+  }
+  return { ms: elapsed, appeared, disappeared };
+}
+
+window.benchValidTimeDiff = async (
+  scope = "entity_set",
+  samples = 20,
+  entityCount = DIFF_ENTITY_COUNT,
+) => {
+  await initPromise;
+  if (scope !== "entity_set" && scope !== "attribute_scope") {
+    throw new Error(`unknown diff scope ${scope}`);
+  }
+  window.gc?.();
+  const heapBeforeBytes = heap();
+  const openStarted = performance.now();
+  const db = await BrowserDb.openPaged(DB_NAME);
+  const openMs = performance.now() - openStarted;
+  const heapAfterOpenBytes = heap();
+
+  // `readViewAnyValidTime` needs an explicit transaction pin; take the
+  // current cursor so the view sees the whole imported fixture.
+  const txCursor = db.readView().txCursor;
+  const view = db.readViewAnyValidTime(txCursor);
+  // `entityCount` is a knob for scaling probes; the attribute scope always
+  // sees every receipt entity, so only the entity-set scope can vary.
+  const entities = scope === "entity_set" ? diffEntityIds(entityCount) : undefined;
+  const expectedRows =
+    (scope === "entity_set" ? entityCount : DIFF_ENTITY_COUNT) * 2;
+
+  const cold = await timedDiff(view, entities, expectedRows);
+  const heapAfterColdBytes = heap();
+  const warm = [];
+  for (let index = 0; index < samples; index++) {
+    warm.push((await timedDiff(view, entities, expectedRows)).ms);
+  }
+  const sorted = [...warm].sort((left, right) => left - right);
+
+  return show(
+    JSON.stringify({
+      scope,
+      samples,
+      txCursor: String(txCursor),
+      openMs: Math.round(openMs * 1000) / 1000,
+      coldMs: Math.round(cold.ms * 1000) / 1000,
+      rows: expectedRows,
+      appeared: cold.appeared,
+      disappeared: cold.disappeared,
+      warmP50Ms: percentile(sorted, 50),
+      warmP95Ms: percentile(sorted, 95),
+      warmMaxMs: percentile(sorted, 100),
+      heapBeforeBytes,
+      heapAfterOpenBytes,
+      heapAfterColdBytes,
+      heapAfterWarmBytes: heap(),
+      stats: await idbStats(),
+    }),
+  );
+};
