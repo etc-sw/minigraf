@@ -35,8 +35,89 @@ const BROWSER_AGGREGATE_ENTRY_BUDGET: usize = 4_096;
 const BROWSER_AGGREGATE_RESIDENT_PAGE_LIMIT: usize = 192;
 const BROWSER_READ_VIEW_MAX_RESULT_BYTES: usize = 8 * 1024 * 1024;
 
-async fn yield_browser_task() -> Result<(), JsValue> {
-    let promise = js_sys::Promise::new(&mut |resolve, reject| {
+/// How this thread hands the event loop back between paged-read steps.
+///
+/// `setTimeout(resolve, 0)` is not a zero-cost task hop: once the nesting level
+/// passes five, browsers clamp it to 4 ms, and a scan that resolves, steps and
+/// reschedules hits that nesting level immediately. A 128-entity valid-time
+/// diff paid ~4 ms per entity of pure scheduling. The two primitives above the
+/// timeout are unclamped, so the hop costs what a task hop actually costs.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum YieldPrimitive {
+    /// `scheduler.yield()` — purpose-built, keeps continuation priority.
+    Scheduler,
+    /// `MessageChannel` postMessage — a real task, and no `Window` needed, so
+    /// this also works inside `maintenance-worker.js`.
+    MessageChannel,
+    /// `setTimeout(0)` on `Window`. Clamped; last resort.
+    Timeout,
+}
+
+thread_local! {
+    /// Resolved once per thread: a realm does not grow a `scheduler` between
+    /// yields, and re-probing would run on every step of every paged read.
+    static YIELD_PRIMITIVE: std::cell::Cell<Option<YieldPrimitive>> =
+        const { std::cell::Cell::new(None) };
+}
+
+fn global_property(name: &str) -> Option<JsValue> {
+    let value = js_sys::Reflect::get(&js_sys::global(), &JsValue::from_str(name)).ok()?;
+    if value.is_undefined() || value.is_null() {
+        None
+    } else {
+        Some(value)
+    }
+}
+
+fn scheduler_yield_fn() -> Option<(JsValue, js_sys::Function)> {
+    let scheduler = global_property("scheduler")?;
+    let method = js_sys::Reflect::get(&scheduler, &JsValue::from_str("yield")).ok()?;
+    let method = method.dyn_ref::<js_sys::Function>()?.clone();
+    Some((scheduler, method))
+}
+
+fn resolve_yield_primitive() -> YieldPrimitive {
+    if let Some(cached) = YIELD_PRIMITIVE.with(std::cell::Cell::get) {
+        return cached;
+    }
+    let resolved = if scheduler_yield_fn().is_some() {
+        YieldPrimitive::Scheduler
+    } else if global_property("MessageChannel").is_some() {
+        YieldPrimitive::MessageChannel
+    } else {
+        YieldPrimitive::Timeout
+    };
+    YIELD_PRIMITIVE.with(|slot| slot.set(Some(resolved)));
+    resolved
+}
+
+fn scheduler_yield_promise() -> Option<js_sys::Promise> {
+    let (scheduler, method) = scheduler_yield_fn()?;
+    method.call0(&scheduler).ok()?.dyn_into().ok()
+}
+
+fn message_channel_yield_promise() -> Option<js_sys::Promise> {
+    let channel = web_sys::MessageChannel::new().ok()?;
+    let port1 = channel.port1();
+    let port2 = channel.port2();
+    let promise = js_sys::Promise::new(&mut |resolve, _reject| {
+        let port = port1.clone();
+        // `once_into_js` hands the closure to JS, which frees it after the one
+        // delivery — no handler table to unwind from inside the callback.
+        let handler = wasm_bindgen::closure::Closure::once_into_js(move |_: JsValue| {
+            port.close();
+            let _ = resolve.call0(&JsValue::UNDEFINED);
+        });
+        // Setting `onmessage` starts the port; the channel is per-yield, so
+        // two concurrent scans never overwrite each other's handler.
+        port1.set_onmessage(Some(handler.unchecked_ref()));
+    });
+    port2.post_message(&JsValue::UNDEFINED).ok()?;
+    Some(promise)
+}
+
+fn timeout_yield_promise() -> js_sys::Promise {
+    js_sys::Promise::new(&mut |resolve, reject| {
         let Some(window) = web_sys::window() else {
             let _ = reject.call1(
                 &JsValue::UNDEFINED,
@@ -49,7 +130,16 @@ async fn yield_browser_task() -> Result<(), JsValue> {
         {
             let _ = reject.call1(&JsValue::UNDEFINED, &error);
         }
-    });
+    })
+}
+
+async fn yield_browser_task() -> Result<(), JsValue> {
+    let promise = match resolve_yield_primitive() {
+        YieldPrimitive::Scheduler => scheduler_yield_promise(),
+        YieldPrimitive::MessageChannel => message_channel_yield_promise(),
+        YieldPrimitive::Timeout => None,
+    }
+    .unwrap_or_else(timeout_yield_promise);
     JsFuture::from(promise).await.map(|_| ())
 }
 
@@ -3002,6 +3092,36 @@ mod tests {
     wasm_bindgen_test_configure!(run_in_browser);
 
     const BASE_FACT_PAGE_START_OFFSET: usize = 84 + 12 + 80;
+
+    #[wasm_bindgen_test]
+    async fn yield_uses_an_unclamped_primitive() {
+        assert!(
+            resolve_yield_primitive() != YieldPrimitive::Timeout,
+            "browser resolved the clamped setTimeout fallback"
+        );
+        yield_browser_task().await.expect("yield resolves");
+    }
+
+    #[wasm_bindgen_test]
+    async fn repeated_yields_are_not_clamped() {
+        // Warm the primitive and the nesting level: the 4 ms clamp only starts
+        // after five nested timeouts, so a cold single hop looks fast either way.
+        for _ in 0..8 {
+            yield_browser_task().await.expect("warmup yield resolves");
+        }
+        let hops = 64;
+        let started = js_sys::Date::now();
+        for _ in 0..hops {
+            yield_browser_task().await.expect("measured yield resolves");
+        }
+        let elapsed = js_sys::Date::now() - started;
+        // Clamped, 64 hops cost >= 256 ms. Unclamped they cost single-digit ms;
+        // 100 ms leaves room for a loaded CI machine without admitting a clamp.
+        assert!(
+            elapsed < 100.0,
+            "64 task yields took too long — the clamped path is back"
+        );
+    }
 
     fn fixture_pages(bytes: &[u8]) -> Vec<(u64, Vec<u8>)> {
         assert!(
