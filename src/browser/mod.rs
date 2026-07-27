@@ -1230,6 +1230,66 @@ impl BrowserReadView {
         history_page_to_js(result?, self.tx_count)
     }
 
+    /// Read one bounded page of net valid-time differences.
+    ///
+    /// Available only on a view created with `readViewAnyValidTime`, because
+    /// the request carries both valid instants itself. Pass `entities` to scope
+    /// the diff to an exact set, or omit it to scan the whole attribute range;
+    /// an unscoped whole-database diff is rejected rather than served.
+    #[wasm_bindgen(js_name = validTimeDiff)]
+    pub async fn valid_time_diff(
+        &self,
+        attribute: String,
+        entities: Option<Vec<String>>,
+        valid_at_before: i64,
+        valid_at_after: i64,
+        after: Option<String>,
+        limit: usize,
+    ) -> Result<JsValue, JsValue> {
+        let parsed_entities = entities
+            .as_ref()
+            .map(|ids| {
+                ids.iter()
+                    .map(|id| {
+                        crate::EntityId::parse_str(id).map_err(|error| {
+                            JsValue::from_str(&format!(
+                                "valid_time_diff invalid entity id {id}: {error}"
+                            ))
+                        })
+                    })
+                    .collect::<Result<Vec<_>, _>>()
+            })
+            .transpose()?;
+        let after = after
+            .as_deref()
+            .map(crate::db::decode_valid_time_diff_cursor)
+            .transpose()
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        let request = crate::db::ValidTimeDiffRequest {
+            attribute: &attribute,
+            entities: parsed_entities.as_deref(),
+            valid_at_before,
+            valid_at_after,
+            after: after.as_ref(),
+            limit,
+        };
+        // Validation happens inside `begin`, before any storage work, so a
+        // malformed request never reaches the paged-read guard.
+        let scan = crate::db::ValidTimeDiffScan::begin(&self.valid_at, self.tx_count, &request)
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+
+        let db = BrowserDb {
+            inner: Rc::clone(&self.inner),
+        };
+        db.ensure_usable()?;
+        let guarded = db.begin_paged_read()?;
+        let result = self.read_valid_time_diff(&db, scan).await;
+        if guarded {
+            db.finish_paged_read();
+        }
+        valid_time_diff_page_to_js(result?, self.tx_count)
+    }
+
     /// Read current source entities that reference one target through one exact attribute.
     #[wasm_bindgen(js_name = refsTo)]
     pub async fn refs_to(
@@ -1345,6 +1405,39 @@ impl BrowserReadView {
             std::mem::take(&mut cursor.items),
         )
         .map_err(|error| JsValue::from_str(&error.to_string()))
+    }
+
+    /// Drive the shared diff scan, servicing page faults and yielding.
+    ///
+    /// The scan itself is the same state machine the native path runs; the only
+    /// browser-specific behaviour lives here — stage a not-resident page and
+    /// retry, and hand the event loop a turn between steps.
+    async fn read_valid_time_diff(
+        &self,
+        db: &BrowserDb,
+        mut scan: crate::db::ValidTimeDiffScan,
+    ) -> Result<crate::db::ValidTimeDiffPage, JsValue> {
+        loop {
+            // The borrow ends with this statement; it must never be held
+            // across an await.
+            let step = scan.step(&self.inner.borrow().fact_storage);
+            match step {
+                Ok(crate::db::ValidTimeDiffScanStep::Complete) => break,
+                Ok(crate::db::ValidTimeDiffScanStep::Yielded) => {
+                    db.evict_aggregate_staging();
+                    yield_browser_task().await?;
+                }
+                Err(error) => match page_not_resident_id(&error) {
+                    Some(page_id) => {
+                        db.fetch_and_stage_page(page_id).await?;
+                        db.evict_aggregate_staging();
+                    }
+                    None => return Err(JsValue::from_str(&error.to_string())),
+                },
+            }
+        }
+        scan.finish()
+            .map_err(|error| JsValue::from_str(&error.to_string()))
     }
 
     async fn read_current_entities(
@@ -1609,6 +1702,47 @@ fn history_page_to_js(
     if encoded.len() > BROWSER_READ_VIEW_MAX_RESULT_BYTES {
         return Err(JsValue::from_str(&format!(
             "entity_attribute_history result exceeds {BROWSER_READ_VIEW_MAX_RESULT_BYTES} bytes; result was rejected without truncation"
+        )));
+    }
+    js_sys::JSON::parse(&encoded)
+}
+
+fn valid_time_diff_page_to_js(
+    page: crate::db::ValidTimeDiffPage,
+    tx_count: u64,
+) -> Result<JsValue, JsValue> {
+    let next = page
+        .next
+        .as_ref()
+        .map(crate::db::encode_valid_time_diff_cursor)
+        .transpose()
+        .map_err(|error| JsValue::from_str(&error.to_string()))?;
+    let rows = page
+        .rows
+        .into_iter()
+        .map(|row| {
+            serde_json::json!({
+                "entity": row.entity.to_string(),
+                "attribute": row.attribute,
+                "value": to_tagged_json(&row.value),
+                "change": match row.change {
+                    crate::db::ValidTimeDiffChange::Appeared => "appeared",
+                    crate::db::ValidTimeDiffChange::Disappeared => "disappeared",
+                },
+                "validFrom": row.valid_from.to_string(),
+                "validTo": row.valid_to.to_string(),
+            })
+        })
+        .collect::<Vec<_>>();
+    let encoded = serde_json::json!({
+        "rows": rows,
+        "next": next,
+        "txCount": tx_count.to_string(),
+    })
+    .to_string();
+    if encoded.len() > BROWSER_READ_VIEW_MAX_RESULT_BYTES {
+        return Err(JsValue::from_str(&format!(
+            "valid_time_diff result exceeds {BROWSER_READ_VIEW_MAX_RESULT_BYTES} bytes; result was rejected without truncation"
         )));
     }
     js_sys::JSON::parse(&encoded)
@@ -4726,6 +4860,279 @@ mod tests {
             .expect("history query");
         let history: serde_json::Value = serde_json::from_str(&history).unwrap();
         assert_eq!(history["results"].as_array().unwrap().len(), 1);
+    }
+
+    // ── valid_time_diff (A-3 browser mirror) ─────────────────────────────────
+    //
+    // Unix ms for the instants used below.
+    const T_2026_01_01: i64 = 1_767_225_600_000;
+    const T_2026_03_01: i64 = 1_772_323_200_000;
+    const T_2026_06_01: i64 = 1_780_272_000_000;
+    const T_2026_09_01: i64 = 1_788_220_800_000;
+
+    async fn diff_fixture() -> BrowserDb {
+        let db = BrowserDb::open_in_memory().expect("open_in_memory");
+        // A value that holds until June, then is replaced.
+        db.execute(
+            r#"(transact {:valid-from "2026-01-01" :valid-to "2026-06-01"} [[:alice :status/value "draft"]])"#
+                .to_string(),
+        )
+        .await
+        .expect("seed draft window");
+        db.execute(
+            r#"(transact {:valid-from "2026-06-01"} [[:alice :status/value "final"]])"#.to_string(),
+        )
+        .await
+        .expect("seed final window");
+        db
+    }
+
+    fn diff_rows(page: &JsValue) -> Vec<(String, String, String)> {
+        let text = js_sys::JSON::stringify(page)
+            .expect("page stringifies")
+            .as_string()
+            .expect("page is a string");
+        let parsed: serde_json::Value = serde_json::from_str(&text).expect("page parses");
+        parsed["rows"]
+            .as_array()
+            .expect("rows is an array")
+            .iter()
+            .map(|row| {
+                (
+                    row["entity"].as_str().unwrap_or_default().to_owned(),
+                    row["change"].as_str().unwrap_or_default().to_owned(),
+                    row["value"]["value"]
+                        .as_str()
+                        .or_else(|| row["value"].as_str())
+                        .unwrap_or_default()
+                        .to_owned(),
+                )
+            })
+            .collect()
+    }
+
+    fn diff_next(page: &JsValue) -> Option<String> {
+        let text = js_sys::JSON::stringify(page)
+            .expect("page stringifies")
+            .as_string()
+            .expect("page is a string");
+        let parsed: serde_json::Value = serde_json::from_str(&text).expect("page parses");
+        parsed["next"].as_str().map(str::to_owned)
+    }
+
+    async fn any_valid_time_view(db: &BrowserDb) -> BrowserReadView {
+        let pinned = db.inner.borrow().fact_storage.current_tx_count();
+        db.read_view_any_valid_time(pinned)
+            .expect("any-valid-time view")
+    }
+
+    #[wasm_bindgen_test]
+    async fn valid_time_diff_reports_a_replacement_as_two_rows() {
+        let db = diff_fixture().await;
+        let view = any_valid_time_view(&db).await;
+        let page = view
+            .valid_time_diff(
+                ":status/value".to_string(),
+                None,
+                T_2026_03_01,
+                T_2026_09_01,
+                None,
+                100,
+            )
+            .await
+            .expect("attribute-scoped diff");
+        let mut rows = diff_rows(&page);
+        rows.sort();
+        assert_eq!(
+            rows.len(),
+            2,
+            "a replacement is one disappeared plus one appeared"
+        );
+        assert_eq!(rows[0].1, "appeared");
+        assert_eq!(rows[0].2, "final");
+        assert_eq!(rows[1].1, "disappeared");
+        assert_eq!(rows[1].2, "draft");
+        assert!(diff_next(&page).is_none(), "the scope was exhausted");
+    }
+
+    #[wasm_bindgen_test]
+    async fn valid_time_diff_entity_scope_matches_attribute_scope() {
+        let db = diff_fixture().await;
+        let view = any_valid_time_view(&db).await;
+        let attribute_page = view
+            .valid_time_diff(
+                ":status/value".to_string(),
+                None,
+                T_2026_03_01,
+                T_2026_09_01,
+                None,
+                100,
+            )
+            .await
+            .expect("attribute-scoped diff");
+        let entity = diff_rows(&attribute_page)
+            .first()
+            .expect("attribute scope produced a row")
+            .0
+            .clone();
+        let entity_page = view
+            .valid_time_diff(
+                ":status/value".to_string(),
+                Some(vec![entity]),
+                T_2026_03_01,
+                T_2026_09_01,
+                None,
+                100,
+            )
+            .await
+            .expect("entity-scoped diff");
+        let mut from_attribute = diff_rows(&attribute_page);
+        let mut from_entity = diff_rows(&entity_page);
+        from_attribute.sort();
+        from_entity.sort();
+        assert_eq!(
+            from_attribute, from_entity,
+            "both scopes must agree on the same facts"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn valid_time_diff_ignores_churn_inside_the_interval() {
+        let db = diff_fixture().await;
+        let view = any_valid_time_view(&db).await;
+        // "draft" is visible at both ends of this interval, and the June
+        // replacement lies outside it, so nothing changed on net.
+        let page = view
+            .valid_time_diff(
+                ":status/value".to_string(),
+                None,
+                T_2026_01_01,
+                T_2026_03_01,
+                None,
+                100,
+            )
+            .await
+            .expect("net-zero diff");
+        assert!(
+            diff_rows(&page).is_empty(),
+            "a value visible at both instants is not a change"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn valid_time_diff_requires_an_any_valid_time_view() {
+        let db = diff_fixture().await;
+        let view = db.read_view().expect("current view");
+        let result = view
+            .valid_time_diff(
+                ":status/value".to_string(),
+                None,
+                T_2026_03_01,
+                T_2026_09_01,
+                None,
+                100,
+            )
+            .await;
+        assert!(
+            result.is_err(),
+            "a valid-time-pinned view cannot answer a two-instant diff"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn valid_time_diff_rejects_reversed_and_malformed_requests() {
+        let db = diff_fixture().await;
+        let view = any_valid_time_view(&db).await;
+        assert!(
+            view.valid_time_diff(
+                ":status/value".to_string(),
+                None,
+                T_2026_09_01,
+                T_2026_03_01,
+                None,
+                100,
+            )
+            .await
+            .is_err(),
+            "the later instant must exceed the earlier one"
+        );
+        assert!(
+            view.valid_time_diff(
+                "status".to_string(),
+                None,
+                T_2026_03_01,
+                T_2026_09_01,
+                None,
+                100,
+            )
+            .await
+            .is_err(),
+            "an unqualified attribute must be rejected"
+        );
+        assert!(
+            view.valid_time_diff(
+                ":status/value".to_string(),
+                None,
+                T_2026_03_01,
+                T_2026_09_01,
+                Some("not-a-cursor".to_string()),
+                100,
+            )
+            .await
+            .is_err(),
+            "a malformed continuation must be rejected"
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn valid_time_diff_resumes_through_a_javascript_cursor() {
+        let db = BrowserDb::open_in_memory().expect("open_in_memory");
+        for who in [":alice", ":bob", ":carol"] {
+            db.execute(format!(
+                r#"(transact {{:valid-from "2026-01-01" :valid-to "2026-06-01"}} [[{who} :status/value "draft"]])"#
+            ))
+            .await
+            .expect("seed draft window");
+            db.execute(format!(
+                r#"(transact {{:valid-from "2026-06-01"}} [[{who} :status/value "final"]])"#
+            ))
+            .await
+            .expect("seed final window");
+        }
+        let view = any_valid_time_view(&db).await;
+
+        let mut seen = Vec::new();
+        let mut cursor: Option<String> = None;
+        let mut pages = 0;
+        loop {
+            let page = view
+                .valid_time_diff(
+                    ":status/value".to_string(),
+                    None,
+                    T_2026_03_01,
+                    T_2026_09_01,
+                    cursor.clone(),
+                    2,
+                )
+                .await
+                .expect("paged diff");
+            seen.extend(diff_rows(&page));
+            pages += 1;
+            cursor = diff_next(&page);
+            if cursor.is_none() || pages > 10 {
+                break;
+            }
+        }
+        assert!(pages > 1, "a two-row limit over three entities must page");
+        let mut sorted = seen.clone();
+        sorted.sort();
+        sorted.dedup();
+        assert_eq!(
+            sorted.len(),
+            seen.len(),
+            "continuation must not repeat a row"
+        );
+        assert_eq!(seen.len(), 6, "three entities each contribute two rows");
     }
 
     #[wasm_bindgen_test]

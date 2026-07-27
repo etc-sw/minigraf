@@ -172,6 +172,17 @@ async, same bounds plus the browser-wide `8 MiB` structured-result bound,
 paged-generation checks and sparse page demand identical to
 `entityAttributeHistory()`.
 
+A-3 resolved how parity is guaranteed rather than merely intended. Both
+surfaces drive one `ValidTimeDiffScan` state machine, so every visibility,
+budget, paging, and fail-closed rule exists once. `step()` advances by at most
+one storage step and surfaces errors instead of absorbing them; the browser
+driver is the only code that differs, and it does exactly two things a native
+driver does not — stage a not-resident page and retry, and yield to the event
+loop between steps. The continuation crosses the JavaScript boundary through
+`encode_valid_time_diff_cursor` / `decode_valid_time_diff_cursor`, which share
+the CRC-protected hex scheme used by `entityAttributeHistory`, so a cursor
+minted on either surface decodes on the other.
+
 Naming is open (§8): `valid_time_diff` vs `changes_between`. The name must
 carry the axis, because a D-tx surface may exist later.
 
@@ -298,5 +309,5 @@ Applicable rows from the roadmap correctness matrix, plus diff-specific rows:
 | --- | --- | --- |
 | A-1 (done) | Semantics, scope, API shape, reuse map, matrix, gates. | Note committed; cross-lane decision recorded in vetch-memory as proposed. |
 | A-2 (done) | Native `valid_time_diff` tests-first per §6, receipt per §7. | 17-test matrix green in `tests/valid_time_diff_test.rs`; 1M measurement receipt in `docs/BENCHMARKS.md`. |
-| A-3 | Browser mirror + real-Chrome regression; package only via standard sequence. | Chrome suite green. |
+| A-3 (done) | Browser mirror + real-Chrome regression; package only via standard sequence. | `BrowserReadView.validTimeDiff()` on the shared `ValidTimeDiffScan`; 6 browser cases green in real Chrome (87 total, was 81). Package sync NOT run. |
 | A-4 | Handoff to Codex lane: capability transition + refs so recall_diff can build. | vetch-memory records updated; no vicia-db code. |
