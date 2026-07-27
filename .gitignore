@@ -34,3 +34,9 @@ reference/
 
 # Tool scratch output (graphify skill)
 src/graphify-out/
+
+# Caller-product internal documents (Vetch / Harrekki requirements, adoption
+# plans, lane answers). These describe downstream products, not Vicia DB, and
+# are deliberately kept out of this public repository. Tracked docs may cite
+# paths under here; those citations only resolve in an internal checkout.
+docs/internal/

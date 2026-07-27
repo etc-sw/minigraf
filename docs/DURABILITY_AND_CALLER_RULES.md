@@ -1,7 +1,7 @@
 # Durability and Caller Rules
 
 Per-backend durability semantics (gap G13) and the browser caller rules from
-slice A5 of `docs/APP_ADOPTION_GAP_PLAN.md`. This is the authority for what
+slice A5 of `docs/internal/APP_ADOPTION_GAP_PLAN.md`. This is the authority for what
 capability-scoped foreground and maintenance operations guarantee **at the
 moment they return**, per backend. Raw `Minigraf` and `BrowserDb` methods retain
 the same underlying durability semantics for 1.x compatibility. The

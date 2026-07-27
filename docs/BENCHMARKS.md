@@ -560,7 +560,7 @@ measured only around `recompact_visible_delta()`.
 
 ## A0: Caller-Shaped Evidence Suites (2026-07-11)
 
-Evidence gate for the app-adoption line (`docs/APP_ADOPTION_GAP_PLAN.md`,
+Evidence gate for the app-adoption line (`docs/internal/APP_ADOPTION_GAP_PLAN.md`,
 slice A0). Three suites shaped after the vetch-app and harrekki caller
 requirement documents. All numbers: A0 environment (see Environment).
 
@@ -697,7 +697,7 @@ match the A0 rows above — no regression from the atomicity change.
 
 `Minigraf::export_fact_log_since(since_tx_count)` returns the fact-log tail
 (`tx_count > since`) at cost proportional to the tail, not the committed
-graph (`docs/APP_ADOPTION_GAP_PLAN.md` slice A2, harrekki P0 #2). Committed
+graph (`docs/internal/APP_ADOPTION_GAP_PLAN.md` slice A2, harrekki P0 #2). Committed
 packed pages hold facts in nondecreasing `tx_count` order, so the reader
 binary-searches the first tail page (O(log pages) cache reads) and streams
 from there; delta segments and pending facts filter in memory. Fixture:
@@ -726,7 +726,7 @@ keeps it ~2,800× cheaper than the full export. Setup cost for the fixture:
 
 ## A7: kill -9 Durability Gate (2026-07-11)
 
-Reliability gate, not a benchmark (`docs/APP_ADOPTION_GAP_PLAN.md` slice A7,
+Reliability gate, not a benchmark (`docs/internal/APP_ADOPTION_GAP_PLAN.md` slice A7,
 harrekki P0 #3). `tests/kill9_durability_test.rs` SIGKILLs real
 `minigraf --session --file` child processes at randomized instants —
 including checkpoint-biased windows — over growing `.graph` lineages, then
@@ -768,7 +768,7 @@ only (recompact thresholds are unreachable at this scale).
 
 `(forget ...)` closes query-selected or explicitly supplied EAV valid-time
 windows as one WAL-first transaction while preserving the earlier history
-(`docs/APP_ADOPTION_GAP_PLAN.md` slice A8, harrekki P1 #6). Gate commands:
+(`docs/internal/APP_ADOPTION_GAP_PLAN.md` slice A8, harrekki P1 #6). Gate commands:
 
 ```bash
 cargo test --release --test forget_test \
@@ -815,7 +815,7 @@ bad-magic headers remain hard errors.
 ## A5: Browser IndexedDB Growth (2026-07-11)
 
 Long-running write growth of the browser backend (`BrowserDb`), measured for
-the A5 parity-evidence gate (`docs/APP_ADOPTION_GAP_PLAN.md`). This is the
+the A5 parity-evidence gate (`docs/internal/APP_ADOPTION_GAP_PLAN.md`). This is the
 pre-A5-4 maintenance snapshot. At the time, every browser
 write `execute()` runs `save()`, which appends a delta segment and rewrites
 the manifest; `save()` never consults the delta growth thresholds, and the
