@@ -2,11 +2,13 @@
 
 Status: V0–V3 complete; R1–R3 landed on 2026-07-27 (merge `fa27cf6`). The
 package is `vicia-db`, the import path is `vicia_db`, and `ViciaDb` is the
-primary type with `Minigraf` kept as a live alias. **Publishing is deferred by
-decision** — see "Publish Deferred" below, which supersedes the publish half of
-the V3 decision. No file format or language-binding rename has happened.
+primary type with `Minigraf` kept as a live alias. **Publishing is on, and
+manual** — `vicia-db` to crates.io and `@vicia-db/browser` to npm, released by
+hand; R5 (arming release CI) is declined. See "Publish Decision, Final" below.
+No file format or language-binding rename has happened.
 
-Date: 2026-06-06, V3 decision 2026-07-27, publish deferred 2026-07-27
+Date: 2026-06-06, V3 decision 2026-07-27, publish deferred and then reinstated
+as manual-only 2026-07-27
 
 Branch: `vicia/api-alias` for the V2 update. The initial plan landed on
 `vicia/rename-plan`. The V3 decision landed on `vicia/rename-v3`.
@@ -259,9 +261,9 @@ Gate:
 Decision: **rename the package to `vicia-db`**, and promote `ViciaDb` to the
 primary Rust type in the same window, keeping `Minigraf` as the compatibility
 alias. (This section originally also decided to publish to crates.io. That half
-was reversed the same day — see "Publish Deferred". The name, version, metadata,
-and type decisions below stand unchanged; they are what the rename needed, not
-what publishing needed.) The package rename is the only break-window this line gets, so the type
+was deferred and then reinstated as manual-only the same day — see "Publish
+Decision, Final". The name, version, metadata, and type decisions below stand
+unchanged; they are what the rename needed, not what publishing needed.) The package rename is the only break-window this line gets, so the type
 flip rides along with it rather than costing a second round of doc and example
 churn.
 
@@ -271,7 +273,7 @@ churn.
 | First version | `0.1.0` — not a continuation of upstream's 1.1.1, which never described this fork's v10–v13 storage |
 | `authors` | `["etc-sw"]` — who ships the package. Upstream copyright stays in `LICENSE-MIT`; lineage stays in README |
 | `repository` | `https://github.com/etc-sw/vicia-db` |
-| `documentation` | Omitted. With publishing deferred there is no docs.rs page to point at |
+| `documentation` | Omitted. docs.rs builds a page automatically from the crates.io release, and Cargo defaults to it |
 | Primary type | `ViciaDb`, with `pub type Minigraf = ViciaDb` |
 | File format | Unchanged. `.graph`, `MGRF`, `MGCPG001`, `MGDMF001`, `MGDSG001`, and every format version stay as-is |
 
@@ -321,23 +323,19 @@ today, in the opposite direction.
 - **R4 — leave history alone.** `CHANGELOG.md` entries and the 91 files under
   `docs/superpowers/plans|specs` keep saying `minigraf`, because they record
   what was true then. A blanket rewrite would erase that.
-- **R5 — re-arm release CI, separate commit, last. NOT DONE — deferred, see
-  "Publish Deferred".** `release.yml`
+- **R5 — re-arm release CI. DECLINED, see "Publish Decision, Final".** `release.yml`
   `-p minigraf` → `-p vicia-db`, `cascade.yml` dispatch targets moved off
   `project-minigraf/*`. The `push: tags:` trigger and `CARGO_REGISTRY_TOKEN`
   are added *here and nowhere earlier* — both files carry a DISARMED banner
   warning that adding the token mid-rename silently arms a publish. Note
   `release.yml` is cargo-dist generated; `dist generate` restores the trigger.
-- **R6 — publish, then bindings (V4). NOT DONE — deferred, see "Publish
-  Deferred".** `cargo publish --dry-run`, publish,
+- **R6 — publish, then bindings (V4). Manual, see "Publish Decision, Final".** `cargo publish --dry-run`, publish,
   then npm/PyPI/Maven. Never in the same commit as core changes.
 
 ### Open risk
 
-The names are free but unreserved, and with publishing deferred they stay that
-way indefinitely. Nothing holds `vicia-db` on crates.io or the `@vicia-db`
-scope on npm. Reserving either with a placeholder publish is an irreversible
-public action and was deliberately not done.
+The names are free but unreserved until the first release of each lands. See
+"Reserved-name exposure, closed".
 
 ### V4: Binding And Ecosystem Rename
 
@@ -350,34 +348,70 @@ Gate:
 - Separate checklist for npm, PyPI, Maven, Swift, C, WASM, and docs.rs.
 - No binding rename should be bundled into core storage changes.
 
-## Publish Deferred (2026-07-27)
+## Publish Decision, Final (2026-07-27)
 
-Decision: **do not publish.** `vicia-db` does not go to crates.io and
-`@vicia-db/browser` does not go to npm until an outside consumer needs one.
-This supersedes the publish half of the V3 decision above; the rename itself
-already landed and is not affected.
+Decision: **publish, manually.** `vicia-db` goes to crates.io and
+`@vicia-db/browser` goes to npm. R5 — arming the release CI — is **declined**;
+releases are run by hand from a clean checkout.
 
-Reasoning: no consumer resolves this package from a registry.
+This section records a decision that moved twice in one day, and the reasoning
+for each move is worth keeping because the trade is real:
 
-| Consumer | Actual edge | Needs a registry? |
-| --- | --- | --- |
-| `vetch-memory` | `minigraf = { package = "vicia-db", path = "../vicia-db" }` | No |
-| `being-public` | `config/vicia-source.json` — `cargo install --git` at a pinned rev | No |
-| `vetch-app` | `"@vicia-db/browser": "link:vendor/vicia-browser"`, built by `scripts/sync-vetch-browser-package.sh` | No |
+1. **Deferred first.** No consumer resolves this package from a registry —
+   `vetch-memory` uses a path dependency, `being-public` pins a git revision,
+   `vetch-app` links a vendored build. On that evidence a release buys nothing
+   a consumer needs.
+2. **Then reinstated.** The deferral left both names unreserved indefinitely,
+   and there is no reservation mechanism on crates.io short of publishing.
+   Publishing a real `0.1.0` from substantial code is a legitimate claim on the
+   name rather than squatting, and it is the only claim available.
 
-Publishing would buy a docs.rs page, a reserved name, and third-party
-consumability. None is needed today, and each costs something that is hard to
-undo: a crates.io release cannot be deleted, only yanked, and the name is held
-forever; and R5 is the step that arms `CARGO_REGISTRY_TOKEN` plus the release
-tag trigger, which is exactly the configuration where a stray tag publishes by
-accident. Leaving R5 and R6 closed removes that failure mode entirely.
+What survived the reversal is the *reason* the deferral was attractive: the
+danger was never the release, it was the armed pipeline. So the release
+happens and R5 does not.
 
-What this does *not* change: the rename, the `0.1.0` version, the `authors` and
-`repository` metadata, and the `ViciaDb`/`Minigraf` type decision all stand.
-They were needed to stop the fork from wearing upstream's identity, which is
-independent of whether anything ships to a registry.
+| Item | Decision |
+| --- | --- |
+| `vicia-db` on crates.io | Publish `0.1.0` manually |
+| `@vicia-db/browser` on npm | Publish `0.1.0` manually via `just publish-browser` |
+| R5 — release CI | **Declined.** No tag trigger, no `CARGO_REGISTRY_TOKEN` in CI |
+| Language bindings (PyPI/Maven/Swift/C) | Unchanged — still upstream's, still V4 |
 
-To reverse: R5 then R6, in that order, as originally written.
+### Why R5 stays declined
+
+`release.yml` is cargo-dist generated and its publish job runs
+`cargo publish -p <name>` on a `push: tags:` trigger. The release checklist in
+CONTRIBUTING.md ends with "tag pushed". Arming that pipeline makes an ordinary
+`git push origin v0.1.1` a publish, and the only thing standing between the two
+is a secret that someone will eventually add for an unrelated reason. Manual
+release costs one command per release and removes that failure mode entirely.
+
+Both workflows keep their DISARMED banners, and both banners now say that
+manual release is the decision rather than a step someone forgot.
+
+Note the latent hazard the banners call out: `release.yml`'s publish job still
+says `-p minigraf`, upstream's crate name. It is left wrong on purpose — with
+no token the job fails either way, and a wrong name fails louder than a right
+one. Do not "fix" it without deciding to arm releases.
+
+### npm release path
+
+`@vicia-db/browser` had no release path at all before this decision; the sync
+script only swapped a staged build into Vetch's vendor directory. The npm
+publish reuses that same staged package and its gates — `wasm-pack` build,
+provenance stamp, browser integration gates against the sibling Vetch checkout,
+and a source-stability recheck — and then runs `npm publish --access public`
+instead of the vendor swap. It refuses a dirty checkout with no override.
+
+It deliberately does **not** update Vetch's vendored package. Vetch consumes a
+local `link:` build so its iteration never waits on a release, and a release
+must not move Vetch underneath the person running it.
+
+### Reserved-name exposure, closed
+
+The earlier "Open risk" — that `vicia-db` and the `@vicia-db` scope were free
+but unreserved — is closed by the first release of each. Until those land it is
+still open.
 
 ## Non-Goals
 
@@ -404,9 +438,8 @@ Still open:
   `vicia_db`? This fork does not own the upstream crate name, so this is only
   possible if upstream cooperates. Assume no.
 - Should the public file extension remain `.graph` indefinitely?
-- ~~Does the crates.io name need reserving before R6?~~ Answered: publishing
-  is deferred, so the exposure window is open-ended and accepted. See "Publish
-  Deferred".
+- ~~Does the crates.io name need reserving before R6?~~ Answered: yes, and
+  publishing `0.1.0` is the only way to do it. See "Publish Decision, Final".
 
 ## Current Recommendation
 
@@ -414,5 +447,5 @@ Nothing is pending. R1–R3 landed, all three downstream consumers were repinned
 in the same session (`vetch-memory` `cac914f`, `being-public` `32c2563`;
 `vetch-app` needed no change because its sync script already emits
 `vicia_db`), and R4 is a decision to leave history alone rather than work to do.
-R5 and R6 stay closed until an outside consumer needs a registry release. Keep
-any binding rename work (V4) on its own branch.
+R6 is a manual release of both packages; R5 is declined and stays declined.
+Keep any binding rename work (V4) on its own branch.

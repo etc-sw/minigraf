@@ -12,6 +12,14 @@ sync VETCH_APP_DIR="":
 sync-local VETCH_APP_DIR="":
     VICIA_SYNC_ALLOW_DIRTY_PUBLISH=1 ./scripts/sync-vetch-browser-package.sh "{{VETCH_APP_DIR}}"
 
+# Rehearse the npm release of @vicia-db/browser. Runs every gate, publishes nothing.
+publish-browser-dry-run VETCH_APP_DIR="":
+    VICIA_NPM_PUBLISH=1 VICIA_NPM_PUBLISH_DRY_RUN=1 ./scripts/sync-vetch-browser-package.sh "{{VETCH_APP_DIR}}"
+
+# Publish @vicia-db/browser to npm from a clean commit. IRREVERSIBLE.
+publish-browser VETCH_APP_DIR="":
+    VICIA_NPM_PUBLISH=1 ./scripts/sync-vetch-browser-package.sh "{{VETCH_APP_DIR}}"
+
 # Clone/update the reference engines under ~/db-ref and link the local harness.
 db-ref-setup:
     ./scripts/setup-db-refs.sh

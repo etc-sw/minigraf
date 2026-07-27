@@ -20,9 +20,9 @@ repository = "https://github.com/etc-sw/vicia-db"
 keywords = ["graph", "datalog", "bitemporal", "embedded", "database"]
 categories = ["database-implementations", "embedded"]
 readme = "README.md"
-# `documentation` is intentionally absent. Publishing is deferred, so there is
-# no docs.rs page for this crate, and pointing at docs.rs/minigraf would send
-# readers to upstream's API, which has diverged from this fork since v10.
+# `documentation` is intentionally absent: Cargo defaults it to the docs.rs
+# page that the crates.io release builds, which is what we want. Never point it
+# at docs.rs/minigraf — that is upstream's API, which has diverged since v10.
 
 [lib]
 name = "vicia_db"

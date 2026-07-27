@@ -12,10 +12,11 @@
 > maintained independently for the Vetch line. It is **not** the upstream
 > project and is not endorsed by it.
 >
-> - **Nothing here is published.** This fork publishes no crate, npm package,
->   or release. Every package named `minigraf` below — on crates.io, npm, PyPI,
->   and Maven Central — is **upstream's**, and reflects upstream's code, not
->   this fork's.
+> - **This fork publishes only under its own names.** `vicia-db` on crates.io
+>   and `@vicia-db/browser` on npm are this fork's. Every package named
+>   `minigraf` below — on crates.io, npm, PyPI, and Maven Central — is
+>   **upstream's**, and reflects upstream's code, not this fork's. The two are
+>   not interchangeable and have diverged since v10.
 > - **The badges above are this fork's own CI.** Upstream's build status,
 >   coverage, and releases are on the upstream repository.
 > - Work here has diverged from upstream: v10–v13 delta storage, bounded
@@ -41,13 +42,11 @@ keeps compiling — and is not deprecated. The version restarts at `0.1.0` rathe
 than continuing upstream's `1.1.1`; that number belongs to a different package
 under a different maintainer.
 
-**Publishing is deferred.** `vicia-db` is not on crates.io and
-`@vicia-db/browser` is not on npm, by decision rather than by backlog. Every
-consumer reaches this repository directly — by path, by pinned git revision, or
-through a vendored package build — so a registry release would buy a docs.rs
-page and a reserved name, at the cost of an irreversible publish and a release
-pipeline that has to stay armed. That trade is worth making when there is an
-outside consumer; there is not one yet. If you need one, open an issue.
+**Publishing is manual.** `vicia-db` goes to crates.io and
+`@vicia-db/browser` goes to npm, both released by hand. The release workflows in
+`.github/workflows/` stay disarmed on purpose: there is no tag trigger and no
+registry token in CI, so a routine `git push --tags` cannot publish anything.
+Every release is a deliberate local command.
 
 The language bindings still carry upstream's names. They move in a later slice.
 
@@ -64,10 +63,11 @@ the `run_idle_maintenance()` caller contract.
 
 ## Local Vetch browser sync
 
-Vicia's browser binding lives in `bindings/browser` and builds under the
-package name `@vicia-db/browser`. Nothing is published to npm — the name is the
-local package identity Vetch links against. Build the current checkout and
-atomically sync it into the sibling Vetch checkout with:
+Vicia's browser binding lives in `bindings/browser` and publishes to npm as
+`@vicia-db/browser`. Vetch does not consume the published package; it links a
+vendored build of the current checkout, so local iteration never waits on a
+release. Build the current checkout and atomically sync it into the sibling
+Vetch checkout with:
 
 ```bash
 just sync
@@ -82,9 +82,42 @@ just sync /absolute/path/to/vetch-worktree
 The synced package includes `vicia-build.json` with the exact source commit,
 dirty-state flag, wasm hash, and wasm-pack version. Vetch consumes it through a
 `link:` dependency, so replacing the package directory takes effect without
-overwriting `node_modules` or changing imports. This is the whole distribution
-path today; if npm publication is ever taken up, it would replace Vetch's
-dependency locator and nothing else.
+overwriting `node_modules` or changing imports. Publishing the same staged
+package to npm is a separate, explicit command — see
+[Releasing](#releasing) — and does not change how Vetch resolves it.
+
+## Releasing
+
+Releases are run by hand, from a clean checkout. CI cannot publish: the release
+workflows have no tag trigger and no registry token, and that is deliberate —
+see the DISARMED banners in `.github/workflows/release.yml` and `cascade.yml`.
+
+**Rust crate — `vicia-db` on crates.io**
+
+```sh
+cargo publish --dry-run     # full build of the packaged crate; uploads nothing
+cargo publish               # IRREVERSIBLE
+```
+
+**Browser package — `@vicia-db/browser` on npm**
+
+```sh
+just publish-browser-dry-run   # every gate, publishes nothing
+just publish-browser           # IRREVERSIBLE
+```
+
+`publish-browser` reuses the Vetch sync pipeline: it builds the package with
+`wasm-pack`, stamps `vicia-build.json` with the source commit and wasm hash,
+runs the browser integration gates against the sibling Vetch checkout, and
+re-checks that the source did not change while those gates ran. It refuses a
+dirty checkout with no override, because a published artifact has to be
+reproducible from a commit. It does **not** touch Vetch's vendored package —
+Vetch keeps linking its local build, so a release never moves Vetch underneath
+you. Run `just sync` separately for that.
+
+Neither registry lets you take a release back. crates.io versions can be
+yanked but never deleted, and the crate name is held permanently. Check the
+version number before running either command.
 
 ## Vision
 
@@ -112,19 +145,22 @@ Vicia DB is a **single-file embedded graph database** that lets you:
 
 ## Installation
 
-`vicia-db` is **not on crates.io**, by decision — see
-[Vicia DB Transition](#vicia-db-transition). Depend on this repository by path
-or git revision:
-
 ```toml
 [dependencies]
-vicia-db = { git = "https://github.com/etc-sw/vicia-db" }
+vicia-db = "0.1"
 ```
 
 Then import through `vicia_db`:
 
 ```rust
 use vicia_db::ViciaDb;
+```
+
+To track unreleased work, depend on the repository instead:
+
+```toml
+[dependencies]
+vicia-db = { git = "https://github.com/etc-sw/vicia-db" }
 ```
 
 > **Note:** `cargo add minigraf` installs **upstream's** crate, not this fork.
@@ -269,10 +305,11 @@ No other database offers this combination:
 
 ## Platform support
 
-> All packages listed here are published by **upstream Vicia DB**, not by this
-> fork. They track upstream's code. The one exception is the browser binding in
-> `bindings/browser`, which this fork builds locally as `@vicia-db/browser` and
-> does not publish either.
+> This fork publishes two packages: `vicia-db` on crates.io and
+> `@vicia-db/browser` on npm. Everything in the table below is published by
+> **upstream Minigraf** and tracks upstream's code, not this fork's. The
+> language bindings (Python, Node.js, JVM, Android, Swift, C) have no
+> fork-published equivalent yet.
 
 | Platform | Package | Install |
 |---|---|---|

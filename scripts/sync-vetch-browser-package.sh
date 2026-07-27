@@ -16,6 +16,28 @@ quiet_surface="$vetch_dir/apps/quiet-surface"
 destination="$quiet_surface/vendor/vicia-browser"
 verify_only="${VICIA_SYNC_VERIFY_ONLY:-0}"
 allow_dirty_publish="${VICIA_SYNC_ALLOW_DIRTY_PUBLISH:-0}"
+# Publish the staged package to npm instead of swapping it into Vetch's vendor
+# directory. Vetch keeps consuming its local `link:` build either way — the npm
+# release is for outside consumers, not for Vetch.
+npm_publish="${VICIA_NPM_PUBLISH:-0}"
+npm_publish_dry_run="${VICIA_NPM_PUBLISH_DRY_RUN:-0}"
+
+if [[ "$npm_publish" == 1 ]]; then
+  # A published artifact has to be reproducible from a commit. There is no
+  # allow-dirty escape hatch here, unlike the Vetch-local sync.
+  if [[ "$allow_dirty_publish" == 1 ]]; then
+    echo "error: VICIA_SYNC_ALLOW_DIRTY_PUBLISH cannot be combined with VICIA_NPM_PUBLISH" >&2
+    exit 1
+  fi
+  if [[ "$verify_only" == 1 ]]; then
+    echo "error: VICIA_SYNC_VERIFY_ONLY cannot be combined with VICIA_NPM_PUBLISH" >&2
+    exit 1
+  fi
+  command -v npm >/dev/null || {
+    echo "error: npm is required to publish" >&2
+    exit 1
+  }
+fi
 
 workspace_sha256() {
   node - "$repo_root" <<'NODE'
@@ -74,7 +96,11 @@ if [[ -n "$(git -C "$repo_root" status --porcelain --untracked-files=normal)" ]]
 fi
 if [[ "$source_dirty" == true && "$verify_only" != 1 && "$allow_dirty_publish" != 1 ]]; then
   echo "error: refusing to publish a browser package from a dirty Vicia checkout" >&2
-  echo "hint: use 'just sync-local' to verify and publish the current local worktree" >&2
+  if [[ "$npm_publish" == 1 ]]; then
+    echo "hint: an npm release must be reproducible from a commit; commit or stash first" >&2
+  else
+    echo "hint: use 'just sync-local' to verify and publish the current local worktree" >&2
+  fi
   exit 1
 fi
 source_workspace_sha256="$(workspace_sha256)"
@@ -177,6 +203,28 @@ fs.writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
 NODE
   echo "error: Vicia source changed while integration gates were running; publish aborted" >&2
   exit 1
+fi
+
+if [[ "$npm_publish" == 1 ]]; then
+  npm_args=(publish --access public)
+  if [[ "$npm_publish_dry_run" == 1 ]]; then
+    npm_args+=(--dry-run)
+  fi
+  if ! (cd "$stage_package" && npm "${npm_args[@]}"); then
+    echo "error: npm publish failed; nothing was released and Vetch's vendored package is untouched" >&2
+    exit 1
+  fi
+  if [[ "$npm_publish_dry_run" == 1 ]]; then
+    echo "npm publish --dry-run passed for @vicia-db/browser from $source_commit"
+  else
+    echo "published @vicia-db/browser from $source_commit"
+  fi
+  echo "source kind: $source_kind"
+  echo "workspace sha256: $source_workspace_sha256"
+  echo "wasm sha256: $wasm_sha256"
+  echo "receipt: $latest_receipt"
+  echo "note: Vetch still consumes its vendored build; run 'just sync' to refresh it"
+  exit 0
 fi
 
 if [[ "$verify_only" == 1 ]]; then
