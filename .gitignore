@@ -2,6 +2,7 @@
 /Cargo.lock
 /schema.graphql
 
+.env.local
 .idea
 .worktrees/
 tools/ref-db-bench/Cargo.toml
