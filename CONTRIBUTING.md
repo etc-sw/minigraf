@@ -109,8 +109,17 @@ Releases are managed by the project maintainer. The process is documented in iss
 1. All prerequisite issue PRs merged and CI green
 2. Version bumped consistently across all manifests (`Cargo.toml`, `package.json`, `pyproject.toml`, `build.gradle.kts`, `Package.swift`)
 3. `cargo check --workspace` passes cleanly
-4. All docs synced (see `CLAUDE.md` — "Sync all docs at phase completion")
-5. Tag pushed — CI publishes to crates.io, PyPI, npm, and Maven Central automatically
+4. All docs synced and cross-checked so none contradicts another: `ROADMAP.md`,
+   `README.md`, `CHANGELOG.md`, `docs/TEST_COVERAGE.md` (status lines and test
+   counts), plus the affected `.wiki/` pages — `Architecture.md` for module,
+   format, or data-model changes, `Datalog-Reference.md` for new syntax,
+   `Comparison.md` for the feature matrix, `Use-Cases.md` for deployment
+   targets. The wiki is a separate repository and is committed and pushed
+   separately.
+5. Tag pushed — on the upstream project CI publishes to crates.io, PyPI, npm,
+   and Maven Central. On this fork the tag-triggered release workflows are
+   deliberately disarmed; see the comment at the top of
+   `.github/workflows/release.yml`.
 
 ## Code of Conduct
 

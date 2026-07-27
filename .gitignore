@@ -15,6 +15,13 @@ tools/ref-db-bench/target/
 skills/
 memory.graph
 
+# Agent harness instructions (Claude / Codex). Local working context, not
+# project content: they name the current work slice and cite paths under the
+# private docs/internal/ tree. Root-anchored so a future per-directory
+# CLAUDE.md stays trackable if one is ever wanted.
+/CLAUDE.md
+/AGENTS.md
+
 # heaptrack profiling artifacts
 heaptrack.*.zst
 
