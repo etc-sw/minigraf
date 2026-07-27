@@ -16,6 +16,7 @@ on:
 permissions:
   contents: read
   issues: write
+  actions: read   # read this workflow's own run history to detect repeat commits
 
 jobs:
   compile:
@@ -24,9 +25,36 @@ jobs:
     timeout-minutes: 120
     outputs:
       has_bencher: ${{ steps.bencher_configured.outputs.has_bencher }}
+      is_new_commit: ${{ steps.freshness.outputs.is_new_commit }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # The cron fires whether or not anything changed. Between 2026-07-18 and
+      # 2026-07-27 that produced ten consecutive nightly runs against the
+      # identical commit 2afac62 — roughly 42 CPU-hours spent re-measuring
+      # byte-identical code. Benchmark a commit once; a repeat run only
+      # re-samples runner noise.
+      - name: Detect an already-benchmarked commit
+        id: freshness
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          HEAD_SHA: ${{ github.sha }}
+        run: |
+          if [ "$EVENT_NAME" != "schedule" ]; then
+            echo "is_new_commit=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$EVENT_NAME run; freshness check does not apply."
+            exit 0
+          fi
+          previous="$(gh run list --workflow bench.yml --event schedule \
+            --status completed --limit 1 --json headSha --jq '.[0].headSha // ""')"
+          if [ "$previous" = "$HEAD_SHA" ]; then
+            echo "is_new_commit=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$HEAD_SHA was already benchmarked by the previous nightly; skipping the matrix. Use workflow_dispatch to force a re-run."
+          else
+            echo "is_new_commit=true" >> "$GITHUB_OUTPUT"
+          fi
 
       # The `secrets` context is not available in `if:` conditions, so resolve
       # it once here and expose the answer as a job output. Without a Bencher
@@ -90,7 +118,10 @@ jobs:
 
   benchmark:
     name: bench / ${{ matrix.name }}
-    if: github.event_name != 'pull_request' && needs.compile.outputs.has_bencher == 'true'
+    if: >-
+      github.event_name != 'pull_request'
+      && needs.compile.outputs.has_bencher == 'true'
+      && needs.compile.outputs.is_new_commit == 'true'
     runs-on: ubuntu-latest
     needs: [compile]
     timeout-minutes: 360
