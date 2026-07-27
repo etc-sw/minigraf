@@ -1,5 +1,5 @@
 //! Generates a checkpointed `.graph` fixture of N facts for the A0
-//! browser open-at-scale runner (docs/APP_ADOPTION_GAP_PLAN.md).
+//! browser open-at-scale runner (docs/internal/APP_ADOPTION_GAP_PLAN.md).
 //!
 //!   cargo run --release --example generate_bench_fixture -- <facts> <out.graph>
 //!

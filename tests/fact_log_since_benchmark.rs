@@ -1,6 +1,6 @@
 //! A2 gate benchmark: `export_fact_log_since` at a 1M-fact committed base.
 //!
-//! Gate (docs/APP_ADOPTION_GAP_PLAN.md A2): a since-tail of ≤100 records
+//! Gate (docs/internal/APP_ADOPTION_GAP_PLAN.md A2): a since-tail of ≤100 records
 //! returns without a committed full scan; latency recorded in BENCHMARKS.md.
 //! The structural no-`stream_all` proof lives in the unit and integration
 //! tests; this fixture produces the numeric evidence at gate scale.

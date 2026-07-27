@@ -1,13 +1,29 @@
 # Minigraf
 
-[![crates.io](https://img.shields.io/crates/v/minigraf.svg)](https://crates.io/crates/minigraf)
-[![docs.rs](https://docs.rs/minigraf/badge.svg)](https://docs.rs/minigraf)
-[![Build Status](https://github.com/project-minigraf/minigraf/actions/workflows/rust.yml/badge.svg)](https://github.com/project-minigraf/minigraf/actions/workflows/rust.yml)
-[![Clippy Status](https://github.com/project-minigraf/minigraf/actions/workflows/rust-clippy.yml/badge.svg)](https://github.com/project-minigraf/minigraf/actions/workflows/rust-clippy.yml)
-[![Coverage](https://codecov.io/gh/project-minigraf/minigraf/branch/main/graph/badge.svg)](https://codecov.io/gh/project-minigraf/minigraf)
-[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/project-minigraf/minigraf#license)
+[![Build Status](https://github.com/etc-sw/vicia-db/actions/workflows/rust.yml/badge.svg)](https://github.com/etc-sw/vicia-db/actions/workflows/rust.yml)
+[![Clippy Status](https://github.com/etc-sw/vicia-db/actions/workflows/rust-clippy.yml/badge.svg)](https://github.com/etc-sw/vicia-db/actions/workflows/rust-clippy.yml)
+[![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](https://github.com/etc-sw/vicia-db#license)
 [![Rust Edition](https://img.shields.io/badge/rust-2024-orange.svg)](https://blog.rust-lang.org/2024/10/17/Rust-1.82.0.html)
-[![Release](https://img.shields.io/badge/release-v1.1.1-blue.svg)](https://github.com/project-minigraf/minigraf/releases/tag/v1.1.1)
+
+> ### This is a fork
+>
+> ⚠️ This repository is **Vicia DB**, a fork of
+> [project-minigraf/minigraf](https://github.com/project-minigraf/minigraf)
+> maintained independently for the Vetch line. It is **not** the upstream
+> project and is not endorsed by it.
+>
+> - **Nothing here is published.** This fork publishes no crate, npm package,
+>   or release. Every package named `minigraf` below — on crates.io, npm, PyPI,
+>   and Maven Central — is **upstream's**, and reflects upstream's code, not
+>   this fork's.
+> - **The badges above are this fork's own CI.** Upstream's build status,
+>   coverage, and releases are on the upstream repository.
+> - Work here has diverged from upstream: v10–v13 delta storage, bounded
+>   transaction-pinned read views, copy-on-write recompact, and a browser
+>   ledger split. See [CHANGELOG.md](CHANGELOG.md).
+>
+> Licensed under the original `MIT OR Apache-2.0` terms with upstream copyright
+> notices preserved. See [License](#license).
 
 > **Embedded graph memory for AI agents, mobile apps, and the browser** — the SQLite of bi-temporal graph databases
 
@@ -74,6 +90,10 @@ Minigraf is a **single-file embedded graph database** that lets you:
 6. **LLM-friendly** - The small, uniform grammar (`[?e :attr ?v]` patterns, no JOIN variants, no subquery nesting) is easy for AI coding assistants to generate correctly from a few examples; the entire language fits in a system prompt
 
 ## Installation
+
+> **Note:** these commands install **upstream Minigraf** from crates.io. This
+> fork is not published; to use it, depend on this repository by path or git
+> revision. See [the fork notice](#this-is-a-fork).
 
 ```toml
 [dependencies]
@@ -225,6 +245,11 @@ No other database offers this combination:
 
 ## Platform support
 
+> All packages listed here are published by **upstream Minigraf**, not by this
+> fork. They track upstream's code. The one exception is the browser binding in
+> `bindings/browser`, which this fork builds locally as `@vicia-db/browser` and
+> does not publish either.
+
 | Platform | Package | Install |
 |---|---|---|
 | Rust (native) | `minigraf` on crates.io | `cargo add minigraf` |
@@ -311,16 +336,32 @@ See [ROADMAP.md](ROADMAP.md) for the full phase plan, current status, and releas
 
 ## Performance
 
-Benchmarks on Intel Core i7-1065G7 @ 1.30GHz, 16 GB RAM, Rust 1.92.0. See [BENCHMARKS.md](docs/BENCHMARKS.md) for full tables, [BENCHMARK_MILESTONES.md](docs/BENCHMARK_MILESTONES.md) for the machine-checked development and release gates, and [CROSS_DB_STRESS_BENCHMARK.md](docs/CROSS_DB_STRESS_BENCHMARK.md) for the classified Vicia/CozoDB/SQLite/redb speed, memory, storage, reopen, and kill-9 comparison.
+These numbers come from **two different machines**; cross-machine comparison is
+indicative only. See [BENCHMARKS.md](docs/BENCHMARKS.md) for full tables and
+per-row provenance, [BENCHMARK_MILESTONES.md](docs/BENCHMARK_MILESTONES.md) for
+the machine-checked development and release gates, and
+[CROSS_DB_STRESS_BENCHMARK.md](docs/CROSS_DB_STRESS_BENCHMARK.md) for the
+classified Vicia/CozoDB/SQLite/redb speed, memory, storage, reopen, and kill-9
+comparison.
 
-| Metric | Result |
-|---|---|
-| Insert (in-memory, single fact) | ~2.7 µs — flat across 1K–100K facts |
-| Insert (file-backed, WAL) | ~3.6 µs — flat across 1K–100K facts |
-| Entity+attribute point query at 1M facts | 4.1 µs (selective B+tree lookup) |
-| Attribute-wide query at 1M facts | 485 ms (result set grows with N) |
-| Open time at 1M facts | 1.31 s (2.4× faster than v5 — indexes no longer loaded into RAM) |
-| Peak heap at 1M facts | 1.05 GB (~21% less than v5 — indexes paged in on demand) |
+- **H0** — Intel Core i7-1065G7 @ 1.30GHz, 16 GB, Rust 1.94.0
+- **A0** — AMD Ryzen 7 7800X3D, 32 GB, WSL2, Rust 1.96.0-nightly
+
+| Metric | Result | Host |
+|---|---|---|
+| Insert (in-memory, single fact) | ~2.7 µs — flat across 1K–100K facts | H0 |
+| Insert (file-backed, WAL) | ~3.6 µs — flat across 1K–100K facts | H0 |
+| Entity+attribute point query at 1M facts | 4.1 µs (selective B+tree lookup) | A0 |
+| Entity-bound `:as-of` point read at 1M facts | 0.017–0.043 ms p95 (Q1-B selective pushdown; was ~1.26–1.50 s) | H0 |
+| Attribute-wide query at 1M facts | 485 ms (result set grows with N) | A0 |
+| Delta checkpoint at 1M facts, one pending fact | 512 ms (was 4.83 s on full rebuild) | H0 |
+| Checkpoint p95, 1M base × 1,024 receipt slices | 3.098 ms (exact caller trace, budget 50 ms) | A0 |
+| Reopen after delta publish at 1M facts | 4.4 ms (same trace) | A0 |
+| Open time at 1M facts (v6-era, cold committed file) | 1.31 s | H0 |
+| Peak heap at 1M facts (v6-era) | 1.05 GB | H0 |
+
+The last two rows date from the v6 format and have not been re-measured since;
+the current format is v12 with an explicit v13 current-projection catalog.
 
 File-backed databases enforce a maximum fact size of **4 080 serialised bytes** per fact. In-memory databases have no limit.
 

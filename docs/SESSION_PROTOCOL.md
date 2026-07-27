@@ -2,7 +2,7 @@
 
 Version: 1 (frozen 2026-07-11 by dual caller-lane ACK — design record in
 `docs/A6_SESSION_PROTOCOL_QUESTIONS.md`, answers in
-`docs/A6_SESSION_PROTOCOL_ANSWERS_HARREKKI.md` and shared-memory decision
+`docs/internal/A6_SESSION_PROTOCOL_ANSWERS_HARREKKI.md` and shared-memory decision
 `:m/20260710T181042Z-vetch-codex-...-eba29494`).
 
 A caller-owned child process speaking newline-delimited JSON over
@@ -120,7 +120,7 @@ non-empty, a re-assertion truncated to `valid_to = T`. All records share one
 The incremental "facts since tx_count N" read (harrekki P0 #2). The Rust API
 (`Minigraf::export_fact_log_since`) is frozen; the frame shape was ACKed
 verbatim by the harrekki lane per the A6 precedent (record:
-`docs/A6_SESSION_PROTOCOL_ANSWERS_HARREKKI.md` "A2 export_since frame",
+`docs/internal/A6_SESSION_PROTOCOL_ANSWERS_HARREKKI.md` "A2 export_since frame",
 shared-memory need `:need/vicia-a2-export-since-frame-ack` resolved).
 
 Request: `{"op": "export_since", "since_tx_count": <uint>, "id"?}`

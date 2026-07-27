@@ -2,7 +2,7 @@
 
 Status: ANSWERED 2026-07-11 — all five recommendations ACKed by both caller
 lanes; A6 implementation unblocked. Harrekki lane:
-`docs/A6_SESSION_PROTOCOL_ANSWERS_HARREKKI.md` (97e8574; includes direct
+`docs/internal/A6_SESSION_PROTOCOL_ANSWERS_HARREKKI.md` (97e8574; includes direct
 answers — wake-loop needs no pipelining, supersede stays harrekki-owned).
 Vetch lane: shared-memory decision
 `:m/20260710T181042Z-vetch-codex-vetch-lane-acks-a6-defaults-ndjson-framing-eba29494`
@@ -16,9 +16,9 @@ The protocol is a long-term contract with the harrekki JVM adapter (the
 `xtdb_ledger.clj` seat) and possibly other non-Rust callers, so caller
 lanes got a veto before the first byte was frozen.
 
-Context: `docs/APP_ADOPTION_GAP_PLAN.md` slice A6;
-`docs/HARREKKI_CALLER_REQUIREMENTS.md` P0 #1 (framed pipe mode) and #4
-(status surface); `docs/VETCH_CALLER_REQUIREMENTS.md` P0 durability
+Context: `docs/internal/APP_ADOPTION_GAP_PLAN.md` slice A6;
+`docs/internal/HARREKKI_CALLER_REQUIREMENTS.md` P0 #1 (framed pipe mode) and #4
+(status surface); `docs/internal/VETCH_CALLER_REQUIREMENTS.md` P0 durability
 receipts. Scope pins: caller-owned child process over stdin/stdout, no
 network server, no listener socket, session survives malformed input.
 

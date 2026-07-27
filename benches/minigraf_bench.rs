@@ -28,7 +28,7 @@ use minigraf::OpenOptions;
 // ── A0 evidence-gate mode ─────────────────────────────────────────────────────
 //
 // `MINIGRAF_BENCH_MODE=full` extends the query-latency scales to 100K/1M for
-// local BENCHMARKS.md refresh runs (docs/APP_ADOPTION_GAP_PLAN.md, A0).
+// local BENCHMARKS.md refresh runs (docs/internal/APP_ADOPTION_GAP_PLAN.md, A0).
 // Without it the CI-shaped run keeps the fast 1K/10K scales.
 
 fn full_bench_mode() -> bool {
@@ -297,9 +297,9 @@ fn bench_time_travel(c: &mut Criterion) {
 // ── A0: decay/ — harrekki decay-candidate read shapes ─────────────────────────
 //
 // "Entities untouched since T" is the harrekki decay-candidate shape
-// (docs/HARREKKI_CALLER_REQUIREMENTS.md P1 #6). Both variants return the same
+// (docs/internal/HARREKKI_CALLER_REQUIREMENTS.md P1 #6). Both variants return the same
 // 20% candidate set; the numbers gate the A3 range-pushdown promotion decision
-// (docs/APP_ADOPTION_GAP_PLAN.md candidates).
+// (docs/internal/APP_ADOPTION_GAP_PLAN.md candidates).
 
 fn bench_decay_candidate(c: &mut Criterion) {
     let scales = query_scales();

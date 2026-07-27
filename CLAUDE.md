@@ -7,7 +7,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Minigraf is a tiny, portable **bi-temporal graph database with Datalog queries** written in Rust. Designed as the embedded graph memory layer for AI agents, mobile apps, and the browser — built on the SQLite philosophy: embedded, single-file, reliable, with time travel.
 
 See `ROADMAP.md` for upstream Minigraf phase history and publish gates. See
-`docs/VETCH_DELTA_STORAGE_ROADMAP.md` for the active local Vicia/Vetch
+`docs/internal/VETCH_DELTA_STORAGE_ROADMAP.md` for the active local Vicia/Vetch
 delta-storage line, and `CHANGELOG.md` for per-phase implementation history.
 
 ## Core Philosophy - CRITICAL
@@ -189,7 +189,7 @@ Current next slice:
 
 Relevant areas:
 
-- `docs/VETCH_DELTA_STORAGE_ROADMAP.md` — high-level gate sequence, Q2-B
+- `docs/internal/VETCH_DELTA_STORAGE_ROADMAP.md` — high-level gate sequence, Q2-B
   acceptance, and Vetch maintenance/adoption caveats.
 - `docs/DELTA_INDEX_DESIGN.md` — v10 storage format, publish/recovery rules,
   and Q2-B implementation-order note.

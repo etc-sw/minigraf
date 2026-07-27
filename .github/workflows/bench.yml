@@ -22,9 +22,27 @@ jobs:
     name: bench / compile
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    outputs:
+      has_bencher: ${{ steps.bencher_configured.outputs.has_bencher }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # The `secrets` context is not available in `if:` conditions, so resolve
+      # it once here and expose the answer as a job output. Without a Bencher
+      # API key the whole benchmark matrix exists only to upload nowhere, so it
+      # is skipped rather than run for 40 minutes and fail.
+      - name: Detect Bencher configuration
+        id: bencher_configured
+        env:
+          BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+        run: |
+          if [ -n "$BENCHER_API_KEY" ]; then
+            echo "has_bencher=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_bencher=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::BENCHER_API_KEY is not set; skipping the benchmark matrix. The local coverage and smoke-receipt gates in this job still run."
+          fi
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -72,7 +90,7 @@ jobs:
 
   benchmark:
     name: bench / ${{ matrix.name }}
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && needs.compile.outputs.has_bencher == 'true'
     runs-on: ubuntu-latest
     needs: [compile]
     timeout-minutes: 360
@@ -266,27 +284,36 @@ jobs:
           CARGO_TERM_COLOR=never cargo bench -- "${{ matrix.filter }}" \
             2>&1 | tee ${{ matrix.file }}
 
+      # Deliberately unpinned. Bencher's own guidance is to pin only for
+      # Bencher Self-Hosted; against Bencher Cloud a pinned old CLI drifts out
+      # of compatibility with the live API.
       - name: Install Bencher CLI
-        uses: bencherdev/bencher@v0.4.25
+        uses: bencherdev/bencher@main
 
       - name: Upload to Bencher
         id: bencher
         continue-on-error: true
+        env:
+          BENCHER_API_KEY: ${{ secrets.BENCHER_API_KEY }}
+          BENCHER_FILE: ${{ matrix.file }}
+          BENCHER_THRESHOLD: ${{ matrix.threshold }}
         run: |
           bencher run \
-            --project minigraf \
-            --token "${{ secrets.BENCHER_API_TOKEN }}" \
+            --project vicia-db \
             --branch main \
             --testbed ubuntu-latest \
             --threshold-measure latency \
             --threshold-test t_test \
-            --threshold-upper-boundary ${{ matrix.threshold }} \
-            --err \
+            --threshold-upper-boundary "$BENCHER_THRESHOLD" \
+            --error-on-alert \
             --adapter rust_criterion \
-            --file ${{ matrix.file }}
+            --file "$BENCHER_FILE"
 
+      # Best-effort. Repositories with Issues disabled (the default for a fork)
+      # must not turn a benchmark report into a red build.
       - name: Open regression issue
         if: steps.bencher.outcome == 'failure'
+        continue-on-error: true
         uses: actions/github-script@v6
         with:
           script: |

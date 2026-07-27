@@ -18,6 +18,12 @@ memory.graph
 # heaptrack profiling artifacts
 heaptrack.*.zst
 
+# Editor swap/backup files. These mirror buffer contents verbatim, so a swap
+# file for an ignored secret (.env.local) is itself a secret.
+*.swp
+*.swo
+*~
+
 # wiki repo (plain clone, not a submodule)
 .wiki/
 
@@ -27,3 +33,17 @@ minigraf-ffi/python/**/__pycache__/
 minigraf-ffi/python/.venv/
 minigraf-ffi/python/dist/
 .omc/
+.serena/
+
+# Third-party source trees kept locally for invariant comparison only.
+# These are other projects' code — never commit them into this repository.
+reference/
+
+# Tool scratch output (graphify skill)
+src/graphify-out/
+
+# Caller-product internal documents (Vetch / Harrekki requirements, adoption
+# plans, lane answers). These describe downstream products, not Vicia DB, and
+# are deliberately kept out of this public repository. Tracked docs may cite
+# paths under here; those citations only resolve in an internal checkout.
+docs/internal/
