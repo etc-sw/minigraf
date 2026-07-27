@@ -22,7 +22,7 @@ Benchmark results for Minigraf. Core query benchmarks were updated in v0.13.1 (P
 | RAM | 16 GB |
 | OS | Manjaro Linux 6.12.73-1 |
 | Rust | 1.94.0 |
-| Profile | `release` (`opt-level = 3`, `lto = "thin"`, `panic = "abort"`) |
+| Profile | `release` (`opt-level = "z"`, `lto = true`, `codegen-units = 1`, `panic = "abort"`, `strip = "symbols"`) |
 | Swap | None |
 
 Sections marked "A0 environment" (Query Latency, Time-Travel, and the A0

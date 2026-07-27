@@ -129,6 +129,9 @@ impl CurrentProjectionTailOverlay {
             .sum()
     }
 
+    /// Entity count behind the overlay. Only the test module asserts on this;
+    /// production accounting goes through `replacement_rows`.
+    #[cfg(test)]
     pub(crate) fn replacement_entities(&self) -> usize {
         self.replacements.len()
     }
