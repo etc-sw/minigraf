@@ -484,7 +484,7 @@ pub struct ValidTimeDiffCursor {
     pub(crate) scope: ValidTimeDiffCursorScope,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub(crate) enum ValidTimeDiffCursorScope {
     EntitySet {
         entities: Vec<crate::EntityId>,
@@ -493,6 +493,105 @@ pub(crate) enum ValidTimeDiffCursorScope {
     Attribute {
         last_entity: crate::EntityId,
     },
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+struct ValidTimeDiffCursorWire {
+    version: u8,
+    attribute: String,
+    tx_count: u64,
+    valid_at_before: i64,
+    valid_at_after: i64,
+    scope: ValidTimeDiffCursorScope,
+}
+
+/// Encode a diff continuation as an opaque CRC-protected hex string.
+///
+/// The native API hands back a typed [`ValidTimeDiffCursor`]; the browser
+/// binding cannot, because the token has to survive a round trip through
+/// JavaScript. Both sides share this encoding so a cursor minted natively and
+/// one minted in the browser are the same bytes.
+#[cfg_attr(
+    not(all(target_arch = "wasm32", feature = "browser")),
+    allow(dead_code)
+)]
+pub(crate) fn encode_valid_time_diff_cursor(cursor: &ValidTimeDiffCursor) -> Result<String> {
+    use std::fmt::Write as _;
+
+    let payload = serde_json::to_vec(&ValidTimeDiffCursorWire {
+        version: 1,
+        attribute: cursor.attribute.clone(),
+        tx_count: cursor.tx_count,
+        valid_at_before: cursor.valid_at_before,
+        valid_at_after: cursor.valid_at_after,
+        scope: cursor.scope.clone(),
+    })?;
+    let mut bytes = Vec::with_capacity(payload.len().saturating_add(4));
+    bytes.extend_from_slice(&crc32fast::hash(&payload).to_be_bytes());
+    bytes.extend_from_slice(&payload);
+    let mut encoded = String::with_capacity(bytes.len().saturating_mul(2));
+    for byte in bytes {
+        write!(&mut encoded, "{byte:02x}")?;
+    }
+    Ok(encoded)
+}
+
+/// Decode a diff continuation, rejecting anything malformed, oversized,
+/// corrupt, or from an unsupported version.
+#[cfg_attr(
+    not(all(target_arch = "wasm32", feature = "browser")),
+    allow(dead_code)
+)]
+pub(crate) fn decode_valid_time_diff_cursor(encoded: &str) -> Result<ValidTimeDiffCursor> {
+    if encoded.is_empty()
+        || !encoded.len().is_multiple_of(2)
+        || encoded.len() > VALID_TIME_DIFF_MAX_RESULT_BYTES
+    {
+        bail!("valid_time_diff cursor is malformed or oversized");
+    }
+    fn nibble(byte: u8) -> Option<u8> {
+        match byte {
+            b'0'..=b'9' => Some(byte - b'0'),
+            b'a'..=b'f' => Some(byte - b'a' + 10),
+            b'A'..=b'F' => Some(byte - b'A' + 10),
+            _ => None,
+        }
+    }
+    let mut bytes = Vec::with_capacity(encoded.len() / 2);
+    for pair in encoded.as_bytes().chunks_exact(2) {
+        let high = pair.first().and_then(|byte| nibble(*byte));
+        let low = pair.get(1).and_then(|byte| nibble(*byte));
+        let (Some(high), Some(low)) = (high, low) else {
+            bail!("valid_time_diff cursor contains non-hex bytes");
+        };
+        bytes.push((high << 4) | low);
+    }
+    let (checksum_bytes, payload) = bytes
+        .split_at_checked(4)
+        .ok_or_else(|| anyhow::anyhow!("valid_time_diff cursor is malformed"))?;
+    let expected_checksum = u32::from_be_bytes(
+        checksum_bytes
+            .try_into()
+            .map_err(|_| anyhow::anyhow!("valid_time_diff cursor is malformed"))?,
+    );
+    if crc32fast::hash(payload) != expected_checksum {
+        bail!("valid_time_diff cursor checksum mismatch");
+    }
+    let wire: ValidTimeDiffCursorWire = serde_json::from_slice(payload)
+        .map_err(|_| anyhow::anyhow!("valid_time_diff cursor is malformed"))?;
+    if wire.version != 1 {
+        bail!(
+            "valid_time_diff cursor version {} is unsupported",
+            wire.version
+        );
+    }
+    Ok(ValidTimeDiffCursor {
+        attribute: wire.attribute,
+        tx_count: wire.tx_count,
+        valid_at_before: wire.valid_at_before,
+        valid_at_after: wire.valid_at_after,
+        scope: wire.scope,
+    })
 }
 
 /// Bounded net valid-time diff selection for [`ReadView::valid_time_diff`].
@@ -7866,5 +7965,132 @@ mod capability_tests {
         let image_offset =
             usize::try_from(published_page_count * crate::storage::PAGE_SIZE as u64).unwrap();
         assert_eq!(&bytes[image_offset..image_offset + 8], b"MGCPG001");
+    }
+}
+
+#[cfg(test)]
+mod valid_time_diff_cursor_codec_tests {
+    use super::*;
+
+    fn entity(byte: u8) -> crate::EntityId {
+        crate::EntityId::from_bytes([byte; 16])
+    }
+
+    fn attribute_cursor() -> ValidTimeDiffCursor {
+        ValidTimeDiffCursor {
+            attribute: ":status/value".to_owned(),
+            tx_count: 42,
+            valid_at_before: 1_000,
+            valid_at_after: 2_000,
+            scope: ValidTimeDiffCursorScope::Attribute {
+                last_entity: entity(7),
+            },
+        }
+    }
+
+    fn entity_set_cursor() -> ValidTimeDiffCursor {
+        ValidTimeDiffCursor {
+            attribute: ":status/value".to_owned(),
+            tx_count: 9,
+            valid_at_before: -5,
+            valid_at_after: i64::MAX,
+            scope: ValidTimeDiffCursorScope::EntitySet {
+                entities: vec![entity(1), entity(2), entity(3)],
+                next_index: 2,
+            },
+        }
+    }
+
+    #[test]
+    fn attribute_scope_cursor_round_trips() {
+        let cursor = attribute_cursor();
+        let decoded =
+            decode_valid_time_diff_cursor(&encode_valid_time_diff_cursor(&cursor).unwrap())
+                .expect("attribute cursor should decode");
+        assert_eq!(decoded, cursor, "attribute cursor lost fidelity");
+    }
+
+    #[test]
+    fn entity_set_cursor_round_trips() {
+        let cursor = entity_set_cursor();
+        let decoded =
+            decode_valid_time_diff_cursor(&encode_valid_time_diff_cursor(&cursor).unwrap())
+                .expect("entity-set cursor should decode");
+        assert_eq!(decoded, cursor, "entity-set cursor lost fidelity");
+    }
+
+    #[test]
+    fn encoding_is_lowercase_hex_only() {
+        let encoded = encode_valid_time_diff_cursor(&attribute_cursor()).unwrap();
+        assert!(
+            encoded.len().is_multiple_of(2),
+            "encoding must be whole bytes"
+        );
+        assert!(
+            encoded
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b)),
+            "encoding must be lowercase hex"
+        );
+    }
+
+    #[test]
+    fn corrupted_payload_is_rejected_by_checksum() {
+        let encoded = encode_valid_time_diff_cursor(&attribute_cursor()).unwrap();
+        // Flip the final payload nibble; the CRC prefix stays intact.
+        let mut bytes = encoded.into_bytes();
+        let last = bytes.last_mut().expect("encoding is non-empty");
+        *last = if *last == b'0' { b'1' } else { b'0' };
+        let corrupted = String::from_utf8(bytes).unwrap();
+        assert!(
+            decode_valid_time_diff_cursor(&corrupted).is_err(),
+            "a corrupted cursor must not decode"
+        );
+    }
+
+    #[test]
+    fn truncated_checksum_is_rejected() {
+        assert!(
+            decode_valid_time_diff_cursor("0011").is_err(),
+            "a cursor shorter than its checksum must not decode"
+        );
+    }
+
+    #[test]
+    fn non_hex_and_odd_length_are_rejected() {
+        assert!(
+            decode_valid_time_diff_cursor("zz").is_err(),
+            "non-hex input must not decode"
+        );
+        assert!(
+            decode_valid_time_diff_cursor("abc").is_err(),
+            "odd-length input must not decode"
+        );
+        assert!(
+            decode_valid_time_diff_cursor("").is_err(),
+            "empty input must not decode"
+        );
+    }
+
+    #[test]
+    fn unsupported_version_is_rejected() {
+        let payload = serde_json::to_vec(&ValidTimeDiffCursorWire {
+            version: 2,
+            attribute: ":status/value".to_owned(),
+            tx_count: 1,
+            valid_at_before: 0,
+            valid_at_after: 1,
+            scope: ValidTimeDiffCursorScope::Attribute {
+                last_entity: entity(1),
+            },
+        })
+        .unwrap();
+        let mut bytes = crc32fast::hash(&payload).to_be_bytes().to_vec();
+        bytes.extend_from_slice(&payload);
+        let encoded: String = bytes.iter().map(|byte| format!("{byte:02x}")).collect();
+        assert!(
+            decode_valid_time_diff_cursor(&encoded).is_err(),
+            "a future cursor version must not silently decode"
+        );
     }
 }
