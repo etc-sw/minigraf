@@ -155,7 +155,7 @@ projection-tail-overlay-full OUTPUT_DIR="target/projection-tail-overlay/full":
 # Generate and validate the browser interactive/maintenance TypeScript boundary.
 browser-capability-surface OUTPUT_DIR="target/browser-capability-surface":
     wasm-pack build --target web --out-dir "{{OUTPUT_DIR}}" -- --features browser
-    node scripts/validate-browser-capability-surface.mjs "{{OUTPUT_DIR}}/minigraf.d.ts"
+    node scripts/validate-browser-capability-surface.mjs "{{OUTPUT_DIR}}/vicia_db.d.ts"
 
 # Compare two leaf-read receipts and enforce the candidate acceptance gates.
 leaf-read-path-compare BASELINE CANDIDATE:

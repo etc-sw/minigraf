@@ -1,8 +1,8 @@
 //! Integration tests for Phase 6.2 packed pages.
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::{Minigraf, OpenOptions};
 use tempfile::NamedTempFile;
+use vicia_db::{OpenOptions, ViciaDb};
 
 #[test]
 fn test_1k_facts_correct_after_packed_save_reload() {
@@ -107,7 +107,7 @@ fn test_as_of_query_after_packed_reload() {
 
 #[test]
 fn test_recursive_rules_unchanged_after_6_2() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute("(transact [[:a :next :b] [:b :next :c] [:c :next :d]])")
         .unwrap();
     db.execute("(rule [(reachable ?from ?to) [?from :next ?to]])")

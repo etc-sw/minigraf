@@ -1,4 +1,4 @@
-# Minigraf
+# Vicia DB
 
 [![Build Status](https://github.com/etc-sw/vicia-db/actions/workflows/rust.yml/badge.svg)](https://github.com/etc-sw/vicia-db/actions/workflows/rust.yml)
 [![Clippy Status](https://github.com/etc-sw/vicia-db/actions/workflows/rust-clippy.yml/badge.svg)](https://github.com/etc-sw/vicia-db/actions/workflows/rust-clippy.yml)
@@ -31,13 +31,26 @@ A tiny, self-contained graph database with **Datalog queries** and **bi-temporal
 
 ## Vicia DB Transition
 
-This repository is preparing **Vicia DB** as the Vetch-oriented successor name
-for this Minigraf line. The current Rust package and language bindings remain
-`minigraf`; Rust code may now use the `ViciaDb` compatibility alias while
-existing `Minigraf` code continues to work unchanged.
+This repository is **Vicia DB**, the Vetch-oriented successor name for the
+forked Minigraf line. As of 2026-07-27 the publish decision is made: this fork
+will be published to crates.io as `vicia-db`, starting at `0.1.0`.
+
+The Rust package rename has landed. The crate is `vicia-db`, the import path is
+`vicia_db`, and `ViciaDb` is the primary handle type. `Minigraf` remains as a
+type alias — it names the same type with the same API, so pre-rename source
+keeps compiling — and is not deprecated. The version restarts at `0.1.0` rather
+than continuing upstream's `1.1.1`; that number belongs to a different package
+under a different maintainer.
+
+The language bindings still carry upstream's names. They move in a later slice.
+
+The file format does not change. `.graph` files, the `MGRF` header magic, and
+every format version remain exactly as they are — format stability outranks
+name consistency.
 
 See [docs/VICIA_DB_RENAME_PLAN.md](docs/VICIA_DB_RENAME_PLAN.md) for the staged
-rename plan, compatibility policy, and attribution checklist.
+rename plan, compatibility policy, downstream impact list, and attribution
+checklist.
 
 See [docs/MAINTENANCE_API_CONTRACT.md](docs/MAINTENANCE_API_CONTRACT.md) for
 the `run_idle_maintenance()` caller contract.
@@ -67,14 +80,14 @@ dependency locator.
 
 ## Vision
 
-Minigraf is a **single-file embedded graph database** that lets you:
+Vicia DB is a **single-file embedded graph database** that lets you:
 - ✅ **Query relationships with Datalog** - Recursive rules, natural graph traversal
 - ✅ **Time travel through history** - Bi-temporal queries (transaction time + valid time)
 - ✅ **Forget without erasing history** - Atomically close valid-time windows for query results or fact lists
 - ✅ **Window functions** - `sum/count/min/max/avg/rank/row-number :over (partition-by … :order-by …)` in `:find` clauses
 - ✅ **Prepared statements** - Parse + plan once with `$slot` bind tokens, execute thousands of times
 - ✅ **Embed anywhere** - Native, WASM, mobile, IoT - one `.graph` file
-- ✅ **Zero configuration** - Just `Minigraf::open("data.graph")` and you're done
+- ✅ **Zero configuration** - Just `ViciaDb::open("data.graph")` and you're done
 
 **Status**: See [ROADMAP.md](ROADMAP.md) for current phase and what's next.
 
@@ -91,20 +104,22 @@ Minigraf is a **single-file embedded graph database** that lets you:
 
 ## Installation
 
-> **Note:** these commands install **upstream Minigraf** from crates.io. This
-> fork is not published; to use it, depend on this repository by path or git
-> revision. See [the fork notice](#this-is-a-fork).
+`vicia-db` is **not on crates.io yet**. Until it is, depend on this repository
+by path or git revision:
 
 ```toml
 [dependencies]
-minigraf = "1.0"
+vicia-db = { git = "https://github.com/etc-sw/vicia-db" }
 ```
 
-Or via cargo:
+Then import through `vicia_db`:
 
-```sh
-cargo add minigraf
+```rust
+use vicia_db::ViciaDb;
 ```
+
+> **Note:** `cargo add minigraf` installs **upstream's** crate, not this fork.
+> The two have diverged since v10. See [the fork notice](#this-is-a-fork).
 
 ## Quick Start
 
@@ -124,7 +139,7 @@ read view and page one exact entity/attribute range with
 transaction, and valid-time identity under the pinned transaction cursor.
 
 ```rust
-use minigraf::{InteractiveLedger, MaintenanceLedger, ReadViewOptions};
+use vicia_db::{InteractiveLedger, MaintenanceLedger, ReadViewOptions};
 
 {
     let ledger = InteractiveLedger::open("myapp.graph")?;
@@ -155,14 +170,14 @@ use minigraf::{InteractiveLedger, MaintenanceLedger, ReadViewOptions};
 
 ### Raw compatibility and advanced Datalog
 
-`Minigraf` remains the supported unrestricted surface for rule registration,
+`ViciaDb` remains the supported unrestricted surface for rule registration,
 prepared queries, semantic bulk forget, REPL-style execution, and migrations
 from existing callers. It remains supported throughout 1.x; the replacement-
 first 2.0 conditions and exact migration table are documented in
 [`docs/API_COMPATIBILITY_AND_MIGRATION.md`](docs/API_COMPATIBILITY_AND_MIGRATION.md).
 
 ```rust
-use minigraf::{Minigraf, OpenOptions};
+use vicia_db::{Vicia DB, OpenOptions};
 
 // Open or create a file-backed database
 let db = OpenOptions::new().path("myapp.graph").open()?;
@@ -204,14 +219,14 @@ db.execute(r#"(forget [:find ?e ?a ?v
                               [?e ?a ?v]])"#)?;
 
 // Vicia-facing Rust code can use the compatibility alias for the same handle
-let _vicia = minigraf::ViciaDb::in_memory()?;
+let _vicia = vicia_db::ViciaDb::in_memory()?;
 
 // Recursive rule — transitive reachability
 db.execute(r#"(rule [(reachable ?a ?b) [?a :friend ?b]])
               (rule [(reachable ?a ?b) [?a :friend ?m] (reachable ?m ?b)])"#)?;
 
 // Prepared statement — parse + plan once, execute many times
-use minigraf::BindValue;
+use vicia_db::BindValue;
 let pq = db.prepare("(query [:find ?name :as-of $tx :where [$entity :person/name ?name]])")?;
 let r1 = pq.execute(&[("tx", BindValue::TxCount(1)), ("entity", BindValue::Entity(alice_id))])?;
 let r2 = pq.execute(&[("tx", BindValue::TxCount(2)), ("entity", BindValue::Entity(bob_id))])?;
@@ -225,15 +240,15 @@ cargo run < demos/demo_recursive.txt   # recursive rules demo
 
 ## Demo
 
-See a working implementation of **temporal reasoning** with Minigraf at [github.com/adityamukho/temporal_reasoning](https://github.com/adityamukho/temporal_reasoning) — an AI agent that uses Minigraf's bi-temporal model to store, correct, and audit beliefs.
+See a working implementation of **temporal reasoning** with Vicia DB at [github.com/adityamukho/temporal_reasoning](https://github.com/adityamukho/temporal_reasoning) — an AI agent that uses Vicia DB's bi-temporal model to store, correct, and audit beliefs.
 
 See the [Datalog Reference](https://github.com/project-minigraf/minigraf/wiki/Datalog-Reference) wiki page for the complete syntax.
 
-## Why Minigraf?
+## Why Vicia DB?
 
 No other database offers this combination:
 
-| Feature | Minigraf | XTDB | Cozo | Neo4j | SQLite |
+| Feature | Vicia DB | XTDB | Cozo | Neo4j | SQLite |
 |---|---|---|---|---|---|
 | **Query Language** | Datalog | Datalog | Datalog | Cypher | SQL |
 | **Single File** | ✅ Yes | ❌ No | ❌ No | ❌ No | ✅ Yes |
@@ -245,7 +260,7 @@ No other database offers this combination:
 
 ## Platform support
 
-> All packages listed here are published by **upstream Minigraf**, not by this
+> All packages listed here are published by **upstream Vicia DB**, not by this
 > fork. They track upstream's code. The one exception is the browser binding in
 > `bindings/browser`, which this fork builds locally as `@vicia-db/browser` and
 > does not publish either.
@@ -283,7 +298,7 @@ See the [Comparison](https://github.com/project-minigraf/minigraf/wiki/Compariso
 
 Store what an agent believes, retract and correct without losing history, and replay past states to audit decisions. Every fact carries both transaction time (when it was recorded) and valid time (when it was true), so you can reconstruct the exact knowledge state at the moment of any past decision.
 
-Pairs well with vector stores (GraphRAG pattern): the vector store answers "what is similar?"; Minigraf answers "what are the relationships, who recorded them, and what did we believe at time T?"
+Pairs well with vector stores (GraphRAG pattern): the vector store answers "what is similar?"; Vicia DB answers "what are the relationships, who recorded them, and what did we believe at time T?"
 
 ### For Mobile Apps
 
@@ -317,18 +332,18 @@ Language bindings ship as `minigraf` on PyPI, `minigraf` on npm (Node.js native 
 
 ## Scope
 
-Minigraf runs as:
+Vicia DB runs as:
 - ✅ An embedded library
 - ✅ A standalone binary (interactive REPL)
 - ✅ Browser WASM — `@minigraf/browser` (IndexedDB-backed, `wasm-pack`)
 - ✅ Server-side WASM — `wasm32-wasip1` / WASI (Wasmtime, Wasmer, Cloudflare Workers)
 - ✅ Android, iOS, Python, Node.js, Java, C — via UniFFI / napi-rs / cbindgen
 
-Minigraf will **not** be (by design):
+Vicia DB will **not** be (by design):
 - **Distributed** — no clustering, no sharding, no replication; each agent instance owns its own `.graph` file
 - **Client-server** — no network protocol in core
 - **Billion-node scale** — optimised for <1M nodes (like SQLite)
-- **A time-series database** — Minigraf is a *temporal* database; see [Comparison](https://github.com/project-minigraf/minigraf/wiki/Comparison#influxdb--prometheus--timescaledb-time-series-databases)
+- **A time-series database** — Vicia DB is a *temporal* database; see [Comparison](https://github.com/project-minigraf/minigraf/wiki/Comparison#influxdb--prometheus--timescaledb-time-series-databases)
 
 ## Roadmap
 
@@ -384,6 +399,6 @@ at your option.
 
 Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
 
-Vicia DB successor work preserves the Minigraf lineage, original copyright
+Vicia DB successor work preserves the Vicia DB lineage, original copyright
 notice, and dual-license terms unless a future legal review explicitly changes
 that policy.

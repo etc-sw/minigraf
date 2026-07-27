@@ -1,14 +1,14 @@
 use anyhow::{Result, bail};
-use minigraf::{Minigraf, QueryResult, Value};
+use vicia_db::{QueryResult, Value, ViciaDb};
 
-fn rows(db: &Minigraf, query: &str) -> Result<Vec<Vec<Value>>> {
+fn rows(db: &ViciaDb, query: &str) -> Result<Vec<Vec<Value>>> {
     match db.execute(query)? {
         QueryResult::QueryResults { results, .. } => Ok(results),
         _ => bail!("expected query results"),
     }
 }
 
-fn insert_overlapping_claim_windows(db: &Minigraf) -> Result<()> {
+fn insert_overlapping_claim_windows(db: &ViciaDb) -> Result<()> {
     for (valid_from, valid_to) in [("2020-01-01", "2090-01-01"), ("2025-01-01", "2100-01-01")] {
         db.execute(&format!(
             r#"(transact {{:valid-from "{valid_from}" :valid-to "{valid_to}"}} [
@@ -21,7 +21,7 @@ fn insert_overlapping_claim_windows(db: &Minigraf) -> Result<()> {
     Ok(())
 }
 
-fn assert_one_claim_row(db: &Minigraf, valid_at: &str) -> Result<()> {
+fn assert_one_claim_row(db: &ViciaDb, valid_at: &str) -> Result<()> {
     let result = rows(
         db,
         &format!(
@@ -42,7 +42,7 @@ fn assert_one_claim_row(db: &Minigraf, valid_at: &str) -> Result<()> {
 
 #[test]
 fn explicit_and_default_point_in_time_relations_coalesce_before_join() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     insert_overlapping_claim_windows(&db)?;
 
     assert_one_claim_row(&db, r#":valid-at "2026-07-17""#)?;
@@ -52,7 +52,7 @@ fn explicit_and_default_point_in_time_relations_coalesce_before_join() -> Result
 
 #[test]
 fn any_valid_time_retains_distinct_overlapping_windows() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     insert_overlapping_claim_windows(&db)?;
 
     let result = rows(

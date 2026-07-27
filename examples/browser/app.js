@@ -1,14 +1,14 @@
 // Minigraf capability-scoped browser demo — no bundler required.
-// Build first: wasm-pack build --target web --out-dir minigraf-wasm -- --features browser
+// Build first: wasm-pack build --target web --out-dir vicia-db-wasm -- --features browser
 // Then serve from repo root: python3 -m http.server 8080
 // Open: http://localhost:8080/examples/browser/
 
 import init, {
   BrowserInteractiveLedger,
-} from "../../minigraf-wasm/minigraf.js";
+} from "../../vicia-db-wasm/vicia_db.js";
 
-const SOURCE_DB = "minigraf-capability-demo";
-const IMPORTED_DB = "minigraf-capability-demo-imported";
+const SOURCE_DB = "vicia-db-capability-demo";
+const IMPORTED_DB = "vicia-db-capability-demo-imported";
 const QUERY_MAX_ROWS = 16;
 const QUERY_MAX_BYTES = 8 * 1024;
 const activeWorkers = new Set();
@@ -120,7 +120,7 @@ function runMaintenanceWorker(request, transfer = []) {
 }
 
 function lockName(dbName) {
-  return `minigraf:${dbName}`;
+  return `vicia-db:${dbName}`;
 }
 
 function deleteDatabase(dbName) {

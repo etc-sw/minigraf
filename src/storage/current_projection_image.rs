@@ -1560,7 +1560,7 @@ mod tests {
     fn persistent_identity_survives_reopen_and_rejects_an_older_manifest() {
         let directory = tempfile::tempdir().unwrap();
         let path = directory.path().join("projection.graph");
-        let db = crate::Minigraf::open(&path).unwrap();
+        let db = crate::ViciaDb::open(&path).unwrap();
         db.execute(&format!(
             "(transact [[#uuid \"{}\" :projection/value 1]])",
             Uuid::from_u128(1)
@@ -1598,7 +1598,7 @@ mod tests {
         assert!(current_image.identity().manifest_generation() > 0);
         drop(db);
 
-        let reopened = crate::Minigraf::open(&path).unwrap();
+        let reopened = crate::ViciaDb::open(&path).unwrap();
         let decoded = reopened
             .benchmark_decode_current_projection_page_image(
                 &current_image,

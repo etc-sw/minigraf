@@ -3851,7 +3851,7 @@ impl<B: StorageBackend + 'static> PersistentFactStorage<B> {
     /// full-rebuild path.
     ///
     /// This is intentionally private and not called from `checkpoint()`. The
-    /// public scheduling boundary is [`crate::Minigraf::run_idle_maintenance`],
+    /// public scheduling boundary is [`crate::ViciaDb::run_idle_maintenance`],
     /// which checkpoints pending writes before invoking this path.
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     pub(crate) fn recompact_visible_delta(&mut self) -> Result<CheckpointOutcome> {

@@ -951,20 +951,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "minigraf"
-version = "1.1.1"
-dependencies = [
- "anyhow",
- "chrono",
- "crc32fast",
- "postcard",
- "regex-lite",
- "serde",
- "serde_json",
- "uuid",
-]
-
-[[package]]
 name = "miniz_oxide"
 version = "0.7.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1987,11 +1973,25 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "cozo",
- "minigraf",
  "redb",
  "serde",
  "serde_json",
  "sqlite",
+ "vicia-db",
+]
+
+[[package]]
+name = "vicia-db"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "chrono",
+ "crc32fast",
+ "postcard",
+ "regex-lite",
+ "serde",
+ "serde_json",
+ "uuid",
 ]
 
 [[package]]

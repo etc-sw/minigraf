@@ -1,14 +1,14 @@
 use anyhow::Result;
-use minigraf::{Minigraf, QueryResult};
+use vicia_db::{QueryResult, ViciaDb};
 
-fn row_count(db: &Minigraf, query: &str) -> Result<usize> {
+fn row_count(db: &ViciaDb, query: &str) -> Result<usize> {
     match db.execute(query)? {
         QueryResult::QueryResults { results, .. } => Ok(results.len()),
         _ => anyhow::bail!("expected query results"),
     }
 }
 
-fn assert_person_edge_windows(db: &Minigraf, w1_count: usize, w2_count: usize) -> Result<()> {
+fn assert_person_edge_windows(db: &ViciaDb, w1_count: usize, w2_count: usize) -> Result<()> {
     assert_eq!(
         row_count(
             db,
@@ -28,7 +28,7 @@ fn assert_person_edge_windows(db: &Minigraf, w1_count: usize, w2_count: usize) -
     Ok(())
 }
 
-fn insert_two_ref_windows(db: &Minigraf) -> Result<()> {
+fn insert_two_ref_windows(db: &ViciaDb) -> Result<()> {
     db.execute(
         r#"(transact {:valid-from "2020-01-01" :valid-to "2021-01-01"} [[:alice :edge/to #uuid "550e8400-e29b-41d4-a716-446655440000"]])"#,
     )?;
@@ -40,7 +40,7 @@ fn insert_two_ref_windows(db: &Minigraf) -> Result<()> {
 
 #[test]
 fn scoped_retract_only_removes_matching_valid_time_window() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     insert_two_ref_windows(&db)?;
 
     db.execute(
@@ -61,7 +61,7 @@ fn scoped_retract_only_removes_matching_valid_time_window() -> Result<()> {
 
 #[test]
 fn tx_level_scoped_retract_options_apply_to_ref_edge() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     insert_two_ref_windows(&db)?;
 
     db.execute(
@@ -73,7 +73,7 @@ fn tx_level_scoped_retract_options_apply_to_ref_edge() -> Result<()> {
 
 #[test]
 fn legacy_retract_still_removes_all_valid_time_windows() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     insert_two_ref_windows(&db)?;
 
     db.execute(r#"(retract [[:alice :edge/to #uuid "550e8400-e29b-41d4-a716-446655440000"]])"#)?;
@@ -92,7 +92,7 @@ fn legacy_retract_still_removes_all_valid_time_windows() -> Result<()> {
 
 #[test]
 fn write_transaction_scoped_retract_matches_implicit_execute() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     insert_two_ref_windows(&db)?;
 
     let mut tx = db.begin_write()?;
@@ -123,7 +123,7 @@ fn scoped_retract_survives_checkpoint_and_reopen() -> Result<()> {
     let path = dir.path().join("scoped-retract.graph");
 
     {
-        let db = Minigraf::open(&path)?;
+        let db = ViciaDb::open(&path)?;
         insert_two_ref_windows(&db)?;
         db.execute(
             r#"(retract [[:alice :edge/to #uuid "550e8400-e29b-41d4-a716-446655440000" {:valid-from "2020-01-01" :valid-to "2021-01-01"}]])"#,
@@ -131,6 +131,6 @@ fn scoped_retract_survives_checkpoint_and_reopen() -> Result<()> {
         db.checkpoint()?;
     }
 
-    let reopened = Minigraf::open(&path)?;
+    let reopened = ViciaDb::open(&path)?;
     assert_person_edge_windows(&reopened, 0, 1)
 }

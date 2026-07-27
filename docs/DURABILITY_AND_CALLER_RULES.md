@@ -3,7 +3,7 @@
 Per-backend durability semantics (gap G13) and the browser caller rules from
 slice A5 of `docs/internal/APP_ADOPTION_GAP_PLAN.md`. This is the authority for what
 capability-scoped foreground and maintenance operations guarantee **at the
-moment they return**, per backend. Raw `Minigraf` and `BrowserDb` methods retain
+moment they return**, per backend. Raw `ViciaDb` and `BrowserDb` methods retain
 the same underlying durability semantics for 1.x compatibility. The
 session-protocol view of the same facts (the
 `durability` field on result frames) is `docs/SESSION_PROTOCOL.md`
@@ -13,8 +13,8 @@ Backends covered:
 
 - **Native file-backed** — `InteractiveLedger::open("path.graph")` for
   foreground work and `MaintenanceLedger::open("path.graph")` for an explicit
-  idle lifetime: single `.graph` file + WAL sidecar. `Minigraf::open()` remains
-  the raw 1.x compatibility surface. The file-backed `minigraf --session`
+  idle lifetime: single `.graph` file + WAL sidecar. `ViciaDb::open()` remains
+  the raw 1.x compatibility surface. The file-backed `vicia-db --session`
   process likewise uses an explicit-only checkpoint policy: threshold and drop
   checkpoints are disabled, while protocol `checkpoint`, `maintenance`, and
   `backup` remain available.
@@ -33,14 +33,14 @@ Backends covered:
 | `checkpoint()` returns Ok | Committed image durable (data synced before the header publish), WAL retired. = `published`. | Same flush as `execute`'s write-through; only needed after bulk operations. |
 | `backup_to()` / session `backup` returns Ok | Source checkpoint complete; a fresh independent destination contains exactly returned `tx_count`, is fsynced, and was atomically published without overwrite while the same write lock remained held. | Not applicable; browser portability uses atomic export/import. |
 | idle maintenance returns Ok | Pending writes are checkpointed first; threshold delta may be copy-on-write recompacted. | Threshold delta was either healthy (`noop`) or rebuilt as a fresh contiguous graph and atomically replaced in IndexedDB. |
-| Handle drop / tab close | `InteractiveLedger` performs no hidden checkpoint; its WAL replays when maintenance or foreground work reopens. Raw `Minigraf` retains its best-effort drop checkpoint. | Whatever the last committed IndexedDB transaction wrote. Nothing in flight survives partially (single tx). |
+| Handle drop / tab close | `InteractiveLedger` performs no hidden checkpoint; its WAL replays when maintenance or foreground work reopens. Raw `ViciaDb` retains its best-effort drop checkpoint. | Whatever the last committed IndexedDB transaction wrote. Nothing in flight survives partially (single tx). |
 | Crash mid-write | The in-flight entry has a bad CRC32 and is discarded on replay; every *acknowledged* write survives. | The in-flight IndexedDB transaction rolls back whole; reopen shows the previous consistent state. |
 
 ### Native: WAL-first
 
 - A write `execute()` appends the transaction to the WAL sidecar and
   **fsyncs on every append** (`WalWriter::append_entry`, `src/wal.rs`)
-  *before* facts apply to the in-memory store (`Minigraf::execute`,
+  *before* facts apply to the in-memory store (`ViciaDb::execute`,
   `src/db.rs`). If the WAL write fails, nothing was applied — the database
   is unchanged and consistent. A partial entry from a crash mid-append
   fails its CRC32 and replay stops at it: only unacknowledged work is lost.
@@ -57,7 +57,7 @@ Backends covered:
   The WAL and unpublished physical tail pages are excluded. A failure after
   source checkpoint may leave that checkpoint durable, but never returns a
   published backup receipt; existing destination/sidecar paths are untouched.
-  The linearization domain is one daemon-owned `Minigraf` handle and its
+  The linearization domain is one daemon-owned `ViciaDb` handle and its
   clones. Independently opening the same source pathname is not a second
   writer mode; all access must route through the owner.
 

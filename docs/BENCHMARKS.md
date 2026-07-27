@@ -1,11 +1,21 @@
-# Minigraf Benchmarks
+# Vicia DB Benchmarks
+
+> ## ⚠️ Reproduce commands below predate the `vicia-db` package rename
+>
+> Every receipt on this page was recorded while the crate was named `minigraf`.
+> The commands are kept verbatim because they record what was actually run. To
+> re-run one today, substitute: `--bench minigraf_bench` is now
+> `--bench vicia_db_bench`, and `wasm-pack ... --out-dir minigraf-wasm` is now
+> `--out-dir vicia-db-wasm` (the generated glue is `vicia_db.js` /
+> `vicia_db_bg.wasm`). The `MINIGRAF_*` bench-mode environment variables are
+> deliberately unchanged, so those lines still work as written.
 
 > ## ⚠️ Every number below predates the 2026-07-27 `opt-level` change
 >
 > All results on this page were measured with `[profile.release] opt-level = "z"`.
 > That profile is now `opt-level = 3`, after an A/B on 2026-07-27 showed `"z"`
 > was costing roughly **1.6x on the core read path** while saving nothing in the
-> artifact the philosophy actually budgets — `libminigraf.so` is 302 KiB at
+> artifact the philosophy actually budgets — `libvicia_db.so` is 302 KiB at
 > every optimization level.
 >
 > Sample of the measured delta (`"z"` -> `3`, same host, same day):
@@ -35,7 +45,7 @@ Numbers updated below reflect the Bencher CI baseline (ubuntu-latest runner) whe
 
 **Live benchmark history**: [https://bencher.dev/perf/minigraf/plots](https://bencher.dev/perf/minigraf/plots)
 
-Benchmark results for Minigraf. Core query benchmarks were updated in v0.13.1 (Phase 7.4 — query path snapshot fix). New benchmark groups for window functions, temporal metadata, UDFs, count-distinct, and regex filter added in v0.17.0 (Phase 7.8). Negation, disjunction, aggregation, and expression benchmarks were first run on v0.13.0 and selectively re-run on v0.13.1. Throughput reporting (facts/sec, aggregate ops/sec), retraction benchmarks, prepared query benchmarks, and checkpoint@1M added in v0.20.1.
+Benchmark results for Vicia DB. Core query benchmarks were updated in v0.13.1 (Phase 7.4 — query path snapshot fix). New benchmark groups for window functions, temporal metadata, UDFs, count-distinct, and regex filter added in v0.17.0 (Phase 7.8). Negation, disjunction, aggregation, and expression benchmarks were first run on v0.13.0 and selectively re-run on v0.13.1. Throughput reporting (facts/sec, aggregate ops/sec), retraction benchmarks, prepared query benchmarks, and checkpoint@1M added in v0.20.1.
 
 ## Environment
 
@@ -67,7 +77,7 @@ against older i7 rows.
 
 Measured 2026-07-12 on the A0/HAL7800 environment against the same clean
 342 MiB v11 graph containing 1.01M `:cmp/value` integer facts. Each row is a
-fresh release `minigraf --session` process measured with `/usr/bin/time -v`;
+fresh release `vicia-db --session` process measured with `/usr/bin/time -v`;
 session output is discarded. The before rows are the clean `f7aa6cc` baseline.
 
 | Query | Before wall / max RSS | After wall / max RSS | Change |
@@ -127,7 +137,7 @@ authority is `benchmarks/milestones.json`, which owns milestone ids, profiles,
 commands, decision questions, and absolute budgets for native, browser, and
 Vetch product evidence.
 
-Nightly CI treats `benches/minigraf_bench.rs` as the Criterion group source of
+Nightly CI treats `benches/vicia_db_bench.rs` as the Criterion group source of
 truth. `node scripts/check-benchmark-coverage.mjs` verifies both directions:
 every literal Criterion group must match a nightly workflow filter, and every
 workflow filter must match at least one group. This prevents a newly added group
@@ -613,7 +623,7 @@ in the T7A delta-publish range (~5 ms p95).
 
 Vetch's external runner
 `apps/quiet-surface/scripts/bench-vicia-gate-d-exact-trace.mjs` drives the
-release `minigraf --session` binary rather than calling a Rust benchmark API.
+release `vicia-db --session` binary rather than calling a Rust benchmark API.
 The acceptance profile starts from an immutable 1M-fact v11 base, replays
 1,024 capture/edit/proposal/receipt/epistemic slices, checkpoints every slice,
 discovers the current card ids through the persisted space-membership entity,
@@ -653,10 +663,10 @@ foreground, reopened, and expected fingerprints matched.
 
 ### Decay-Candidate Query Cost (harrekki)
 
-`decay/` groups in `benches/minigraf_bench.rs` — "entities untouched since
+`decay/` groups in `benches/vicia_db_bench.rs` — "entities untouched since
 T" (harrekki caller doc P1 #6): N entities with one `:touched/at` integer
 each, 20% below the threshold. Run: `MINIGRAF_BENCH_MODE=full cargo bench
---bench minigraf_bench -- "decay/"`. Criterion median.
+--bench vicia_db_bench -- "decay/"`. Criterion median.
 
 | Shape | 1K | 10K | 100K | 1M |
 |---|---|---|---|---|
@@ -718,7 +728,7 @@ match the A0 rows above — no regression from the atomicity change.
 
 ## A2: Incremental Fact Log (2026-07-11)
 
-`Minigraf::export_fact_log_since(since_tx_count)` returns the fact-log tail
+`ViciaDb::export_fact_log_since(since_tx_count)` returns the fact-log tail
 (`tx_count > since`) at cost proportional to the tail, not the committed
 graph (`docs/internal/APP_ADOPTION_GAP_PLAN.md` slice A2, harrekki P0 #2). Committed
 packed pages hold facts in nondecreasing `tx_count` order, so the reader
@@ -751,7 +761,7 @@ keeps it ~2,800× cheaper than the full export. Setup cost for the fixture:
 
 Reliability gate, not a benchmark (`docs/internal/APP_ADOPTION_GAP_PLAN.md` slice A7,
 harrekki P0 #3). `tests/kill9_durability_test.rs` SIGKILLs real
-`minigraf --session --file` child processes at randomized instants —
+`vicia-db --session --file` child processes at randomized instants —
 including checkpoint-biased windows — over growing `.graph` lineages, then
 reopens and audits every acknowledged transaction (an ack = a complete
 `ok:true` transacted frame, which the A6 protocol only emits after WAL

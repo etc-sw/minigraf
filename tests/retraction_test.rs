@@ -3,13 +3,13 @@
 //! These tests verify that `filter_facts_for_query` computes the net-asserted
 //! view per (entity, attribute, value) triple, correctly hiding retracted facts.
 
-use minigraf::Minigraf;
+use vicia_db::ViciaDb;
 
 // ── Test 1: Basic retraction ──────────────────────────────────────────────────
 
 #[test]
 fn test_retraction_hides_fact_from_query() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute("(transact [[:alice :age 30]])").unwrap();
     db.execute("(retract [[:alice :age 30]])").unwrap();
     let result = db
@@ -25,7 +25,7 @@ fn test_retraction_hides_fact_from_query() {
 
 #[test]
 fn test_retraction_as_of_before_shows_fact() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute("(transact [[:alice :age 30]])").unwrap(); // tx_count = 1
     db.execute("(transact [[:alice :age 31]])").unwrap(); // tx_count = 2
     db.execute("(retract [[:alice :age 30]])").unwrap(); // tx_count = 3
@@ -43,7 +43,7 @@ fn test_retraction_as_of_before_shows_fact() {
 
 #[test]
 fn test_retraction_as_of_after_hides_fact() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute("(transact [[:alice :age 30]])").unwrap(); // tx_count = 1
     db.execute("(transact [[:alice :age 31]])").unwrap(); // tx_count = 2
     db.execute("(retract [[:alice :age 30]])").unwrap(); // tx_count = 3
@@ -67,7 +67,7 @@ fn test_retraction_as_of_after_hides_fact() {
 
 #[test]
 fn test_retraction_then_reassert() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute("(transact [[:alice :status :active]])").unwrap();
     db.execute("(retract [[:alice :status :active]])").unwrap();
     db.execute("(transact [[:alice :status :active]])").unwrap();
@@ -85,7 +85,7 @@ fn test_retraction_then_reassert() {
 
 #[test]
 fn test_retraction_with_any_valid_time() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(r#"(transact {:valid-from "2023-01-01"} [[:alice :role :engineer]])"#)
         .unwrap();
     db.execute("(retract [[:alice :role :engineer]])").unwrap();
@@ -103,7 +103,7 @@ fn test_retraction_with_any_valid_time() {
 
 #[test]
 fn test_retraction_rule_as_of_before_sees_fact() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute("(transact [[:a :next :b] [:b :next :c]])")
         .unwrap(); // tx_count = 1
     db.execute("(retract [[:a :next :b]])").unwrap(); // tx_count = 2
@@ -129,7 +129,7 @@ fn test_retraction_rule_as_of_before_sees_fact() {
 
 #[test]
 fn test_write_transaction_retract_and_transact_same_attr_query_sees_new_value() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     db.execute("(transact [[:order-42 :fsm/state :awaiting-payment]])")
         .unwrap();
@@ -145,7 +145,7 @@ fn test_write_transaction_retract_and_transact_same_attr_query_sees_new_value() 
         .execute("(query [:find ?order ?state :where [?order :fsm/state ?state]])")
         .unwrap();
     match result {
-        minigraf::QueryResult::QueryResults { results, .. } => {
+        vicia_db::QueryResult::QueryResults { results, .. } => {
             assert_eq!(results.len(), 1, "expected exactly one result row");
         }
         _ => panic!("expected QueryResults"),
@@ -156,7 +156,7 @@ fn test_write_transaction_retract_and_transact_same_attr_query_sees_new_value() 
 
 #[test]
 fn test_retraction_rule_as_of_after_breaks_chain() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute("(transact [[:a :next :b] [:b :next :c]])")
         .unwrap(); // tx_count = 1
     db.execute("(retract [[:a :next :b]])").unwrap(); // tx_count = 2

@@ -14,16 +14,16 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use anyhow::Result;
-use minigraf::{Minigraf, QueryResult};
+use vicia_db::{QueryResult, ViciaDb};
 
-fn rows(db: &Minigraf, query: &str) -> Result<usize> {
+fn rows(db: &ViciaDb, query: &str) -> Result<usize> {
     match db.execute(query)? {
         QueryResult::QueryResults { results, .. } => Ok(results.len()),
         _ => anyhow::bail!("expected query results"),
     }
 }
 
-fn forget(db: &Minigraf, cmd: &str) -> Result<(Option<u64>, usize)> {
+fn forget(db: &ViciaDb, cmd: &str) -> Result<(Option<u64>, usize)> {
     match db.execute(cmd)? {
         QueryResult::Forgotten { tx_id, count } => Ok((tx_id, count)),
         _ => anyhow::bail!("expected a forgotten result"),
@@ -34,7 +34,7 @@ fn forget(db: &Minigraf, cmd: &str) -> Result<(Option<u64>, usize)> {
 
 #[test]
 fn forget_closes_window_at_explicit_time() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact {:valid-from "2026-01-01"} [[:alice :status :active]])"#)?;
 
     let (tx_id, count) = forget(
@@ -63,7 +63,7 @@ fn forget_closes_window_at_explicit_time() -> Result<()> {
 
 #[test]
 fn forget_default_closure_time_is_tx_time() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact {:valid-from "2020-01-01"} [[:alice :status :active]])"#)?;
 
     let (_, count) = forget(&db, r#"(forget [[:alice :status :active]])"#)?;
@@ -88,7 +88,7 @@ fn forget_default_closure_time_is_tx_time() -> Result<()> {
 
 #[test]
 fn forget_as_of_time_travel_shows_open_window() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact {:valid-from "2020-01-01"} [[:alice :status :active]])"#)?;
     let pre_closure = db.current_tx_count();
 
@@ -112,7 +112,7 @@ fn forget_as_of_time_travel_shows_open_window() -> Result<()> {
 
 #[test]
 fn forget_is_reversible_by_reassert() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact [[:alice :status :active]])"#)?;
     forget(&db, r#"(forget [[:alice :status :active]])"#)?;
     assert_eq!(
@@ -131,7 +131,7 @@ fn forget_is_reversible_by_reassert() -> Result<()> {
 
 #[test]
 fn forget_is_idempotent_and_noop_consumes_no_tx() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact {:valid-from "2026-01-01"} [[:alice :status :active]])"#)?;
 
     let (tx_id, count) = forget(
@@ -159,7 +159,7 @@ fn forget_is_idempotent_and_noop_consumes_no_tx() -> Result<()> {
 
 #[test]
 fn forget_retruncates_to_earlier_time() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact {:valid-from "2026-01-01"} [[:r :status :active]])"#)?;
 
     let (_, count) = forget(
@@ -190,7 +190,7 @@ fn forget_retruncates_to_earlier_time() -> Result<()> {
 
 #[test]
 fn forget_after_legacy_unscoped_retract_is_noop() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact [[:l :status :active]])"#)?;
     db.execute(r#"(retract [[:l :status :active]])"#)?;
 
@@ -205,7 +205,7 @@ fn forget_after_legacy_unscoped_retract_is_noop() -> Result<()> {
 
 #[test]
 fn forget_at_window_start_emits_retract_only() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact [[:z :status :active {:valid-from "2026-06-01"}]])"#)?;
 
     // T == valid_from: an empty (T, T) re-assert would be unmatchable — the
@@ -239,7 +239,7 @@ fn forget_at_window_start_emits_retract_only() -> Result<()> {
 
 #[test]
 fn forget_truncates_finite_window_and_leaves_disjoint_window() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     // Two disjoint windows of the same triple: only the one containing T closes.
     db.execute(
         r#"(transact [[:f :status :active {:valid-from "2026-01-01" :valid-to "2026-04-01"}]])"#,
@@ -273,7 +273,7 @@ fn forget_truncates_finite_window_and_leaves_disjoint_window() -> Result<()> {
 
 #[test]
 fn forget_dedupes_reasserts_for_overlapping_windows_sharing_start() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     // Two overlapping windows with the same valid_from, both containing T.
     db.execute(r#"(transact {:valid-from "2026-01-01"} [[:m :status :active]])"#)?;
     db.execute(
@@ -310,7 +310,7 @@ fn forget_dedupes_reasserts_for_overlapping_windows_sharing_start() -> Result<()
 
 #[test]
 fn forget_query_form_closes_matched_subset() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(
         r#"(transact {:valid-from "2026-01-01"} [[:s1 :session/expired true] [:s1 :session/data 1] [:s2 :session/expired false] [:s2 :session/data 2]])"#,
     )?;
@@ -340,7 +340,7 @@ fn forget_query_form_closes_matched_subset() -> Result<()> {
 
 #[test]
 fn forget_fact_list_dedupes_and_skips_unknown_triples() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact {:valid-from "2026-01-01"} [[:d :s 1] [:d2 :s 2]])"#)?;
 
     let (_, count) = forget(
@@ -364,7 +364,7 @@ fn forget_fact_list_dedupes_and_skips_unknown_triples() -> Result<()> {
 
 #[test]
 fn forget_empty_result_set_is_a_noop() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact [[:x :s 1]])"#)?;
     let before = db.current_tx_count();
     let export_len = db.export_fact_log()?.len();
@@ -388,7 +388,7 @@ fn forget_empty_result_set_is_a_noop() -> Result<()> {
 
 #[test]
 fn forget_rejected_inside_write_transaction() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     let mut tx = db.begin_write()?;
     let err = tx
         .execute(r#"(forget [[:a :s 1]])"#)
@@ -403,7 +403,7 @@ fn forget_rejected_inside_write_transaction() -> Result<()> {
 
 #[test]
 fn forget_query_row_must_bind_entity_first() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact [[:alice :age 30]])"#)?;
     let err = db
         .execute(r#"(forget [:find ?v ?a ?e :where [?e ?a ?v]])"#)
@@ -417,7 +417,7 @@ fn forget_query_row_must_bind_entity_first() -> Result<()> {
 
 #[test]
 fn forget_not_preparable() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     let err = db
         .prepare(r#"(forget [[:a :s 1]])"#)
         .err()
@@ -435,7 +435,7 @@ fn forget_survives_checkpoint_and_reopen() -> Result<()> {
     let path = dir.path().join("forget.graph");
 
     {
-        let db = Minigraf::open(&path)?;
+        let db = ViciaDb::open(&path)?;
         db.execute(r#"(transact {:valid-from "2026-01-01"} [[:p :status :active]])"#)?;
         forget(
             &db,
@@ -444,7 +444,7 @@ fn forget_survives_checkpoint_and_reopen() -> Result<()> {
         db.checkpoint()?;
     }
 
-    let db = Minigraf::open(&path)?;
+    let db = ViciaDb::open(&path)?;
     let q = |at: &str| format!(r#"(query [:find ?s :valid-at "{at}" :where [:p :status ?s]])"#);
     assert_eq!(rows(&db, &q("2026-03-01"))?, 1, "history survives reopen");
     assert_eq!(rows(&db, &q("2026-08-01"))?, 0, "closure survives reopen");
@@ -457,7 +457,7 @@ fn forget_survives_checkpoint_and_reopen() -> Result<()> {
 fn forget_10k_result_set_closes_in_one_transaction() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("forget-10k.graph");
-    let db = Minigraf::open(&path)?;
+    let db = ViciaDb::open(&path)?;
 
     const TOTAL: usize = 10_000;
     const BATCH: usize = 1_000;

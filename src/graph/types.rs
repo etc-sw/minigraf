@@ -59,7 +59,7 @@ pub type EntityId = Uuid;
 /// Attribute name - namespace-qualified keywords like ":person/name" or ":friend"
 pub(crate) type Attribute = String;
 
-/// All value types that can be stored in a Minigraf fact.
+/// All value types that can be stored in a ViciaDb fact.
 ///
 /// Values appear in the third position of EAV triples:
 /// `[entity attribute value]`, e.g. `[:alice :person/name "Alice"]`.
@@ -269,7 +269,7 @@ pub enum FactValidTime {
 
 /// A stable, read-only public projection of one append-only fact-log entry.
 ///
-/// This deliberately does not expose Minigraf's internal `Fact` type. It is
+/// This deliberately does not expose ViciaDb's internal `Fact` type. It is
 /// intended for deterministic fixtures, audit receipts, and replay assertions.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct FactRecord {

@@ -1,8 +1,8 @@
 //! Phase 7.6 integration tests — temporal metadata pseudo-attribute bindings.
 
-use minigraf::{Minigraf, OpenOptions, QueryResult, Value};
+use vicia_db::{OpenOptions, QueryResult, Value, ViciaDb};
 
-fn db() -> Minigraf {
+fn db() -> ViciaDb {
     OpenOptions::new().open_memory().unwrap()
 }
 

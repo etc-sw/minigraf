@@ -6,7 +6,6 @@ use anyhow::{Context, Result, bail};
 use bench_support::process_memory::{
     MemoryBreakdown, current_rss_bytes, memory_breakdown, peak_rss_bytes, trim_allocator,
 };
-use minigraf::{CurrentAttributeCursorDiagnostics, Minigraf, OpenOptions, QueryResult, Value};
 use serde::{Deserialize, Serialize};
 use std::ffi::OsString;
 use std::fs;
@@ -14,6 +13,7 @@ use std::io::Read;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::time::Instant;
+use vicia_db::{CurrentAttributeCursorDiagnostics, OpenOptions, QueryResult, Value, ViciaDb};
 
 const SCHEMA: &str = "vicia.aggregate-retention.v1";
 const ATTRIBUTE: &str = ":retention/value";
@@ -320,7 +320,7 @@ fn measure(path: &Path, facts: u64, iterations: usize) -> Result<Measurement> {
     })
 }
 
-fn aggregate_sample(db: &Minigraf, iteration: usize) -> Result<(AggregateSample, (u64, i128))> {
+fn aggregate_sample(db: &ViciaDb, iteration: usize) -> Result<(AggregateSample, (u64, i128))> {
     let started = Instant::now();
     let result =
         db.execute("(query [:find (count ?v) (sum ?v) :where [?e :retention/value ?v]])")?;

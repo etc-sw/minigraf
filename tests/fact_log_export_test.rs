@@ -1,6 +1,6 @@
 use anyhow::Result;
-use minigraf::{FactRecord, FactValidTime, Minigraf, Value};
 use uuid::Uuid;
+use vicia_db::{FactRecord, FactValidTime, Value, ViciaDb};
 
 const TARGET_UUID: &str = "550e8400-e29b-41d4-a716-446655440000";
 const VALID_FROM_2020_01_01: i64 = 1_577_836_800_000;
@@ -22,7 +22,7 @@ fn find_record<'a>(
         .ok_or_else(|| anyhow::anyhow!("expected matching fact-log record"))
 }
 
-fn insert_two_ref_windows(db: &Minigraf) -> Result<()> {
+fn insert_two_ref_windows(db: &ViciaDb) -> Result<()> {
     db.execute(
         r#"(transact {:valid-from "2020-01-01" :valid-to "2021-01-01"} [[:alice :edge/to #uuid "550e8400-e29b-41d4-a716-446655440000"]])"#,
     )?;
@@ -34,7 +34,7 @@ fn insert_two_ref_windows(db: &Minigraf) -> Result<()> {
 
 #[test]
 fn export_fact_log_includes_assertions_and_legacy_retractions() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     db.execute(r#"(transact [[:alice :role "writer"]])"#)?;
     db.execute(r#"(retract [[:alice :role "writer"]])"#)?;
 
@@ -91,7 +91,7 @@ fn export_fact_log_includes_assertions_and_legacy_retractions() -> Result<()> {
 
 #[test]
 fn export_fact_log_distinguishes_scoped_retract_window_for_ref_edge() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     insert_two_ref_windows(&db)?;
     db.execute(
         r#"(retract [[:alice :edge/to #uuid "550e8400-e29b-41d4-a716-446655440000" {:valid-from "2020-01-01" :valid-to "2021-01-01"}]])"#,
@@ -128,7 +128,7 @@ fn export_fact_log_distinguishes_scoped_retract_window_for_ref_edge() -> Result<
 
 #[test]
 fn export_fact_log_preserves_same_ref_eav_retract_and_assert_in_one_write_tx() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     let target = target_uuid()?;
 
     db.execute(r#"(transact [[:alice :edge/to #uuid "550e8400-e29b-41d4-a716-446655440000"]])"#)?;
@@ -206,12 +206,12 @@ fn export_fact_log_preserves_ref_values_after_checkpoint_reopen() -> Result<()> 
     let target = target_uuid()?;
 
     {
-        let db = Minigraf::open(&path)?;
+        let db = ViciaDb::open(&path)?;
         insert_two_ref_windows(&db)?;
         db.checkpoint()?;
     }
 
-    let reopened = Minigraf::open(&path)?;
+    let reopened = ViciaDb::open(&path)?;
     let records = reopened.export_fact_log()?;
     assert_eq!(
         records.len(),
@@ -247,7 +247,7 @@ fn export_fact_log_preserves_ref_values_after_checkpoint_reopen() -> Result<()> 
 
 /// Assert `export_fact_log_since(since)` returns exactly the ordered
 /// subsequence of the full export with `tx_count > since`.
-fn assert_since_matches_filtered_full(db: &Minigraf, since: u64) -> Result<()> {
+fn assert_since_matches_filtered_full(db: &ViciaDb, since: u64) -> Result<()> {
     let full = db.export_fact_log()?;
     let expected: Vec<&FactRecord> = full
         .iter()
@@ -274,7 +274,7 @@ fn assert_since_matches_filtered_full(db: &Minigraf, since: u64) -> Result<()> {
 
 #[test]
 fn export_fact_log_since_filters_asserted_and_retracted_with_valid_time() -> Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     insert_two_ref_windows(&db)?; // tx 1, 2
     db.execute(
         r#"(retract [[:alice :edge/to #uuid "550e8400-e29b-41d4-a716-446655440000" {:valid-from "2020-01-01" :valid-to "2021-01-01"}]])"#,
@@ -315,7 +315,7 @@ fn export_fact_log_since_filters_asserted_and_retracted_with_valid_time() -> Res
 fn export_fact_log_since_spans_base_delta_and_pending_layers() -> Result<()> {
     let dir = tempfile::tempdir()?;
     let path = dir.path().join("fact-log-since-layers.graph");
-    let db = Minigraf::open(&path)?;
+    let db = ViciaDb::open(&path)?;
 
     // Base layer: first checkpoint full-rebuilds.
     for i in 0..10 {
@@ -357,7 +357,7 @@ fn export_fact_log_since_serves_stored_cursor_across_reopen() -> Result<()> {
 
     // Tick 1: write, checkpoint, remember the cursor.
     let cursor = {
-        let db = Minigraf::open(&path)?;
+        let db = ViciaDb::open(&path)?;
         for i in 0..8 {
             db.execute(&format!(r#"(transact [[:alice :tick/one {i}]])"#))?;
         }
@@ -366,7 +366,7 @@ fn export_fact_log_since_serves_stored_cursor_across_reopen() -> Result<()> {
     };
 
     // Tick 2 (after reopen): new writes land past the stored cursor.
-    let db = Minigraf::open(&path)?;
+    let db = ViciaDb::open(&path)?;
     db.execute(r#"(transact [[:alice :tick/two 1]])"#)?;
     db.execute(r#"(retract [[:alice :tick/two 1]])"#)?;
 

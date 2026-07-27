@@ -12,11 +12,11 @@ stdin/stdout. No network server, no listener socket. Implementation:
 ## Invocation
 
 ```
-minigraf --session                 # in-memory database
-minigraf --session --file <path>   # file-backed database
+vicia-db --session                 # in-memory database
+vicia-db --session --file <path>   # file-backed database
 ```
 
-Or embed: `minigraf::session::Session::new(db).run(reader, writer)` over any
+Or embed: `vicia_db::session::Session::new(db).run(reader, writer)` over any
 line-based transport.
 
 File-backed CLI sessions disable threshold and drop checkpoints. Publication
@@ -118,7 +118,7 @@ non-empty, a re-assertion truncated to `valid_to = T`. All records share one
 ## export_since (A2) — status: frozen (caller-lane ACK 2026-07-11)
 
 The incremental "facts since tx_count N" read (harrekki P0 #2). The Rust API
-(`Minigraf::export_fact_log_since`) is frozen; the frame shape was ACKed
+(`ViciaDb::export_fact_log_since`) is frozen; the frame shape was ACKed
 verbatim by the harrekki lane per the A6 precedent (record:
 `docs/internal/A6_SESSION_PROTOCOL_ANSWERS_HARREKKI.md` "A2 export_since frame",
 shared-memory need `:need/vicia-a2-export-since-frame-ack` resolved).

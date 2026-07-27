@@ -1,7 +1,6 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use anyhow::{Context, Result, bail};
-use minigraf::{FactRecord, Minigraf, OpenOptions, QueryResult, Value};
 use serde::Deserialize;
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -9,6 +8,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use std::time::{Duration, Instant, SystemTime};
 use uuid::Uuid;
+use vicia_db::{FactRecord, OpenOptions, QueryResult, Value, ViciaDb};
 
 #[path = "helpers/receipt.rs"]
 mod receipt;
@@ -157,7 +157,7 @@ fn main() -> Result<()> {
 }
 
 fn ledger_boundary_probes() -> Result<Vec<receipt::CorrectnessCheck>> {
-    let expectation_db = Minigraf::in_memory().map_err(db_error)?;
+    let expectation_db = ViciaDb::in_memory().map_err(db_error)?;
     expectation_db
         .execute("(transact [[:proposal :vetch_proposal/status :open]])")
         .map_err(db_error)?;
@@ -181,7 +181,7 @@ fn ledger_boundary_probes() -> Result<Vec<receipt::CorrectnessCheck>> {
     let serialized_rejection_consumed_no_tx =
         expectation_db.current_tx_count() == cursor_after_first;
 
-    let read_db = Minigraf::in_memory().map_err(db_error)?;
+    let read_db = ViciaDb::in_memory().map_err(db_error)?;
     let mut initial = read_db.begin_write().map_err(db_error)?;
     initial
         .execute("(transact [[:source :vetch_source/title \"source\"]])")
@@ -219,7 +219,7 @@ fn ledger_boundary_probes() -> Result<Vec<receipt::CorrectnessCheck>> {
     ])
 }
 
-fn query_row_count(db: &Minigraf, query: &str) -> Result<usize> {
+fn query_row_count(db: &ViciaDb, query: &str) -> Result<usize> {
     match db.execute(query).map_err(db_error)? {
         QueryResult::QueryResults { results, .. } => Ok(results.len()),
         _ => bail!("boundary probe did not return query rows"),
@@ -275,7 +275,7 @@ fn validate_fixture(fixture: &CallerFixture) -> Result<()> {
 }
 
 fn measure_scenario(
-    db: &Minigraf,
+    db: &ViciaDb,
     scenario: &Scenario,
     sample_count: usize,
 ) -> Result<(ScenarioSamples, Vec<receipt::CorrectnessCheck>)> {
@@ -292,7 +292,7 @@ fn measure_scenario(
         samples.caller_encoding.push(started.elapsed());
 
         let started = Instant::now();
-        let preparation = Minigraf::benchmark_atomic_write_preparation(&commands)?;
+        let preparation = ViciaDb::benchmark_atomic_write_preparation(&commands)?;
         samples.datalog_materialization.push(started.elapsed());
         samples.source_bytes.push(preparation.source_bytes as f64);
         samples.fact_count.push(
@@ -465,7 +465,7 @@ fn fixture_value(value: &FixtureValue) -> Value {
     }
 }
 
-fn exact_proof_rows(db: &Minigraf, proof: &Proof) -> Result<usize> {
+fn exact_proof_rows(db: &ViciaDb, proof: &Proof) -> Result<usize> {
     let query = format!(
         "(query [:find ?v :where [#uuid \"{}\" {} ?v]])",
         proof.entity, proof.attribute
@@ -538,7 +538,7 @@ fn copy_graph(source: &Path, destination: &Path) -> Result<()> {
     Ok(())
 }
 
-fn open_no_auto_checkpoint(path: &Path) -> Result<Minigraf> {
+fn open_no_auto_checkpoint(path: &Path) -> Result<ViciaDb> {
     OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..Default::default()

@@ -1,6 +1,6 @@
 //! Integration tests for WAL-backed crash safety, recovery, and checkpoint.
 //!
-//! These tests exercise the file-backed `Minigraf` API end-to-end, verifying:
+//! These tests exercise the file-backed `ViciaDb` API end-to-end, verifying:
 //! - Basic persistence (write → drop → reopen)
 //! - WAL crash recovery (simulated crash via `mem::forget`)
 //! - Duplicate-free recovery after post-checkpoint crash
@@ -12,8 +12,8 @@
 //! - Legacy file format upgrade on first checkpoint
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::QueryResult;
-use minigraf::db::{Minigraf, OpenOptions};
+use vicia_db::QueryResult;
+use vicia_db::db::{OpenOptions, ViciaDb};
 
 /// File format page size (4 KiB) — matches the internal `PAGE_SIZE` constant.
 const PAGE_SIZE: usize = 4096;
@@ -43,13 +43,13 @@ fn test_file_backed_basic_persistence() {
 
     // Session 1: write and close (drop triggers checkpoint)
     {
-        let db = Minigraf::open(&db_path).unwrap();
+        let db = ViciaDb::open(&db_path).unwrap();
         db.execute(r#"(transact [[:alice :name "Alice"]])"#)
             .unwrap();
     }
 
     // Session 2: reopen and verify
-    let db2 = Minigraf::open(&db_path).unwrap();
+    let db2 = ViciaDb::open(&db_path).unwrap();
     let n = count_results(
         db2.execute("(query [:find ?name :where [?e :name ?name]])")
             .unwrap(),
@@ -70,7 +70,7 @@ fn test_wal_recovery_after_simulated_crash() {
 
     // "Crash" session: write fact, skip Drop
     {
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &db_path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -82,7 +82,7 @@ fn test_wal_recovery_after_simulated_crash() {
             .unwrap();
 
         // Simulate a crash: drop Inner without running Drop logic.
-        // mem::forget on the Arc-backed Minigraf drops the Arc but leaves
+        // mem::forget on the Arc-backed ViciaDb drops the Arc but leaves
         // the Inner alive as long as the clone lives — however, since this
         // is the only handle, forgetting it leaks the Arc permanently and
         // the Drop impl never runs.
@@ -93,7 +93,7 @@ fn test_wal_recovery_after_simulated_crash() {
     assert!(wal_path.exists(), "WAL must exist after simulated crash");
 
     // Recovery session: opening should replay the WAL
-    let db2 = Minigraf::open(&db_path).unwrap();
+    let db2 = ViciaDb::open(&db_path).unwrap();
     let n = count_results(
         db2.execute("(query [:find ?name :where [?e :name ?name]])")
             .unwrap(),
@@ -118,7 +118,7 @@ fn test_no_duplicate_facts_after_post_checkpoint_crash() {
 
     // Session 1: write fact and crash (skip Drop)
     {
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &db_path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -136,7 +136,7 @@ fn test_no_duplicate_facts_after_post_checkpoint_crash() {
 
     // Session 2: normal open replays WAL then checkpoint on close
     {
-        let db = Minigraf::open(&db_path).unwrap();
+        let db = ViciaDb::open(&db_path).unwrap();
         let n = count_results(
             db.execute("(query [:find ?name :where [?e :name ?name]])")
                 .unwrap(),
@@ -154,7 +154,7 @@ fn test_no_duplicate_facts_after_post_checkpoint_crash() {
 
     // Session 3: open again with the stale WAL present; replay should skip already-
     // checkpointed entries, producing exactly 1 fact.
-    let db3 = Minigraf::open(&db_path).unwrap();
+    let db3 = ViciaDb::open(&db_path).unwrap();
     let n = count_results(
         db3.execute("(query [:find ?name :where [?e :name ?name]])")
             .unwrap(),
@@ -177,7 +177,7 @@ fn test_partial_wal_entry_discarded_earlier_entries_intact() {
 
     // Session 1: write 1 fact and crash
     {
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &db_path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -203,7 +203,7 @@ fn test_partial_wal_entry_discarded_earlier_entries_intact() {
     }
 
     // Recovery session
-    let db2 = Minigraf::open(&db_path).unwrap();
+    let db2 = ViciaDb::open(&db_path).unwrap();
     let n = count_results(
         db2.execute("(query [:find ?name :where [?e :name ?name]])")
             .unwrap(),
@@ -224,7 +224,7 @@ fn test_manual_checkpoint_deletes_wal() {
     let db_path = dir.path().join("manual_cp.graph");
     let wal_path = wal_path_for(&db_path);
 
-    let db = Minigraf::open_with_options(
+    let db = ViciaDb::open_with_options(
         &db_path,
         OpenOptions {
             wal_checkpoint_threshold: usize::MAX,
@@ -277,7 +277,7 @@ fn test_manual_checkpoint_deletes_wal() {
     std::mem::forget(db);
 
     // Reopen: must recover the fact from the main file alone (no WAL needed)
-    let db2 = Minigraf::open(&db_path).unwrap();
+    let db2 = ViciaDb::open(&db_path).unwrap();
     let n2 = count_results(
         db2.execute("(query [:find ?name :where [?e :name ?name]])")
             .unwrap(),
@@ -301,7 +301,7 @@ fn test_auto_checkpoint_fires_at_threshold() {
 
     // Session 1: 2 writes → auto-checkpoint fires on 2nd write
     {
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &db_path,
             OpenOptions {
                 wal_checkpoint_threshold: 2,
@@ -328,7 +328,7 @@ fn test_auto_checkpoint_fires_at_threshold() {
     );
 
     // Session 2: facts must be in main file (no WAL replay needed)
-    let db2 = Minigraf::open(&db_path).unwrap();
+    let db2 = ViciaDb::open(&db_path).unwrap();
     let n = count_results(
         db2.execute("(query [:find ?name :where [?e :name ?name]])")
             .unwrap(),
@@ -350,7 +350,7 @@ fn test_explicit_tx_all_or_nothing_commit() {
 
     // Session 1: explicit commit then crash
     {
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &db_path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -370,7 +370,7 @@ fn test_explicit_tx_all_or_nothing_commit() {
     }
 
     // Recovery session
-    let db2 = Minigraf::open(&db_path).unwrap();
+    let db2 = ViciaDb::open(&db_path).unwrap();
     let n = count_results(
         db2.execute("(query [:find ?name :where [?e :name ?name]])")
             .unwrap(),
@@ -392,7 +392,7 @@ fn test_explicit_tx_rollback_not_persisted() {
 
     // Session 1: write then rollback
     {
-        let db = Minigraf::open(&db_path).unwrap();
+        let db = ViciaDb::open(&db_path).unwrap();
         let mut tx = db.begin_write().unwrap();
         tx.execute(r#"(transact [[:alice :name "Alice"]])"#)
             .unwrap();
@@ -402,7 +402,7 @@ fn test_explicit_tx_rollback_not_persisted() {
     }
 
     // Session 2: reopen and verify 0 facts
-    let db2 = Minigraf::open(&db_path).unwrap();
+    let db2 = ViciaDb::open(&db_path).unwrap();
     let n = count_results(
         db2.execute("(query [:find ?name :where [?e :name ?name]])")
             .unwrap(),
@@ -424,7 +424,7 @@ fn test_explicit_tx_multiple_transacts_rollback_not_persisted() {
     };
 
     {
-        let db = Minigraf::open_with_options(&db_path, opts).unwrap();
+        let db = ViciaDb::open_with_options(&db_path, opts).unwrap();
         let mut tx = db.begin_write().unwrap();
         tx.execute(r#"(transact [[:alice :name "Alice"]])"#)
             .unwrap();
@@ -433,7 +433,7 @@ fn test_explicit_tx_multiple_transacts_rollback_not_persisted() {
         // db drops here → checkpoint (nothing to checkpoint since both facts were rolled back)
     }
 
-    let db2 = Minigraf::open(&db_path).unwrap();
+    let db2 = ViciaDb::open(&db_path).unwrap();
     let n = count_results(
         db2.execute("(query [:find ?name :where [?e :name ?name]])")
             .unwrap(),
@@ -453,7 +453,7 @@ fn test_concurrent_reads_while_writer_holds_lock() {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("test.graph");
 
-    let db = Minigraf::open(&db_path).unwrap();
+    let db = ViciaDb::open(&db_path).unwrap();
     db.execute("(transact [[:alice :name \"Alice\"]])").unwrap();
     db.checkpoint().unwrap();
 
@@ -484,7 +484,7 @@ fn test_concurrent_reads_while_writer_holds_lock() {
 
 // ── 11. Implicit execute() write survives WAL replay ─────────────────────────
 
-/// Verifies that `Minigraf::execute("(transact ...)")` writes to the WAL
+/// Verifies that `ViciaDb::execute("(transact ...)")` writes to the WAL
 /// *before* applying facts to in-memory FactStorage, so that WAL replay on
 /// reopen returns the correct facts.
 ///
@@ -502,7 +502,7 @@ fn test_implicit_tx_execute_survives_replay() {
 
     // Session 1: write via implicit execute() then crash (skip Drop)
     {
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &db_path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -522,7 +522,7 @@ fn test_implicit_tx_execute_survives_replay() {
     assert!(wal_path.exists(), "WAL must exist after simulated crash");
 
     // Session 2: reopen triggers WAL replay.
-    let db2 = Minigraf::open(&db_path).unwrap();
+    let db2 = ViciaDb::open(&db_path).unwrap();
     let n = count_results(
         db2.execute("(query [:find ?name :where [?e :name ?name]])")
             .unwrap(),
@@ -547,7 +547,7 @@ fn setup_db_with_one_fact() -> (tempfile::TempDir, std::path::PathBuf, Vec<u8>) 
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("test.graph");
     {
-        let db = minigraf::db::Minigraf::open(&db_path).unwrap();
+        let db = vicia_db::db::ViciaDb::open(&db_path).unwrap();
         db.execute(r#"(transact [[:e1 :name "Alice"]])"#).unwrap();
         std::mem::forget(db);
     }
@@ -556,16 +556,16 @@ fn setup_db_with_one_fact() -> (tempfile::TempDir, std::path::PathBuf, Vec<u8>) 
 }
 
 fn query_names(db_path: &std::path::Path) -> Vec<String> {
-    let db = minigraf::db::Minigraf::open(db_path).unwrap();
+    let db = vicia_db::db::ViciaDb::open(db_path).unwrap();
     match db
         .execute("(query [:find ?n :where [?e :name ?n]])")
         .unwrap()
     {
-        minigraf::QueryResult::QueryResults { results, .. } => results
+        vicia_db::QueryResult::QueryResults { results, .. } => results
             .into_iter()
             .flatten()
             .filter_map(|v| match v {
-                minigraf::Value::String(s) => Some(s),
+                vicia_db::Value::String(s) => Some(s),
                 _ => None,
             })
             .collect(),
@@ -600,7 +600,7 @@ fn wal_recover_bad_checksum_second_entry() {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("test.graph");
     {
-        let db = minigraf::db::Minigraf::open(&db_path).unwrap();
+        let db = vicia_db::db::ViciaDb::open(&db_path).unwrap();
         db.execute(r#"(transact [[:e1 :name "Alice"]])"#).unwrap();
         db.execute(r#"(transact [[:e2 :name "Bob"]])"#).unwrap();
         std::mem::forget(db);
@@ -625,7 +625,7 @@ fn wal_recover_committed_tx_crash_before_checkpoint() {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("test.graph");
     {
-        let db = minigraf::db::Minigraf::open(&db_path).unwrap();
+        let db = vicia_db::db::ViciaDb::open(&db_path).unwrap();
         let mut tx = db.begin_write().unwrap();
         tx.execute(r#"(transact [[:e1 :name "Charlie"]])"#).unwrap();
         tx.commit().unwrap();
@@ -648,7 +648,7 @@ fn wal_recover_rollback_crash() {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("test.graph");
     {
-        let db = minigraf::db::Minigraf::open(&db_path).unwrap();
+        let db = vicia_db::db::ViciaDb::open(&db_path).unwrap();
         let mut tx = db.begin_write().unwrap();
         tx.execute(r#"(transact [[:e1 :name "Dave"]])"#).unwrap();
         tx.rollback();
@@ -667,7 +667,7 @@ fn wal_recover_multiple_committed_corrupt_tail() {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("test.graph");
     {
-        let db = minigraf::db::Minigraf::open(&db_path).unwrap();
+        let db = vicia_db::db::ViciaDb::open(&db_path).unwrap();
         db.execute(r#"(transact [[:e1 :name "Eve"]])"#).unwrap();
         db.execute(r#"(transact [[:e2 :name "Frank"]])"#).unwrap();
         std::mem::forget(db);
@@ -688,7 +688,7 @@ fn wal_corrupt_tail_never_applied() {
     let dir = tempfile::tempdir().unwrap();
     let db_path = dir.path().join("test.graph");
     {
-        let db = minigraf::db::Minigraf::open(&db_path).unwrap();
+        let db = vicia_db::db::ViciaDb::open(&db_path).unwrap();
         db.execute(r#"(transact [[:e1 :name "Grace"]])"#).unwrap();
         std::mem::forget(db);
     }
@@ -708,7 +708,7 @@ fn wal_corrupt_tail_never_applied() {
 
 #[test]
 fn write_lock_not_leaked_after_rollback() {
-    let db = minigraf::db::Minigraf::in_memory().unwrap();
+    let db = vicia_db::db::ViciaDb::in_memory().unwrap();
     let mut tx1 = db.begin_write().unwrap();
     tx1.execute(r#"(transact [[:e1 :name "Temp"]])"#).unwrap();
     tx1.rollback();
@@ -724,7 +724,7 @@ fn write_lock_not_leaked_after_rollback() {
 
 #[test]
 fn write_state_clean_after_drop() {
-    let db = minigraf::db::Minigraf::in_memory().unwrap();
+    let db = vicia_db::db::ViciaDb::in_memory().unwrap();
     {
         let mut tx = db.begin_write().unwrap();
         tx.execute(r#"(transact [[:e1 :name "Ghost"]])"#).unwrap();
@@ -743,7 +743,7 @@ fn write_state_clean_after_drop() {
 // ── 12. V2 file upgrades to V3 on checkpoint ─────────────────────────────────
 
 /// Create a v2-format `.graph` file manually (version field = 2, no
-/// `last_checkpointed_tx_count`), open it with `Minigraf`, write a fact,
+/// `last_checkpointed_tx_count`), open it with `ViciaDb`, write a fact,
 /// checkpoint, then read the raw header and verify it is current.
 #[test]
 fn test_legacy_file_opens_and_upgrades_to_current_on_checkpoint() {
@@ -782,7 +782,7 @@ fn test_legacy_file_opens_and_upgrades_to_current_on_checkpoint() {
 
     // ── Open, write a fact, and checkpoint ────────────────────────────────
     {
-        let db = Minigraf::open(&db_path).unwrap();
+        let db = ViciaDb::open(&db_path).unwrap();
         db.execute(r#"(transact [[:alice :name "Alice"]])"#)
             .unwrap();
         db.checkpoint().unwrap();
@@ -825,7 +825,7 @@ fn test_header_only_wal_preserves_tx_counter_and_acked_writes() {
 
     // Session 1: three committed transactions, explicit checkpoint retires the WAL.
     {
-        let db = Minigraf::open(&db_path).unwrap();
+        let db = ViciaDb::open(&db_path).unwrap();
         db.execute("(transact [[:a :n 1]])").unwrap();
         db.execute("(transact [[:b :n 2]])").unwrap();
         db.execute("(transact [[:c :n 3]])").unwrap();
@@ -846,7 +846,7 @@ fn test_header_only_wal_preserves_tx_counter_and_acked_writes() {
 
     // Session 2: reopen; the counter must hold the committed watermark.
     {
-        let db = Minigraf::open_with_options(
+        let db = ViciaDb::open_with_options(
             &db_path,
             OpenOptions {
                 wal_checkpoint_threshold: usize::MAX,
@@ -869,7 +869,7 @@ fn test_header_only_wal_preserves_tx_counter_and_acked_writes() {
     }
 
     // Session 3: the acknowledged write must replay.
-    let db = Minigraf::open(&db_path).unwrap();
+    let db = ViciaDb::open(&db_path).unwrap();
     let n = count_results(db.execute("(query [:find ?v :where [:d :n ?v]])").unwrap());
     assert_eq!(
         n, 1,

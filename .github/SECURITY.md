@@ -2,14 +2,19 @@
 
 ## Supported Versions
 
-Minigraf is pre-1.0 and under active development. Only the latest published
-version on [crates.io](https://crates.io/crates/minigraf) and the current
-`main` branch receive security fixes. Older versions are not patched.
+Vicia DB is pre-1.0 and under active development. Nothing is published yet —
+the `vicia-db` crate has not shipped a release — so only the current `main`
+branch receives security fixes. Once `vicia-db` is on crates.io, the latest
+published version joins `main`; older versions are not patched.
 
 | Version | Supported |
 | ------- | --------- |
-| latest (0.x) | ✅ |
+| `main` | ✅ |
+| latest published 0.x (once published) | ✅ |
 | older 0.x    | ❌ |
+
+Vulnerabilities in the published `minigraf` crate belong to
+[upstream](https://github.com/project-minigraf/minigraf), not to this fork.
 
 ## Reporting a Vulnerability
 
@@ -17,7 +22,7 @@ Please **do not** open a public GitHub issue for security vulnerabilities.
 
 Use GitHub's private vulnerability reporting instead:
 
-> **[Report a vulnerability](https://github.com/project-minigraf/minigraf/security/advisories/new)**
+> **[Report a vulnerability](https://github.com/etc-sw/vicia-db/security/advisories/new)**
 
 Include as much of the following as possible:
 
@@ -35,12 +40,12 @@ This is a solo hobby project. I will make a best-effort response:
 - **Fix or mitigation**: timeline depends on severity and complexity
 
 If a fix is warranted, it will be released as a patch version and a
-[GitHub Security Advisory](https://github.com/project-minigraf/minigraf/security/advisories)
+[GitHub Security Advisory](https://github.com/etc-sw/vicia-db/security/advisories)
 will be published.
 
 ## Scope
 
-Minigraf is an **embedded, single-file library** with no network surface.
+Vicia DB is an **embedded, single-file library** with no network surface.
 Relevant security concerns include:
 
 - Memory safety issues (e.g. unsound `unsafe` usage)

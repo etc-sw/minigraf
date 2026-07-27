@@ -1,6 +1,6 @@
-# Minigraf Error Reference
+# Vicia DB Error Reference
 
-This document covers every user-facing error produced by the core Minigraf Rust library.
+This document covers every user-facing error produced by the core Vicia DB Rust library.
 Errors surface as `anyhow::Error` values returned from `db.execute()`, `db.prepare()`,
 and related API methods.
 
@@ -147,7 +147,7 @@ appear in runtime output today — runtime codes are tracked in
 
 ## PRS — Parser Errors
 
-Parser errors occur when Minigraf cannot parse the Datalog/EDN input string.
+Parser errors occur when Vicia DB cannot parse the Datalog/EDN input string.
 They are returned immediately from `db.execute()` before any fact is read or written.
 
 See the [Datalog Reference](../../.wiki/Datalog-Reference.md) for syntax guidance.
@@ -253,7 +253,7 @@ See the [Datalog Reference](../../.wiki/Datalog-Reference.md) for syntax guidanc
 
 **Error text**: `String exceeds maximum length of 4096 bytes`
 
-**Cause**: A string value in the input exceeds 4096 bytes. Minigraf limits string lengths to keep the parser bounded.
+**Cause**: A string value in the input exceeds 4096 bytes. Vicia DB limits string lengths to keep the parser bounded.
 
 **Resolution**:
 - Store large strings externally and reference them with a path or URL string attribute.
@@ -972,7 +972,7 @@ See the [Datalog Reference](../../.wiki/Datalog-Reference.md) for syntax guidanc
 
 **Error text**: `(not ...) cannot appear inside another (not ...)`
 
-**Cause**: Minigraf's Datalog does not support double-negation via nested `not` clauses.
+**Cause**: Vicia DB's Datalog does not support double-negation via nested `not` clauses.
 
 **Resolution**:
 - Double negation is logically equivalent to the positive pattern; use the pattern directly.
@@ -1249,7 +1249,7 @@ See the [Datalog Reference](../../.wiki/Datalog-Reference.md) for syntax guidanc
 
 **Error text**: `unknown expression operator: floor-div`
 
-**Cause**: An expression clause used a function name that Minigraf does not recognise. Built-in operators include: `+`, `-`, `*`, `/`, `mod`, `quot`, `abs`, `min`, `max`, `str`, `not`, `=`, `!=`, `<`, `<=`, `>`, `>=`, `matches?`, `starts-with?`, `ends-with?`, `contains?`.
+**Cause**: An expression clause used a function name that Vicia DB does not recognise. Built-in operators include: `+`, `-`, `*`, `/`, `mod`, `quot`, `abs`, `min`, `max`, `str`, `not`, `=`, `!=`, `<`, `<=`, `>`, `>=`, `matches?`, `starts-with?`, `ends-with?`, `contains?`.
 
 **Resolution**:
 - Check spelling against the supported operator list above.
@@ -1394,7 +1394,7 @@ predicate evaluation, or fact transacting.
 
 **Resolution**:
 - Use a `#uuid "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"` literal for a specific entity.
-- Use a new unique symbol if creating a new entity and let Minigraf assign a UUID.
+- Use a new unique symbol if creating a new entity and let Vicia DB assign a UUID.
 
 **Example**:
 ```datalog
@@ -1421,7 +1421,7 @@ predicate evaluation, or fact transacting.
 
 **Error text**: `Cannot transact a pseudo-attribute`
 
-**Cause**: A pseudo-attribute (an internal Minigraf metadata attribute used for system bookkeeping) was used as a fact attribute in `transact`. Pseudo-attributes are reserved and cannot be written by user code.
+**Cause**: A pseudo-attribute (an internal Vicia DB metadata attribute used for system bookkeeping) was used as a fact attribute in `transact`. Pseudo-attributes are reserved and cannot be written by user code.
 
 **Resolution**:
 - Use only user-defined attributes (e.g. `:person/name`, `:app/status`).
@@ -1437,7 +1437,7 @@ predicate evaluation, or fact transacting.
 
 **Error text**: `Invalid value: [1, 2, 3]`
 
-**Cause**: A value in a fact is of a type that Minigraf cannot store. Supported value types are: string, integer (i64), float (f64), boolean, UUID ref (`Value::Ref`), and keyword.
+**Cause**: A value in a fact is of a type that Vicia DB cannot store. Supported value types are: string, integer (i64), float (f64), boolean, UUID ref (`Value::Ref`), and keyword.
 
 **Resolution**:
 - Convert the value to a supported type.
@@ -1536,12 +1536,12 @@ Native pre-header variant: `Existing database is truncated: size=12 bytes, expec
 
 **Cause**: The `.graph` file is truncated — shorter than the minimum header
 or page-0 size. Happens if the file was partially written (e.g. a crash during
-the initial `save()`) or if a non-Minigraf file was passed by mistake. Native
+the initial `save()`) or if a non-Vicia DB file was passed by mistake. Native
 open treats a zero-byte path as an intentional new database, but any non-empty
 prefix shorter than 4096 bytes is rejected without rewriting it.
 
 **Resolution**:
-- Restore the file from a backup. If no backup exists and the file was newly created, delete it and let Minigraf create a fresh one. See the [file format section in README](../README.md#file-format).
+- Restore the file from a backup. If no backup exists and the file was newly created, delete it and let Vicia DB create a fresh one. See the [file format section in README](../README.md#file-format).
 
 **Scenario**: Opening a `.graph` file that was truncated by a disk-full condition during the first `db.save()` or `db.checkpoint()` call.
 
@@ -1549,12 +1549,12 @@ prefix shorter than 4096 bytes is rejected without rewriting it.
 
 **Error text**: `Invalid magic number: not a .graph file`
 
-**Cause**: The first 4 bytes of the file are not the Minigraf magic bytes `MGRF`. The path points to a non-Minigraf file, or the file header was overwritten by another process.
+**Cause**: The first 4 bytes of the file are not the Vicia DB magic bytes `MGRF`. The path points to a non-Vicia DB file, or the file header was overwritten by another process.
 
 **Resolution**:
-- Verify the file path is correct and points to a `.graph` file created by Minigraf. Do not open SQLite databases, JSON files, or other formats with Minigraf.
+- Verify the file path is correct and points to a `.graph` file created by Vicia DB. Do not open SQLite databases, JSON files, or other formats with Vicia DB.
 
-**Scenario**: `Minigraf::open("config.json")` — a wrong file path was passed.
+**Scenario**: `ViciaDb::open("config.json")` — a wrong file path was passed.
 
 ### STG-003 Invalid v4/v5/v6 header too short
 
@@ -1593,12 +1593,12 @@ prefix shorter than 4096 bytes is rejected without rewriting it.
 
 **Error text**: `Unsupported format version: 8 (supported: 1-7)`
 
-**Cause**: The file was written by a newer version of Minigraf than is currently installed. The format version number in the header is outside the range this library can read.
+**Cause**: The file was written by a newer version of Vicia DB than is currently installed. The format version number in the header is outside the range this library can read.
 
 **Resolution**:
-- Upgrade the Minigraf library to a version that supports the file's format. Do not downgrade a database file to an older format — upgrade the library instead. See the [file format section in README](../README.md#file-format).
+- Upgrade the Vicia DB library to a version that supports the file's format. Do not downgrade a database file to an older format — upgrade the library instead. See the [file format section in README](../README.md#file-format).
 
-**Scenario**: A `.graph` file created with a future version of Minigraf is opened with the current library.
+**Scenario**: A `.graph` file created with a future version of Vicia DB is opened with the current library.
 
 ### STG-007 page_count must be greater than 0
 
@@ -1642,7 +1642,7 @@ prefix shorter than 4096 bytes is rejected without rewriting it.
 **Resolution**:
 - Check file system permissions (the process must have read access). Verify the file path still exists. Check for disk errors with your OS's filesystem check tool.
 
-**Scenario**: `Minigraf::open("/data/app.graph")` fails because the process does not have read permission on the file.
+**Scenario**: `ViciaDb::open("/data/app.graph")` fails because the process does not have read permission on the file.
 
 ### STG-011 Internal page has no children
 
@@ -1706,7 +1706,7 @@ prefix shorter than 4096 bytes is rejected without rewriting it.
 **Cause**: An internal Rust mutex guarding the storage backend was poisoned — a previous operation panicked while holding it.
 
 **Resolution**:
-- Restart the process. The WAL will be replayed on the next `Minigraf::open()` to recover committed facts. If panics recur, investigate the application code for panics occurring inside write operations.
+- Restart the process. The WAL will be replayed on the next `ViciaDb::open()` to recover committed facts. If panics recur, investigate the application code for panics occurring inside write operations.
 
 **Scenario**: A write closure panics mid-transaction, poisoning the backend mutex and preventing all subsequent reads and writes.
 
@@ -1875,22 +1875,22 @@ The WAL is replayed on open and deleted on checkpoint.
 **Cause**: The sidecar `.wal` file does not start with the expected WAL magic bytes. The file may have been replaced, corrupted, or created by an incompatible tool.
 
 **Resolution**:
-- If the WAL file is stale or corrupt, delete `<dbname>.wal` and reopen the database — Minigraf will replay only from the committed state in the `.graph` file.
+- If the WAL file is stale or corrupt, delete `<dbname>.wal` and reopen the database — Vicia DB will replay only from the committed state in the `.graph` file.
 - Do not manually create or edit `.wal` files.
 
-**Scenario**: `my-db.wal` was accidentally replaced with an empty file before `Minigraf::open("my-db.graph")` was called.
+**Scenario**: `my-db.wal` was accidentally replaced with an empty file before `ViciaDb::open("my-db.graph")` was called.
 
 ### WAL-002 Unsupported WAL version
 
 **Error text**: `Unsupported WAL version: 3 (expected 2)`
 
-**Cause**: The `.wal` file was written by a version of Minigraf with a different WAL format. This can occur when downgrading the library after a WAL was written by a newer version.
+**Cause**: The `.wal` file was written by a version of Vicia DB with a different WAL format. This can occur when downgrading the library after a WAL was written by a newer version.
 
 **Resolution**:
 - Delete the `.wal` file if it is from an incomplete or stale session (no data is lost — committed facts are in the `.graph` file).
 - If the WAL contains uncommitted in-flight data you need to recover, upgrade the library to the version that wrote the WAL before reopening.
 
-**Scenario**: A `.wal` file written by a pre-release version of Minigraf is opened with the stable release, which uses a different WAL version number.
+**Scenario**: A `.wal` file written by a pre-release version of Vicia DB is opened with the stable release, which uses a different WAL version number.
 
 ### WAL-003 Fact serialised size exceeds maximum
 
@@ -1938,11 +1938,11 @@ The WAL is replayed on open and deleted on checkpoint.
 
 **Error text**: `failed to delete WAL file my-db.wal: permission denied`
 
-**Cause**: After a successful `checkpoint()`, Minigraf could not delete the sidecar `.wal` file. This is typically a file system permissions issue.
+**Cause**: After a successful `checkpoint()`, Vicia DB could not delete the sidecar `.wal` file. This is typically a file system permissions issue.
 
 **Resolution**:
 - Check that the process has write access to the directory containing the `.graph` file (WAL deletion requires directory write permission, not just file write permission).
-- The `.wal` file is safe to delete manually — Minigraf will create a new one on the next write.
+- The `.wal` file is safe to delete manually — Vicia DB will create a new one on the next write.
 
 **Scenario**: `db.checkpoint()` succeeds but the process lacks directory write permission, preventing deletion of `my-db.wal`.
 
@@ -1950,7 +1950,7 @@ The WAL is replayed on open and deleted on checkpoint.
 
 ## API — Database API Errors
 
-API errors indicate a violated contract in how the public `Minigraf` or
+API errors indicate a violated contract in how the public `ViciaDb` or
 `WriteTransaction` API is used.
 
 ### API-001 Write lock poisoned
@@ -1960,7 +1960,7 @@ API errors indicate a violated contract in how the public `Minigraf` or
 **Cause**: A previous `WriteTransaction` panicked while holding the write lock. Rust's mutex poisoning mechanism prevents further writes to protect data integrity.
 
 **Resolution**:
-- Restart the process — the WAL will be replayed on the next `Minigraf::open()` call to recover any committed facts. If panics are occurring regularly, investigate the root cause in your application code before retrying writes.
+- Restart the process — the WAL will be replayed on the next `ViciaDb::open()` call to recover any committed facts. If panics are occurring regularly, investigate the root cause in your application code before retrying writes.
 
 **Scenario**: `db.begin_write()` is called after a previous write closure panicked mid-transaction, poisoning the lock.
 
@@ -1968,7 +1968,7 @@ API errors indicate a violated contract in how the public `Minigraf` or
 
 **Error text**: `unexpected command variant in write path`
 
-**Cause**: An internal routing error — a command type not expected in the write path was dispatched there. This indicates a bug in the Minigraf library, not a user mistake.
+**Cause**: An internal routing error — a command type not expected in the write path was dispatched there. This indicates a bug in the Vicia DB library, not a user mistake.
 
 **Resolution**:
 - File a bug report with the exact input string that triggered this error.
@@ -2088,15 +2088,15 @@ db.execute("(rule [(ancestor ?x ?y) [?x :parent ?y]])")?;
 **Resolution**:
 - File a bug report with the sequence of API calls that produced this error.
 
-**Scenario**: A code path in the library called a write operation before the WAL was set up during `Minigraf::open()`.
+**Scenario**: A code path in the library called a write operation before the WAL was set up during `ViciaDb::open()`.
 
 ---
 
 ## Appendix: Internal Errors
 
-The following error strings indicate a bug in the Minigraf library itself, not a
+The following error strings indicate a bug in the Vicia DB library itself, not a
 user mistake. If you encounter one, please
-[open a GitHub issue](https://github.com/project-minigraf/minigraf/issues/new)
+[open a GitHub issue](https://github.com/etc-sw/vicia-db/issues/new)
 with the full error message and the input that triggered it.
 
 - `internal parser error: expected keyword token`

@@ -1,6 +1,6 @@
 //! A7 kill -9 durability harness (harrekki P0 #3).
 //!
-//! Spawns real `minigraf --session --file` child processes, pipelines framed
+//! Spawns real `vicia-db --session --file` child processes, pipelines framed
 //! NDJSON requests at them, and SIGKILLs the child at randomized instants —
 //! including mid-checkpoint — over many kill cycles on the same growing
 //! `.graph` lineage. After every kill the parent reaps the child, reopens the
@@ -49,7 +49,6 @@
 
 #![cfg(all(unix, not(target_arch = "wasm32")))]
 
-use minigraf::{EntityId, OpenOptions, QueryResult, Value};
 use serde_json::Value as JVal;
 use std::collections::{BTreeMap, HashMap};
 use std::io::{BufRead, BufReader, Read, Write};
@@ -60,6 +59,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
+use vicia_db::{EntityId, OpenOptions, QueryResult, Value};
 
 const DEFAULT_SEED: u64 = 0xA7A7_2026_0711;
 const ATTR_SEQ: &str = ":h/seq";
@@ -397,7 +397,7 @@ fn generate_workload(
 // ─── Child session lifecycle ─────────────────────────────────────────────────
 
 fn spawn_session_child(db_path: &Path, stderr: Stdio) -> Child {
-    Command::new(env!("CARGO_BIN_EXE_minigraf"))
+    Command::new(env!("CARGO_BIN_EXE_vicia-db"))
         .arg("--session")
         .arg("--file")
         .arg(db_path)
@@ -405,7 +405,7 @@ fn spawn_session_child(db_path: &Path, stderr: Stdio) -> Child {
         .stdout(Stdio::piped())
         .stderr(stderr)
         .spawn()
-        .expect("spawn minigraf --session child")
+        .expect("spawn vicia-db --session child")
 }
 
 fn sync_round_trip(stdin: &mut ChildStdin, stdout: &mut BufReader<ChildStdout>, req: &str) -> JVal {
@@ -850,8 +850,8 @@ fn verify_cycle(
     for r in &export {
         max_tx = max_tx.max(r.tx_count);
         let finite_window = match r.valid_time {
-            minigraf::FactValidTime::Window { valid_to, .. } => valid_to != i64::MAX,
-            minigraf::FactValidTime::AllValidTime => {
+            vicia_db::FactValidTime::Window { valid_to, .. } => valid_to != i64::MAX,
+            vicia_db::FactValidTime::AllValidTime => {
                 return Err(format!(
                     "legacy unscoped retraction at tx_count {} (harness never emits these)",
                     r.tx_count

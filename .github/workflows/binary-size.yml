@@ -15,9 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     # Budgets are defined by the size-budget table in PHILOSOPHY.md.
     #
-    # This job used to measure target/release/minigraf — the CLI/REPL binary —
+    # This job used to measure target/release/vicia-db — the CLI/REPL binary —
     # against the engine budget, and reported a 1439 KiB "failure" against a
-    # 1024 KiB limit. The engine was never over budget: libminigraf.so is
+    # 1024 KiB limit. The engine was never over budget: libvicia_db.so is
     # 302 KiB. The check was comparing the wrong artifact.
     env:
       ENGINE_LIMIT_BYTES: 1048576   # 1 MiB — the philosophy commitment
@@ -34,7 +34,7 @@ jobs:
 
       - name: Check core engine size
         run: |
-          ENGINE=target/release/libminigraf.so
+          ENGINE=target/release/libvicia_db.so
           if [ ! -f "$ENGINE" ]; then
             echo "FAIL: $ENGINE was not produced; the cdylib crate-type may have been removed"
             exit 1
@@ -49,7 +49,7 @@ jobs:
 
       - name: Check CLI binary size
         run: |
-          BINARY=target/release/minigraf
+          BINARY=target/release/vicia-db
           SIZE=$(stat -c %s "$BINARY")
           echo "CLI binary: $(( SIZE / 1024 )) KiB (runaway guard: $(( CLI_LIMIT_BYTES / 1024 )) KiB)"
           if [ "$SIZE" -gt "$CLI_LIMIT_BYTES" ]; then

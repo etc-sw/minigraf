@@ -1,8 +1,8 @@
 //! Integration tests for Phase 7.1b: not-join (existential negation).
 
-use minigraf::{Minigraf, OpenOptions, QueryResult};
+use vicia_db::{OpenOptions, QueryResult, ViciaDb};
 
-fn in_memory_db() -> Minigraf {
+fn in_memory_db() -> ViciaDb {
     OpenOptions::new().open_memory().unwrap()
 }
 

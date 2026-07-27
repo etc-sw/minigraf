@@ -1,18 +1,18 @@
 //! A6 framed pipe session protocol tests.
 //!
 //! In-process tests drive `Session::run` over byte buffers; the child-process
-//! tests spawn the real `minigraf --session` binary and hold ONE session for
+//! tests spawn the real `vicia-db --session` binary and hold ONE session for
 //! 10k mixed transact/query round-trips (the A6 gate), plus malformed-input
 //! determinism over a real pipe.
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::Minigraf;
-use minigraf::session::Session;
 use serde_json::Value as JVal;
+use vicia_db::ViciaDb;
+use vicia_db::session::Session;
 
 fn run_session(requests: &str) -> Vec<JVal> {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     let mut session = Session::new(db);
     let mut out = Vec::new();
     session.run(requests.as_bytes(), &mut out).unwrap();
@@ -319,11 +319,11 @@ fn backup_field_errors_and_in_memory_rejection_keep_session_alive() {
 // ─── Child-process tests: the real binary over a real pipe ──────────────────
 
 mod child_process {
-    use minigraf::Minigraf;
     use serde_json::Value as JVal;
     use serde_json::json;
     use std::io::{BufRead, BufReader, Write};
     use std::process::{Child, ChildStdin, ChildStdout, Command, Stdio};
+    use vicia_db::ViciaDb;
 
     struct ChildSession {
         child: Child,
@@ -333,14 +333,14 @@ mod child_process {
 
     impl ChildSession {
         fn spawn(extra_args: &[&str]) -> Self {
-            let mut cmd = Command::new(env!("CARGO_BIN_EXE_minigraf"));
+            let mut cmd = Command::new(env!("CARGO_BIN_EXE_vicia-db"));
             cmd.arg("--session");
             cmd.args(extra_args);
             let mut child = cmd
                 .stdin(Stdio::piped())
                 .stdout(Stdio::piped())
                 .spawn()
-                .expect("spawn minigraf --session");
+                .expect("spawn vicia-db --session");
             let stdin = child.stdin.take().unwrap();
             let stdout = BufReader::new(child.stdout.take().unwrap());
             Self {
@@ -483,7 +483,7 @@ mod child_process {
         let dir = tempfile::tempdir().unwrap();
         let db_path = dir.path().join("fatal-read.graph");
         {
-            let db = Minigraf::open(&db_path).unwrap();
+            let db = ViciaDb::open(&db_path).unwrap();
             let mut seed = String::from("(transact [");
             for index in 0..400 {
                 seed.push_str(&format!("[:seed/e{index} :seed/value {index}]"));
@@ -515,7 +515,7 @@ mod child_process {
         session.wait_for_failure();
 
         std::fs::write(&db_path, &published_image).unwrap();
-        let reopened = Minigraf::open(&db_path).unwrap();
+        let reopened = ViciaDb::open(&db_path).unwrap();
         let facts = reopened.export_fact_log_since(1).unwrap();
         assert_eq!(facts.len(), 1, "acknowledged WAL fact must replay");
         assert_eq!(facts[0].attribute, ":value");
@@ -554,7 +554,7 @@ mod child_process {
         );
 
         {
-            let snapshot = Minigraf::open(&backup_path).unwrap();
+            let snapshot = ViciaDb::open(&backup_path).unwrap();
             assert_eq!(snapshot.current_tx_count(), 1);
             assert_eq!(snapshot.export_fact_log().unwrap().len(), 1);
         }
@@ -574,7 +574,7 @@ mod child_process {
         assert!(status["result"]["last_checkpoint_unix_ms"].is_u64());
 
         {
-            let snapshot = Minigraf::open(&backup_path).unwrap();
+            let snapshot = ViciaDb::open(&backup_path).unwrap();
             assert_eq!(snapshot.current_tx_count(), 1);
             assert_eq!(snapshot.export_fact_log().unwrap().len(), 1);
         }

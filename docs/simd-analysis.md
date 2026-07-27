@@ -87,7 +87,7 @@ The practical conclusion: for the current array-of-structs `Fact` storage layout
 
 ## Full-Query Context
 
-From `time_travel/as_of_counter` and `time_travel/valid_at` (full Minigraf query stack, including parsing, transaction overhead, and fact materialization):
+From `time_travel/as_of_counter` and `time_travel/valid_at` (full Vicia DB query stack, including parsing, transaction overhead, and fact materialization):
 
 | Benchmark                          | 1k facts   | 10k facts  | 100k facts | 1M facts   |
 |------------------------------------|------------|------------|------------|------------|

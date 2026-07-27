@@ -1,14 +1,14 @@
 use anyhow::{Context, Result, bail};
-use minigraf::{
-    CurrentProjectionCandidate, MaintenanceCheckpointEffect, MaintenanceLedger, Minigraf,
-    OpenOptions,
-};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Read;
 use std::path::Path;
 use std::process::{Command, Stdio};
 use std::time::Instant;
+use vicia_db::{
+    CurrentProjectionCandidate, MaintenanceCheckpointEffect, MaintenanceLedger, OpenOptions,
+    ViciaDb,
+};
 
 const ATTRIBUTE: &str = ":projection/value";
 const TEMPORAL_BOUNDARY: i64 = 1_735_689_600_000;
@@ -911,7 +911,7 @@ fn select_candidate<'a>(
 }
 
 fn aggregate(
-    db: &Minigraf,
+    db: &ViciaDb,
     candidate: &CurrentProjectionCandidate,
     valid_at: i64,
 ) -> Result<(u64, i128)> {
@@ -919,7 +919,7 @@ fn aggregate(
 }
 
 fn timed_aggregate(
-    db: &Minigraf,
+    db: &ViciaDb,
     candidate: &CurrentProjectionCandidate,
     valid_at: i64,
 ) -> Result<TimedAggregate> {
@@ -1254,7 +1254,7 @@ fn ensure_expected(facts: u64, valid_at: i64, actual: (u64, i128)) -> Result<()>
     Ok(())
 }
 
-fn open(path: &Path) -> Result<Minigraf> {
+fn open(path: &Path) -> Result<ViciaDb> {
     let mut options = OpenOptions::new();
     options.wal_checkpoint_threshold = usize::MAX;
     options.path(path).open()

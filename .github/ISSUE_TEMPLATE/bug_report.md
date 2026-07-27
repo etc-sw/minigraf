@@ -26,7 +26,7 @@ What actually happened. Include the full error message or panic output if applic
 
 ## Environment
 
-- Minigraf version:
+- Vicia DB version:
 - Rust version (`rustc --version`):
 - OS:
 

@@ -1,7 +1,6 @@
 #![cfg(not(target_arch = "wasm32"))]
 
 use anyhow::{Context, Result, bail};
-use minigraf::{CheckpointConstructionDiagnostics, Minigraf, OpenOptions, QueryResult};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
@@ -9,6 +8,7 @@ use std::process::Command;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
+use vicia_db::{CheckpointConstructionDiagnostics, OpenOptions, QueryResult, ViciaDb};
 
 const SCHEMA: &str = "vicia.checkpoint-construction.v2";
 const PENDING: &[u64] = &[1, 10, 100, 1_000];
@@ -180,7 +180,7 @@ fn run(profile: Profile, output: &Path) -> Result<()> {
 
 fn build_base(path: &Path, facts: u64) -> Result<()> {
     remove_graph(path);
-    let db = Minigraf::open_with_options(
+    let db = ViciaDb::open_with_options(
         path,
         OpenOptions {
             wal_checkpoint_threshold: usize::MAX,
@@ -205,7 +205,7 @@ fn measure_sample(base: &Path, path: &Path, base_facts: u64, pending: u64) -> Re
     remove_graph(path);
     fs::copy(base, path)?;
     fs::OpenOptions::new().write(true).open(path)?.sync_all()?;
-    let db = Minigraf::open_with_options(
+    let db = ViciaDb::open_with_options(
         path,
         OpenOptions {
             wal_checkpoint_threshold: usize::MAX,
@@ -237,7 +237,7 @@ fn measure_sample(base: &Path, path: &Path, base_facts: u64, pending: u64) -> Re
     })
 }
 
-fn aggregate(db: &Minigraf) -> Result<(u64, i128)> {
+fn aggregate(db: &ViciaDb) -> Result<(u64, i128)> {
     let QueryResult::QueryResults { results, .. } =
         db.execute("(query [:find (count ?v) (sum ?v) :where [?e :checkpoint/value ?v]])")?
     else {

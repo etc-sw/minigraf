@@ -5,8 +5,8 @@
 
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::{Minigraf, OpenOptions, QueryResult, Value};
 use uuid::Uuid;
+use vicia_db::{OpenOptions, QueryResult, Value, ViciaDb};
 
 type TestResult<T = ()> = Result<T, Box<dyn std::error::Error>>;
 
@@ -17,11 +17,11 @@ fn rows(result: QueryResult) -> TestResult<Vec<Vec<Value>>> {
     }
 }
 
-fn query_rows(db: &Minigraf, query: &str) -> TestResult<Vec<Vec<Value>>> {
+fn query_rows(db: &ViciaDb, query: &str) -> TestResult<Vec<Vec<Value>>> {
     rows(db.execute(query)?)
 }
 
-fn count_rows(db: &Minigraf, query: &str) -> TestResult<usize> {
+fn count_rows(db: &ViciaDb, query: &str) -> TestResult<usize> {
     Ok(query_rows(db, query)?.len())
 }
 
@@ -57,7 +57,7 @@ fn contains_ref(rows: &[Vec<Value>], value: Uuid) -> bool {
 
 #[test]
 fn same_entity_attr_values_survive_in_memory_indexed_public_queries() -> TestResult {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
 
     db.execute(
         r#"(transact [
@@ -104,7 +104,7 @@ fn same_entity_attr_values_survive_in_memory_indexed_public_queries() -> TestRes
 
 #[test]
 fn ten_same_entity_attr_values_survive_in_one_transaction() -> TestResult {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
 
     db.execute(
         r#"(transact [
@@ -138,7 +138,7 @@ fn ten_same_entity_attr_values_survive_in_one_transaction() -> TestResult {
 
 #[test]
 fn mixed_value_types_survive_same_entity_attr_batch() -> TestResult {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
 
     db.execute(
         r#"(transact [
@@ -163,7 +163,7 @@ fn mixed_value_types_survive_same_entity_attr_batch() -> TestResult {
 
 #[test]
 fn ref_values_survive_same_entity_attr_edge_batch() -> TestResult {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     let source = Uuid::parse_str("00000000-0000-0000-0000-000000000101")?;
     let target_a = Uuid::parse_str("00000000-0000-0000-0000-000000000201")?;
     let target_b = Uuid::parse_str("00000000-0000-0000-0000-000000000202")?;
@@ -223,7 +223,7 @@ fn ref_values_survive_same_entity_attr_edge_batch() -> TestResult {
 
 #[test]
 fn same_entity_attr_values_survive_as_of_and_retract_all() -> TestResult {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
 
     db.execute(
         r#"(transact [
@@ -277,7 +277,7 @@ fn same_entity_attr_values_survive_as_of_and_retract_all() -> TestResult {
 
 #[test]
 fn per_fact_valid_windows_survive_same_entity_attr_batch() -> TestResult {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
 
     db.execute(
         r#"(transact [

@@ -38,13 +38,13 @@ fn query_uses_per_fact_pseudo_attr(query: &DatalogQuery) -> bool {
     clauses_use_per_fact_pseudo_attr(&query.where_clauses)
 }
 
-/// The result of executing a Datalog command via [`crate::db::Minigraf::execute`].
+/// The result of executing a Datalog command via [`crate::db::ViciaDb::execute`].
 ///
 /// Pattern-match on this to distinguish query results from write confirmations:
 ///
 /// ```
-/// # use minigraf::{Minigraf, QueryResult};
-/// # let db = Minigraf::in_memory().unwrap();
+/// # use vicia_db::{ViciaDb, QueryResult};
+/// # let db = ViciaDb::in_memory().unwrap();
 /// # db.execute(r#"(transact [[:alice :person/name "Alice"]])"#).unwrap();
 /// match db.execute("(query [:find ?name :where [?e :person/name ?name]])").unwrap() {
 ///     QueryResult::QueryResults { vars, results } => {
@@ -61,11 +61,11 @@ fn query_uses_per_fact_pseudo_attr(query: &DatalogQuery) -> bool {
 #[derive(Debug, Clone, PartialEq)]
 pub enum QueryResult {
     /// Transaction completed successfully. The inner value is the transaction ID
-    /// (Unix milliseconds). Use [`crate::db::Minigraf::current_tx_count`] to retrieve
+    /// (Unix milliseconds). Use [`crate::db::ViciaDb::current_tx_count`] to retrieve
     /// the monotonic counter (`:as-of N` value) after a write.
     Transacted(TxId),
     /// Retraction completed successfully. The inner value is the transaction ID
-    /// (Unix milliseconds). Use [`crate::db::Minigraf::current_tx_count`] to retrieve
+    /// (Unix milliseconds). Use [`crate::db::ViciaDb::current_tx_count`] to retrieve
     /// the monotonic counter (`:as-of N` value) after a write.
     Retracted(TxId),
     /// Bulk valid-time closure (`(forget ...)`) completed successfully.
@@ -279,7 +279,7 @@ impl DatalogExecutor {
 
     /// Create a `DatalogExecutor` with a shared rule registry and function registry.
     ///
-    /// Used by `Minigraf` to share registries across all `execute()` calls.
+    /// Used by `ViciaDb` to share registries across all `execute()` calls.
     pub fn new_with_rules_and_functions(
         storage: FactStorage,
         rules: Arc<RwLock<RuleRegistry>>,
@@ -402,7 +402,7 @@ impl DatalogExecutor {
 
     /// Convenience constructor for tests. Shares `rules` with other executors but creates
     /// a fresh `FunctionRegistry::with_builtins()`. Production code uses
-    /// [`new_with_rules_and_functions`] to share the registry from `Minigraf::Inner`.
+    /// [`new_with_rules_and_functions`] to share the registry from `ViciaDb::Inner`.
     #[allow(dead_code)]
     pub fn new_with_rules(storage: FactStorage, rules: Arc<RwLock<RuleRegistry>>) -> Self {
         Self::new_with_rules_and_functions(
@@ -414,7 +414,7 @@ impl DatalogExecutor {
 
     /// Create a `DatalogExecutor` with custom complexity limits.
     ///
-    /// Used by `Minigraf` when `OpenOptions` specifies non-default limits.
+    /// Used by `ViciaDb` when `OpenOptions` specifies non-default limits.
     #[allow(dead_code)]
     pub fn new_with_limits(
         storage: FactStorage,
@@ -470,7 +470,7 @@ impl DatalogExecutor {
             // Forget needs the WAL-first write path and the write lock, which
             // the bare executor does not own.
             DatalogCommand::Forget(_) => Err(anyhow::anyhow!(
-                "(forget ...) must run via Minigraf::execute"
+                "(forget ...) must run via ViciaDb::execute"
             )),
         }
     }

@@ -15,9 +15,9 @@ Reference snapshots:
 
 ## Philosophy Fit
 
-The usable pieces fit Minigraf only if they are translated into the existing embedded, single-file, dependency-light storage model. This survey does not recommend adopting GrafeoDB, Fjall, redb, LSM machinery, vector indexes, or a new database backend. The useful direction is narrower:
+The usable pieces fit Vicia DB only if they are translated into the existing embedded, single-file, dependency-light storage model. This survey does not recommend adopting GrafeoDB, Fjall, redb, LSM machinery, vector indexes, or a new database backend. The useful direction is narrower:
 
-- Keep a committed base and append-friendly delta/index segments inside Minigraf's storage boundary.
+- Keep a committed base and append-friendly delta/index segments inside Vicia DB's storage boundary.
 - Keep full-history fact identity across base and delta.
 - Make small append checkpoint/flush cost scale with pending/delta size rather than total committed graph size.
 - Preserve crash recovery by publishing new roots only after all referenced pages or segments are durable.
@@ -27,13 +27,13 @@ The usable pieces fit Minigraf only if they are translated into the existing emb
 
 The easiest pieces to port are not data structures; they are invariants.
 
-| Source | Portable to Minigraf | Do not port |
+| Source | Portable to Vicia DB | Do not port |
 | --- | --- | --- |
 | GrafeoDB compact store | Base plus mutable overlay lifecycle; dirty/deleted state as first-class metadata; overlay-only visibility tests | Columnar property tables, CSR adjacency, vector/search stack, LPG object-copy semantics |
 | Fjall | Batch framing, journal recovery, persisted watermarks, oldest-to-newest replay, snapshot-safe compaction watermarks | Full LSM tree, keyspace framework, background worker stack, compression/filter dependencies |
 | redb | Double-buffered root publish discipline, per-root/slot checksums, recovery fallback to previous valid root, optional 2-phase mode for stricter durability | Page allocator, full MVCC page model, redb as a dependency |
 
-The next Minigraf design note should specify a delta index layer, not an external storage replacement.
+The next Vicia DB design note should specify a delta index layer, not an external storage replacement.
 
 ## 1. Grafeo Compact Store Concept
 
@@ -44,7 +44,7 @@ Reference:
 
 GrafeoDB's user guide frames `compact()` as a conversion from a mutable graph store into an immutable query-optimized base plus mutable overlay. New inserts and property updates land in the overlay, and `recompact()` folds the overlay into a fresh compact base.
 
-Minigraf translation:
+Vicia DB translation:
 
 - The "base" is the current checkpointed fact pages plus four committed B+tree indexes.
 - The "overlay" should be append-friendly delta index segments that cover facts newer than the base root.
@@ -65,13 +65,13 @@ Reference:
 
 Grafeo's `LayeredStore` keeps a read-only base, a mutable overlay, dirty node/edge sets, deleted-from-base sets, a deletion dirty bit, and a merge guard. Reads first account for deletion/dirty metadata, then combine base and overlay where needed. Writes and deletes update overlay state and explicit deletion metadata.
 
-Minigraf translation:
+Vicia DB translation:
 
 - Delta state must distinguish base facts, delta-only facts, and tombstone/retraction facts.
 - Deletion/retraction visibility cannot be reconstructed from absence after reopen. It must be persisted in delta entries or segment metadata.
 - Fact identity must remain full-history identity across segments: `entity`, `attribute`, encoded `value`, `valid_from`, `valid_to`, `tx_count`, `tx_id`, and `asserted`.
 - A compact/merge guard is still useful, but it can be a narrow write-lock discipline rather than ArcSwap/LpgStore machinery.
-- Overlay promotion should not copy whole objects as Grafeo does; Minigraf already has immutable EAV facts and explicit retractions.
+- Overlay promotion should not copy whole objects as Grafeo does; Vicia DB already has immutable EAV facts and explicit retractions.
 
 Easy implementation candidate: a `DeltaIndexReader` that implements the same committed range-scan shape as the current B+tree reader and merges base B+tree ranges with sorted delta ranges.
 
@@ -85,7 +85,7 @@ Reference:
 
 The important failure mode is overlay invisibility after compaction. Grafeo had a path where post-compact overlay-only nodes were not dirty base nodes, so a reader could fall through to the compact base and treat them as missing. Related tests cover overlay-only nodes, overlay edges, base-to-overlay edges, overlay properties, recompact visibility, and deleted base nodes staying deleted after reopen.
 
-Minigraf guardrails:
+Vicia DB guardrails:
 
 - Delta-only facts must be visible even when no base fact has the same E/A/V.
 - `Value::Ref` edges must work when either side of the edge is introduced in delta.
@@ -94,7 +94,7 @@ Minigraf guardrails:
 - Writes after recompact must land in a fresh delta and remain visible.
 - Crash or concurrent compaction tests should prove that writes are never lost across publish boundaries.
 
-These tests are more portable than the implementation. They should drive Minigraf's first delta-index test plan.
+These tests are more portable than the implementation. They should drive Vicia DB's first delta-index test plan.
 
 ## 4. Fjall Journal, Flush, and Compaction
 
@@ -114,13 +114,13 @@ Fjall frames every journal batch as start marker, fixed item count, batch seqno,
 
 The write path is also useful: append batch to journal, optionally persist it, apply it to mutable state, then publish the visible seqno. Recovery replays sealed journals oldest-to-newest, tracks per-keyspace watermarks, and only deletes old journals once persisted table seqnos cover the journal watermarks. Flush and compaction use a snapshot-safe GC watermark.
 
-Minigraf translation:
+Vicia DB translation:
 
 - A delta segment needs explicit batch framing: segment id, base root/epoch, tx range, entry counts, per-index counts, checksum, and committed terminator.
 - On open, only complete committed delta segments enter the visible manifest. An incomplete tail is ignored or truncated to the last committed segment boundary.
 - Reader visibility should be published only after the delta segment is durable.
 - Segment cleanup must be gated by a persisted base root that covers the segment's high `tx_count`.
-- Segment cleanup must also respect open read/as-of snapshots if Minigraf later supports long-lived snapshot handles.
+- Segment cleanup must also respect open read/as-of snapshots if Vicia DB later supports long-lived snapshot handles.
 - Recovery should replay base plus delta manifests in tx order; never assume directory/file order if the single-file metadata contains explicit segment ids.
 
 Useful but deferred: Bloom filters can be segment-level skip metadata for E/A/V range scans. They should not become a general query-engine rewrite.
@@ -140,17 +140,17 @@ Reference:
 
 redb stores transaction roots in double-buffered commit slots. A single primary bit selects the newest slot. Each slot carries a transaction id and checksum; tree pages carry checksums in a Merkle-like chain. The default durable path writes all data/checksums and the secondary slot, flips the primary bit, then fsyncs. On recovery, if the selected primary is corrupt or older, redb falls back to the previous valid slot. Its tests simulate a failed commit where the primary bit reaches disk but the new primary slot is corrupt.
 
-Minigraf translation:
+Vicia DB translation:
 
-- Current Minigraf checkpoint already treats the header write as the commit point after fact and index pages are synced (`src/storage/persistent_facts.rs:911` and `src/storage/persistent_facts.rs:922`).
+- Current Vicia DB checkpoint already treats the header write as the commit point after fact and index pages are synced (`src/storage/persistent_facts.rs:911` and `src/storage/persistent_facts.rs:922`).
 - A delta-index design should keep that discipline: write all delta pages/segment metadata, verify checksums, sync, then publish a small root/manifest pointer.
 - If a file-format change is needed, consider a double-buffered manifest/root area rather than a single mutable root field. A corrupt new manifest should fall back to the previous valid manifest.
 - Keep `header_checksum` and `index_checksum` semantics, but make them cover base plus visible delta metadata if deltas become part of the committed view.
 - A stricter two-phase publish mode is worth documenting for migration/checkpoint paths, but the default should stay minimal and embedded-friendly.
 
-This is the most directly relevant redb idea because Minigraf already has page 0 root fields and header checksums. The gap is that v9 has one active root set, not double-buffered roots.
+This is the most directly relevant redb idea because Vicia DB already has page 0 root fields and header checksums. The gap is that v9 has one active root set, not double-buffered roots.
 
-## Candidate Minigraf Shape
+## Candidate Vicia DB Shape
 
 The easiest design to implement incrementally:
 
@@ -180,10 +180,10 @@ Minimal acceptance criteria for the future implementation:
 
 ## Explicit Non-port List
 
-Do not pull these into Minigraf core as part of the delta-index roadmap:
+Do not pull these into Vicia DB core as part of the delta-index roadmap:
 
 - GrafeoDB `Value::Vector`, HNSW, BM25, RRF, vector quantization, hybrid graph/vector planning.
-- GrafeoDB columnar property storage or CSR adjacency as a replacement for Minigraf's EAV facts.
+- GrafeoDB columnar property storage or CSR adjacency as a replacement for Vicia DB's EAV facts.
 - Fjall's full LSM/keyspace/background-worker implementation.
 - redb's page allocator, table layer, and full MVCC page model.
 - Any external DB dependency.

@@ -1,7 +1,7 @@
-use minigraf::{Minigraf, QueryResult, Value};
+use vicia_db::{QueryResult, Value, ViciaDb};
 
-/// Helper: execute a Datalog command string via `Minigraf::execute`, panicking on error
-fn exec(db: &Minigraf, input: &str) -> QueryResult {
+/// Helper: execute a Datalog command string via `ViciaDb::execute`, panicking on error
+fn exec(db: &ViciaDb, input: &str) -> QueryResult {
     db.execute(input)
         .unwrap_or_else(|e| panic!("execution error for {:?}: {}", input, e))
 }
@@ -20,7 +20,7 @@ fn result_rows(result: QueryResult) -> Vec<Vec<Value>> {
 
 #[test]
 fn test_tx_time_travel_via_counter() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // tx_count=1: assert Alice's name
     exec(&db, r#"(transact [[:alice :person/name "Alice"]])"#);
@@ -50,7 +50,7 @@ fn test_tx_time_travel_via_counter() {
 
 #[test]
 fn test_tx_time_travel_as_of_all() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // tx_count=1
     exec(&db, r#"(transact [[:alice :person/name "Alice"]])"#);
@@ -72,7 +72,7 @@ fn test_tx_time_travel_as_of_all() {
 
 #[test]
 fn test_valid_at_inside_range() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // Alice was employed at Acme from 2023-01-01 to 2023-06-30
     exec(
@@ -103,7 +103,7 @@ fn test_valid_at_inside_range() {
 
 #[test]
 fn test_valid_at_outside_range() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     exec(
         &db,
@@ -129,7 +129,7 @@ fn test_valid_at_outside_range() {
 
 #[test]
 fn test_no_valid_at_returns_only_current() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // Expired fact — valid only in 2020
     exec(
@@ -160,7 +160,7 @@ fn test_no_valid_at_returns_only_current() {
 
 #[test]
 fn test_valid_at_any_valid_time_returns_all() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // Expired fact
     exec(
@@ -190,7 +190,7 @@ fn test_valid_at_any_valid_time_returns_all() {
 
 #[test]
 fn test_bitemporal_combined_query() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // tx_count=1: Alice was active from 2023-01 to 2023-06
     exec(
@@ -227,7 +227,7 @@ fn test_bitemporal_combined_query() {
 
 #[test]
 fn test_valid_at_boundary_exclusive() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // Fact valid from 2023-01-01 (inclusive) to 2023-06-30 (exclusive)
     exec(
@@ -276,7 +276,7 @@ fn test_valid_at_boundary_exclusive() {
 
 #[test]
 fn test_bitemporal_multi_entity() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // Establish names for both entities
     exec(
@@ -327,7 +327,7 @@ fn test_bitemporal_multi_entity() {
 
 #[test]
 fn test_as_of_counter_time_travel() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // tx_count=1: name
     exec(&db, r#"(transact [[:alice :person/name "Alice"]])"#);
@@ -370,7 +370,7 @@ fn test_as_of_counter_time_travel() {
 /// tx_count, causing earlier valid-time intervals to be silently lost.
 #[test]
 fn test_same_eav_multiple_valid_time_intervals() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // tx_count=1: Alice earns 100000 from 2020-01-01 to 2022-01-01
     exec(
@@ -423,7 +423,7 @@ fn test_same_eav_multiple_valid_time_intervals() {
 /// a re-assertion after the retraction is preserved.
 #[test]
 fn test_retraction_cancels_prior_intervals_reassertion_survives() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // tx_count=1: salary valid 2020-2022
     exec(

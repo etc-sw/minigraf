@@ -9,7 +9,7 @@
 //! Not applicable on WASM targets (no filesystem, no heaptrack).
 
 #[cfg(not(target_arch = "wasm32"))]
-use minigraf::OpenOptions;
+use vicia_db::OpenOptions;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() -> anyhow::Result<()> {

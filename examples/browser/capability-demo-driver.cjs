@@ -17,7 +17,7 @@ if (!chrome) throw new Error("CHROME_PATH must point to a Chrome executable");
 
 const pageUrl = process.env.CAPABILITY_DEMO_PAGE
   ?? "http://127.0.0.1:8080/examples/browser/?reset=1";
-const profile = fs.mkdtempSync(path.join(os.tmpdir(), "minigraf-capability-demo-"));
+const profile = fs.mkdtempSync(path.join(os.tmpdir(), "vicia-db-capability-demo-"));
 
 async function main() {
   const browser = await puppeteer.launch({

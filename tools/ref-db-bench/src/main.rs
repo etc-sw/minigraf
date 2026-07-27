@@ -2,7 +2,7 @@ use anyhow::{Context, Result, bail};
 use cozo::{DataValue, DbInstance, Num, ScriptMutability};
 use fjall::{Database as FjallDatabase, KeyspaceCreateOptions};
 use grafeo::{GrafeoDB, Value as GrafeoValue};
-use minigraf::{OpenOptions, QueryResult};
+use vicia_db::{OpenOptions, QueryResult};
 use redb::{Database as RedbDatabase, ReadableDatabase, ReadableTable, TableDefinition};
 use serde::{Deserialize, Serialize};
 use sqlite::State as SqliteState;
@@ -405,7 +405,7 @@ fn vicia_point(result: QueryResult) -> Result<Option<i64>> {
         .and_then(|value| value.as_integer()))
 }
 
-fn vicia_aggregate(db: &minigraf::Minigraf) -> Result<(u64, i128)> {
+fn vicia_aggregate(db: &vicia_db::ViciaDb) -> Result<(u64, i128)> {
     let result = db.execute("(query [:find (count ?v) (sum ?v) :where [?e :cmp/value ?v]])")?;
     let QueryResult::QueryResults { results, .. } = result else {
         bail!("Vicia aggregate returned a non-query result");

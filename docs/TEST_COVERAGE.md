@@ -1,4 +1,4 @@
-# Minigraf Test Coverage Report
+# Vicia DB Test Coverage Report
 
 **Last Updated**: A10 bounded selective relationship-read contract (July 2026), 1358 native tests + 75 browser WASM tests in source
 
@@ -55,7 +55,7 @@
 - ✅ 10 XTDB compat tests (integration, Wave 3 #221 — Apache 2.0 semantic ports of XTDB concepts)
 - ✅ 9 Datomic compat tests (integration, Wave 3 #221 — independently written semantic ports of Datomic concepts)
 - ✅ 5 magic sets tests (integration, #289 — demand-driven recursive evaluation correctness: bound transitive closure, all-free closure, subset invariant, multi-hop, mutual recursion)
-- ✅ 2 Vicia API alias tests (integration, Vicia DB V2 — `ViciaDb` in-memory usage, legacy `Minigraf` interoperability, file-backed checkpoint/reopen)
+- ✅ 2 Vicia API alias tests (integration, Vicia DB V2 — `ViciaDb` in-memory usage, legacy `ViciaDb` interoperability, file-backed checkpoint/reopen)
 - ✅ 17 doc tests (11 passing, 6 ignored: includes compile-fail capability guards plus examples referencing internal types that cannot compile as standalone rustdoc tests)
 - ➕ 75 browser-WASM tests (`wasm-bindgen-test`, headless Chrome — **not counted in the native total**; run via `CHROMEDRIVER=/path/to/chromedriver ./scripts/test-browser-wasm.sh`. A5-4 covers maintenance/failure ordering; A5-5 adds both-producer tagged portability and shared corruption/recovery; A5-6b adds durable v10→v11 migration and verified export; A5-6c adds bounded metadata-only open, cold/warm demand reads, exact page-0 stale-handle rejection, corrupt-page failure, sparse rollback/import/write/forget/maintenance convergence, asynchronous verified export, full-scan staging release, callback cleanup, and legacy recovery compatibility. The strict paged-import tests add complete v10 migration/reopen plus exact-state preservation for every non-exportable truncated recovery mutation; planner regressions prove same-entity per-fact transaction correlation and 128-entity paged reads without range prefetch. H2 adds transaction-pinned structured current-entity and reverse-reference reads plus exact Vetch fixture equivalence. H3 adds capability-scoped atomic write/bounded read, aggregate source-work enforcement, mandatory paged constructors, and maintenance-owned portability tests. A10 adds the shared 4,096-source keyword/Ref relationship fixture through `openPaged()`. Three raw atomic-write regressions cover mixed retract/assert transaction identity, invalid-command rollback, and IndexedDB-abort recovery. All 75 passed in the final Chrome run. The same script is enforced by the Browser WASM CI job.)
 
@@ -184,7 +184,7 @@ All Phase 8 sub-phases complete. See per-phase sections below.
 ## Phase 7.9 Completion Status: ✅ COMPLETE
 
 **Phase 7.9 Features** (current, complete):
-- ✅ `Minigraf::repl(&self) -> Repl<'_>` factory method — `Repl` now borrows `&Minigraf` for lifetime safety
+- ✅ `ViciaDb::repl(&self) -> Repl<'_>` factory method — `Repl` now borrows `&Vicia DB` for lifetime safety
 - ✅ All internal types narrowed to `pub(crate)`: `FactStorage`, `PersistentFactStorage`, `FileHeader`, `StorageBackend`, `DatalogExecutor`, `PatternMatcher`, `Fact`, `TxId`, `VALID_TIME_FOREVER`, `Wal`, etc.
 - ✅ Full rustdoc on all public API items with `# Examples` doctests; 8 new doctests added
 - ✅ `[package.metadata.docs.rs]` in `Cargo.toml` — docs.rs builds with `all-features = true`
@@ -204,7 +204,7 @@ All Phase 8 sub-phases complete. See per-phase sections below.
 - ✅ `prepare_query()` (pub(crate)) — parse, validate, compute query plan once
 - ✅ `PreparedQuery::execute(bindings)` — deep-clone + AST walk substitution; type-checked per bind position; executor, optimizer, matcher unchanged
 - ✅ Panic guards (no slot-name interpolation) in `executor.rs` (4 `ValidAt::Slot` sites, 1 `Expr::Slot` site) and `storage.rs` (`AsOf::Slot`)
-- ✅ `Minigraf::prepare(query_str) -> Result<PreparedQuery>` on public API (`db.rs`)
+- ✅ `ViciaDb::prepare(query_str) -> Result<PreparedQuery>` on public API (`db.rs`)
 - ✅ `BindValue` and `PreparedQuery` re-exported from `lib.rs`
 - ✅ `tests/prepared_statements_test.rs` — 17 integration tests
 - ✅ 780 tests passing (unit + integration + doc)
@@ -217,7 +217,7 @@ All Phase 8 sub-phases complete. See per-phase sections below.
 - ✅ `FindSpec::Udf` and `WhereClause::UdfPredicate` variants in `types.rs`; UDF aggregates usable in `:find` and `:over` window specs; UDF predicates usable in `:where`
 - ✅ Parser extended: UDF aggregate invocations in `:find` / `:over`; UDF predicate invocations in `:where`; unknown function names deferred to runtime, not rejected at parse time
 - ✅ Executor routes UDF aggregates through `FunctionRegistry` at query time; UDF predicates evaluated per binding row
-- ✅ `Minigraf::register_aggregate` and `register_predicate` on the public API (`db.rs`)
+- ✅ `ViciaDb::register_aggregate` and `register_predicate` on the public API (`db.rs`)
 - ✅ `tests/udf_test.rs` — 14 integration tests
 - ✅ 753 tests passing (unit + integration + doc)
 
@@ -228,7 +228,7 @@ All Phase 8 sub-phases complete. See per-phase sections below.
 - ✅ `WindowFunc`, `Order`, `WindowSpec`, `FindSpec::Window` types in `types.rs`; `AggFunc` enum removed; `FindSpec::Aggregate.func` changed to `String`
 - ✅ `parse_window_expr` in `parser.rs` — `(func ?v :over (:partition-by ?p :order-by ?o :desc))` syntax; `lag`/`lead` rejected; unknown function → parse error; non-window-compatible in `:over` → parse error
 - ✅ `apply_post_processing`, `compute_aggregation`, `apply_window_functions`, `project_find_specs` in `executor.rs` — replaces `apply_aggregation`/`apply_agg_func`
-- ✅ `FunctionRegistry` wired through `db.rs` (`Minigraf::Inner` gains `Arc<RwLock<FunctionRegistry>>`)
+- ✅ `FunctionRegistry` wired through `db.rs` (`ViciaDb::Inner` gains `Arc<RwLock<FunctionRegistry>>`)
 - ✅ `tests/window_functions_test.rs` — 12 integration tests (cumulative sum, running count/min/avg, rank with ties, row-number, partition-by, desc ordering, mixed aggregate+window, single-row and empty-result edge cases, lag/lead parse rejection)
 - ✅ 746 tests passing (unit + integration + doc)
 
@@ -591,7 +591,7 @@ All Phase 8 sub-phases complete. See per-phase sections below.
 
 ### kill -9 Durability Harness (`tests/kill9_durability_test.rs`) - ✅ 2 tests (A7)
 
-- ✅ Smoke: 24 kill cycles against real `minigraf --session --file` children (default suite, ~1 s)
+- ✅ Smoke: 24 kill cycles against real `vicia-db --session --file` children (default suite, ~1 s)
 - ✅ `#[ignore]` Nightly gate: A8-extended run passed 2,400 kill cycles / 169,275 acked transactions / 333 acked forgets, zero lost, zero unopenable (see `docs/BENCHMARKS.md` "A8: Bulk Valid-Time Closure")
 - Per-cycle audit: acked exactly-once, in-flight all-or-nothing promotion, transaction atomicity, phantom/duplicate detection, tx-count monotonicity, functional-after-recovery probe
 - FileLock crash-robustness unit tests (6) live in `src/storage/backend/file.rs`
@@ -752,7 +752,7 @@ All Phase 8 sub-phases complete. See per-phase sections below.
 - ✅ per-fact scoped retract removes only the matching valid-time window
 - ✅ transaction-level scoped retract options apply to Ref edge values
 - ✅ legacy retract still removes every valid-time window for the same EAV triple
-- ✅ explicit `WriteTransaction` scoped retract matches implicit `Minigraf::execute`
+- ✅ explicit `WriteTransaction` scoped retract matches implicit `ViciaDb::execute`
 - ✅ checkpoint/reopen preserves scoped retraction semantics
 
 ### Fact-Log Export (`tests/fact_log_export_test.rs`) - ✅ 7 tests
@@ -1034,7 +1034,7 @@ cargo test -- --nocapture
 - Window functions verified: cumulative aggregates, rank/row-number, partition-by, desc ordering, mixed aggregate+window (Phase 7.7a)
 - User-defined functions verified: custom aggregates, custom predicates, UDF as window function, name collision guards, runtime error handling, thread safety (Phase 7.7b)
 - Prepared statements verified: entity/value/as-of/valid-at slot positions, AnyValidTime, combined temporal+entity (agentic loop pattern), plan reuse, all error paths (Phase 7.8)
-- Public API surface verified via rustdoc doctests and integration tests: `Minigraf::open`, `execute`, `prepare`, `export_fact_log`, `run_idle_maintenance`, `repl`, `WriteTransaction`, `OpenOptions` (Phase 7.9 + Vetch ledger export + Q3-A maintenance)
+- Public API surface verified via rustdoc doctests and integration tests: `ViciaDb::open`, `execute`, `prepare`, `export_fact_log`, `run_idle_maintenance`, `repl`, `WriteTransaction`, `OpenOptions` (Phase 7.9 + Vetch ledger export + Q3-A maintenance)
 - WAL fault injection verified: write-fail, flush-fail, read-fault, CRC corruption, checkpoint atomicity, concurrent write+checkpoint (Wave 3)
 - Migration matrix verified: current round-trip, v7 fixture migrate, v3 empty migrate, corrupt magic, unsupported version, WAL replay idempotent (Wave 3 + current-format migration)
 - Multi-value index regression verified: same entity+attribute batch values survive indexed public query paths, ref edge lookups, temporal replay, retraction, and checkpoint/reopen (#287)

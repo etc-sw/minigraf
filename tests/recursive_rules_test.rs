@@ -1,8 +1,8 @@
-use minigraf::{Minigraf, QueryResult, Value};
 use uuid::Uuid;
+use vicia_db::{QueryResult, Value, ViciaDb};
 
-/// Helper: execute a Datalog command via `Minigraf::execute`, panicking on error
-fn exec(db: &Minigraf, input: &str) -> QueryResult {
+/// Helper: execute a Datalog command via `ViciaDb::execute`, panicking on error
+fn exec(db: &ViciaDb, input: &str) -> QueryResult {
     db.execute(input)
         .unwrap_or_else(|e| panic!("execution error for {:?}: {}", input, e))
 }
@@ -10,7 +10,7 @@ fn exec(db: &Minigraf, input: &str) -> QueryResult {
 /// Test simple transitive closure: A -> B -> C
 #[test]
 fn test_simple_transitive_closure() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     let a = Uuid::new_v4();
     let b = Uuid::new_v4();
@@ -63,7 +63,7 @@ fn test_simple_transitive_closure() {
 /// Test transitive closure with cycle
 #[test]
 fn test_transitive_closure_with_cycle() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     let a = Uuid::new_v4();
     let b = Uuid::new_v4();
@@ -118,7 +118,7 @@ fn test_transitive_closure_with_cycle() {
 /// Test long chain (10 nodes)
 #[test]
 fn test_long_chain_transitive_closure() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     let nodes: Vec<Uuid> = (0..10).map(|_| Uuid::new_v4()).collect();
 
@@ -172,7 +172,7 @@ fn test_long_chain_transitive_closure() {
 /// Test ancestor relationship (family tree)
 #[test]
 fn test_ancestor_relationship() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     let alice = Uuid::new_v4();
     let bob = Uuid::new_v4();
@@ -231,7 +231,7 @@ fn test_ancestor_relationship() {
 /// Test multiple recursive predicates in same database
 #[test]
 fn test_multiple_recursive_predicates() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     let a = Uuid::new_v4();
     let b = Uuid::new_v4();
@@ -316,7 +316,7 @@ fn test_multiple_recursive_predicates() {
 /// Test recursive rule with constants in query
 #[test]
 fn test_recursive_rule_with_constants() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     let a = Uuid::new_v4();
     let b = Uuid::new_v4();
@@ -358,7 +358,7 @@ fn test_recursive_rule_with_constants() {
 /// Test diamond pattern in graph
 #[test]
 fn test_diamond_pattern_reachability() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // Diamond: A -> B -> D
     //          A -> C -> D
@@ -413,7 +413,7 @@ fn test_diamond_pattern_reachability() {
 /// Test rule with no base facts (should return empty)
 #[test]
 fn test_recursive_rule_no_base_facts() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     // Register rules but no facts
     exec(&db, r#"(rule [(reach ?x ?y) [?x :connected ?y]])"#);
@@ -439,7 +439,7 @@ fn test_recursive_rule_no_base_facts() {
 /// Test convergence with max iterations
 #[test]
 fn test_convergence_simple_graph() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
 
     let a = Uuid::new_v4();
     let b = Uuid::new_v4();

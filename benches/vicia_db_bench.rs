@@ -11,7 +11,7 @@
 //   pprof = { version = "...", features = ["flamegraph", "criterion"] }
 //
 //   [[bench]]
-//   name = "minigraf_bench"
+//   name = "vicia_db_bench"
 //   harness = false
 //
 // Then wrap criterion_group! with a PProfProfiler and run:
@@ -23,7 +23,7 @@ mod helpers;
 mod simd_helpers;
 
 use criterion::{BenchmarkId, Criterion, Throughput, black_box, criterion_group, criterion_main};
-use minigraf::OpenOptions;
+use vicia_db::OpenOptions;
 
 // ── A0 evidence-gate mode ─────────────────────────────────────────────────────
 //
@@ -1318,12 +1318,12 @@ fn bench_udf(c: &mut Criterion) {
                 db.register_aggregate(
                     "udf_sum",
                     || 0i64,
-                    |acc: &mut i64, v: &minigraf::Value| {
-                        if let minigraf::Value::Integer(i) = v {
+                    |acc: &mut i64, v: &vicia_db::Value| {
+                        if let vicia_db::Value::Integer(i) = v {
                             *acc += *i;
                         }
                     },
-                    |acc: &i64, _n: usize| minigraf::Value::Integer(*acc),
+                    |acc: &i64, _n: usize| vicia_db::Value::Integer(*acc),
                 )
                 .unwrap();
                 b.iter(|| {
@@ -1342,8 +1342,8 @@ fn bench_udf(c: &mut Criterion) {
         for &(label, n) in SCALES_LINEAR {
             group.bench_with_input(BenchmarkId::from_parameter(label), &n, |b, &n| {
                 let db = helpers::populate_in_memory(n);
-                db.register_predicate("udf_gt", |v: &minigraf::Value| -> bool {
-                    if let minigraf::Value::Integer(i) = v {
+                db.register_predicate("udf_gt", |v: &vicia_db::Value| -> bool {
+                    if let vicia_db::Value::Integer(i) = v {
                         *i > 500
                     } else {
                         false
@@ -1433,7 +1433,7 @@ fn bench_prepared(c: &mut Criterion) {
                     .prepare("(query [:find ?e :where [?e :val $val]])")
                     .unwrap();
                 b.iter(|| {
-                    pq.execute(&[("val", minigraf::BindValue::Val(minigraf::Value::Integer(0)))])
+                    pq.execute(&[("val", vicia_db::BindValue::Val(vicia_db::Value::Integer(0)))])
                         .unwrap()
                 });
             });
@@ -1456,7 +1456,7 @@ fn bench_prepared(c: &mut Criterion) {
                 b.iter(|| {
                     pq.execute(&[(
                         "threshold",
-                        minigraf::BindValue::Val(minigraf::Value::Integer(threshold)),
+                        vicia_db::BindValue::Val(vicia_db::Value::Integer(threshold)),
                     )])
                     .unwrap()
                 });

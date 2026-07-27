@@ -10,7 +10,7 @@
 
 // wasm-pack compiles examples for the browser target; provide a no-op entry
 // point so the example compiles cleanly. The actual generator only makes sense
-// on native (it needs the file system and Minigraf::open).
+// on native (it needs the file system and ViciaDb::open).
 #[cfg(target_arch = "wasm32")]
 fn main() {}
 
@@ -27,7 +27,7 @@ fn main() -> anyhow::Result<()> {
     let _ = std::fs::remove_file(tmp_path.with_extension("wal"));
 
     // Populate with known facts.
-    let db = minigraf::Minigraf::open(&tmp_path)?;
+    let db = vicia_db::ViciaDb::open(&tmp_path)?;
     db.execute(r#"(transact [[:alice :name "Alice"]])"#)?;
     db.execute("(transact [[:alice :age 30]])")?;
     // Checkpoint flushes WAL → main file so the bytes are self-contained.

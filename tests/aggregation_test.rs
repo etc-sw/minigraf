@@ -1,9 +1,9 @@
 //! Integration tests for Phase 7.2a aggregation.
 //! Covers count, sum, min, max, :with, rules, negation, and temporal queries.
 
-use minigraf::{Minigraf, OpenOptions, QueryResult, Value};
+use vicia_db::{OpenOptions, QueryResult, Value, ViciaDb};
 
-fn db() -> Minigraf {
+fn db() -> ViciaDb {
     OpenOptions::new().open_memory().unwrap()
 }
 

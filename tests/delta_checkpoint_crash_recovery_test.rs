@@ -1,8 +1,8 @@
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::{Minigraf, OpenOptions, QueryResult};
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
+use vicia_db::{OpenOptions, QueryResult, ViciaDb};
 
 const PAGE_SIZE: usize = 4096;
 const DELTA_SEGMENT_MAGIC: &[u8] = b"MGDSG001";
@@ -13,8 +13,8 @@ struct DeltaCheckpointImage {
     wal_backup: Vec<u8>,
 }
 
-fn open_no_auto_checkpoint(path: &Path) -> Minigraf {
-    Minigraf::open_with_options(
+fn open_no_auto_checkpoint(path: &Path) -> ViciaDb {
+    ViciaDb::open_with_options(
         path,
         OpenOptions {
             wal_checkpoint_threshold: usize::MAX,
@@ -30,7 +30,7 @@ fn wal_path_for(db_path: &Path) -> PathBuf {
     PathBuf::from(wal_path)
 }
 
-fn query_count(db: &Minigraf, query: &str) -> usize {
+fn query_count(db: &ViciaDb, query: &str) -> usize {
     match db.execute(query).expect("query should execute") {
         QueryResult::QueryResults { results, .. } => results.len(),
         _ => panic!("expected query results"),
@@ -127,7 +127,7 @@ fn prepare_delta_checkpoint_image(path: &Path) -> DeltaCheckpointImage {
     }
 }
 
-fn assert_base_and_delta_visible_once(db: &Minigraf) {
+fn assert_base_and_delta_visible_once(db: &ViciaDb) {
     let base_count = query_count(db, r#"(query [:find ?name :where [:base :name ?name]])"#);
     let delta_count = query_count(db, r#"(query [:find ?name :where [:delta :name ?name]])"#);
     assert_eq!(base_count, 1, "base fact must be visible once");
@@ -185,7 +185,7 @@ fn selected_corrupt_delta_errors_even_if_wal_exists() {
     corrupt_marker(&path, DELTA_SEGMENT_MAGIC);
     restore_wal(&path, &image.wal_backup);
 
-    let reopened = Minigraf::open_with_options(
+    let reopened = ViciaDb::open_with_options(
         &path,
         OpenOptions {
             wal_checkpoint_threshold: usize::MAX,
@@ -207,7 +207,7 @@ fn selected_truncated_delta_errors_even_if_wal_exists() {
     truncate_inside_marker(&path, DELTA_SEGMENT_MAGIC);
     restore_wal(&path, &image.wal_backup);
 
-    let reopened = Minigraf::open_with_options(
+    let reopened = ViciaDb::open_with_options(
         &path,
         OpenOptions {
             wal_checkpoint_threshold: usize::MAX,

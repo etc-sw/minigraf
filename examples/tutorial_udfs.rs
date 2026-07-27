@@ -6,10 +6,10 @@
 //! Run with:
 //!   cargo run --example tutorial_udfs
 
-use minigraf::{Minigraf, QueryResult, Value};
+use vicia_db::{QueryResult, Value, ViciaDb};
 
 fn main() -> anyhow::Result<()> {
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
 
     // ── Seed data ────────────────────────────────────────────────────────────
     //

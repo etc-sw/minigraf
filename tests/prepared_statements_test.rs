@@ -1,12 +1,12 @@
-use minigraf::db::Minigraf;
-use minigraf::{BindValue, QueryResult, Value};
 use uuid::Uuid;
+use vicia_db::db::ViciaDb;
+use vicia_db::{BindValue, QueryResult, Value};
 
 // ─── Happy-path tests ─────────────────────────────────────────────────────────
 
 #[test]
 fn prepare_and_execute_entity_slot() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     let alice = Uuid::new_v4();
     let bob = Uuid::new_v4();
 
@@ -45,7 +45,7 @@ fn prepare_and_execute_entity_slot() {
 
 #[test]
 fn prepare_and_execute_value_slot() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(r#"(transact [[:alice :person/name "Alice"] [:bob :person/name "Bob"]])"#)
         .unwrap();
 
@@ -81,7 +81,7 @@ fn prepare_and_execute_value_slot() {
 
 #[test]
 fn prepare_and_execute_as_of_counter() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(r#"(transact [[:alice :person/name "Alice"]])"#)
         .unwrap();
     db.execute(r#"(transact [[:alice :person/name "Alice-v2"]])"#)
@@ -104,7 +104,7 @@ fn prepare_and_execute_as_of_counter() {
 
 #[test]
 fn prepare_and_execute_as_of_timestamp() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(r#"(transact [[:alice :person/name "Alice"]])"#)
         .unwrap();
 
@@ -126,7 +126,7 @@ fn prepare_and_execute_as_of_timestamp() {
 
 #[test]
 fn prepare_and_execute_valid_at() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     // t1 = 2001-09-09T01:46:40Z, t2 = 2033-05-18T03:33:20Z, t3 (ISO) = 2065-01-24T05:20:00Z
     let t1: i64 = 1_000_000_000_000;
     let t2: i64 = 2_000_000_000_000;
@@ -166,7 +166,7 @@ fn prepare_and_execute_valid_at() {
 
 #[test]
 fn prepare_and_execute_valid_at_any() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(r#"(transact [[:alice :person/name "Alice"]])"#)
         .unwrap();
 
@@ -189,7 +189,7 @@ fn prepare_and_execute_valid_at_any() {
 
 #[test]
 fn prepare_and_execute_expr_slot() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(r#"(transact [[:a :score 10] [:b :score 50] [:c :score 90]])"#)
         .unwrap();
 
@@ -210,7 +210,7 @@ fn prepare_and_execute_expr_slot() {
 
 #[test]
 fn prepare_and_execute_combined() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     let alice = Uuid::new_v4();
 
     db.execute(&format!(
@@ -249,7 +249,7 @@ fn prepare_and_execute_combined() {
 
 #[test]
 fn plan_reused_across_executions() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     let alice = Uuid::new_v4();
     let bob = Uuid::new_v4();
     let carol = Uuid::new_v4();
@@ -283,7 +283,7 @@ fn plan_reused_across_executions() {
 
 #[test]
 fn prepare_rejects_attribute_slot() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     let result = db.prepare("(query [:find ?v :where [?e $attr ?v]])");
     assert!(result.is_err(), "expected error for attribute slot");
     assert!(
@@ -297,7 +297,7 @@ fn prepare_rejects_attribute_slot() {
 
 #[test]
 fn prepare_rejects_transact() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     let result = db.prepare(r#"(transact [[:alice :person/name "Alice"]])"#);
     assert!(result.is_err(), "expected error for transact");
     assert!(result.unwrap_err().to_string().contains("transact"));
@@ -305,7 +305,7 @@ fn prepare_rejects_transact() {
 
 #[test]
 fn prepare_rejects_retract() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     let result = db.prepare(r#"(retract [[:alice :person/name "Alice"]])"#);
     assert!(result.is_err(), "expected error for retract");
     assert!(result.unwrap_err().to_string().contains("retract"));
@@ -313,7 +313,7 @@ fn prepare_rejects_retract() {
 
 #[test]
 fn prepare_rejects_rule() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     let result = db.prepare("(rule [(reachable ?a ?b) [?a :edge ?b]])");
     assert!(result.is_err(), "expected error for rule");
     assert!(result.unwrap_err().to_string().contains("rule"));
@@ -321,7 +321,7 @@ fn prepare_rejects_rule() {
 
 #[test]
 fn execute_missing_slot() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(r#"(transact [[:alice :person/name "Alice"]])"#)
         .unwrap();
 
@@ -340,7 +340,7 @@ fn execute_missing_slot() {
 
 #[test]
 fn execute_type_mismatch_as_of() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     let prepared = db
         .prepare("(query [:find ?v :as-of $tx :where [?e :score ?v]])")
         .unwrap();
@@ -355,7 +355,7 @@ fn execute_type_mismatch_as_of() {
 
 #[test]
 fn execute_type_mismatch_entity() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     let prepared = db
         .prepare("(query [:find ?name :where [$entity :person/name ?name]])")
         .unwrap();
@@ -373,7 +373,7 @@ fn execute_type_mismatch_entity() {
 
 #[test]
 fn execute_extra_bindings_ignored() {
-    let db = Minigraf::in_memory().unwrap();
+    let db = ViciaDb::in_memory().unwrap();
     db.execute(r#"(transact [[:alice :person/name "Alice"]])"#)
         .unwrap();
 

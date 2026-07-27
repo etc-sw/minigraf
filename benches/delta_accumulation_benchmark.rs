@@ -8,13 +8,13 @@
 //!   smoke    — 10K-fact base, two quick correctness/growth shapes
 
 use anyhow::{Context, Result, bail};
-use minigraf::{Minigraf, OpenOptions, QueryResult};
 use serde_json::json;
 use std::collections::BTreeMap;
 use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::Path;
 use std::time::{Duration, Instant, SystemTime};
 use uuid::Uuid;
+use vicia_db::{OpenOptions, QueryResult, ViciaDb};
 
 #[path = "helpers/receipt.rs"]
 mod receipt;
@@ -313,7 +313,7 @@ fn verify_base_fact_count(path: &Path, expected: usize) -> Result<()> {
 }
 
 fn add_receipt_batch(
-    db: &Minigraf,
+    db: &ViciaDb,
     scenario: AccumulationScenario,
     checkpoint_index: usize,
 ) -> Result<()> {
@@ -442,7 +442,7 @@ fn find_last_delta_segment_marker(file: &mut std::fs::File, file_len: u64) -> Re
     bail!("delta segment marker not found")
 }
 
-fn open_no_auto_checkpoint(path: &Path) -> Result<Minigraf> {
+fn open_no_auto_checkpoint(path: &Path) -> Result<ViciaDb> {
     OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..Default::default()
@@ -514,7 +514,7 @@ fn deterministic_uuid(index: usize) -> Uuid {
     Uuid::from_u128(index as u128 + 1)
 }
 
-fn assert_query_count(db: &Minigraf, query: &str, expected: usize, label: &str) -> Result<()> {
+fn assert_query_count(db: &ViciaDb, query: &str, expected: usize, label: &str) -> Result<()> {
     let count = query_count(db, query)?;
     if count != expected {
         bail!("{label}");
@@ -522,7 +522,7 @@ fn assert_query_count(db: &Minigraf, query: &str, expected: usize, label: &str) 
     Ok(())
 }
 
-fn query_count(db: &Minigraf, query: &str) -> Result<usize> {
+fn query_count(db: &ViciaDb, query: &str) -> Result<usize> {
     match db.execute(query).map_err(db_error)? {
         QueryResult::QueryResults { results, .. } => Ok(results.len()),
         _ => bail!("expected query results"),

@@ -1,6 +1,6 @@
-use minigraf::{Minigraf, QueryResult, Value};
 use std::path::Path;
 use uuid::Uuid;
+use vicia_db::{QueryResult, Value, ViciaDb};
 
 const PAGE_SIZE: usize = 4096;
 const PAGE_COUNT_OFFSET: usize = 8;
@@ -27,7 +27,7 @@ fn rows(result: QueryResult) -> Vec<Vec<Value>> {
     }
 }
 
-fn query_rows(db: &Minigraf, query: &str) -> Vec<Vec<Value>> {
+fn query_rows(db: &ViciaDb, query: &str) -> Vec<Vec<Value>> {
     rows(db.execute(query).expect("query should execute"))
 }
 
@@ -172,11 +172,11 @@ fn corrupt_manifest_payload(path: &Path, slot: ManifestSlot) {
     std::fs::write(path, bytes).expect("database file should write");
 }
 
-fn query_count(db: &Minigraf, query: &str) -> usize {
+fn query_count(db: &ViciaDb, query: &str) -> usize {
     query_rows(db, query).len()
 }
 
-fn transact_many_ref_facts(db: &Minigraf, entity_prefix: &str, count: usize) {
+fn transact_many_ref_facts(db: &ViciaDb, entity_prefix: &str, count: usize) {
     let mut command = String::from("(transact [");
     for index in 0..count {
         let target = Uuid::from_u128(index as u128 + 10_000);
@@ -196,7 +196,7 @@ fn delta_checkpoint_reopen_sees_delta_only_fact_and_export_log() {
     let wal_path = dir.path().join("delta.graph.wal");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -213,7 +213,7 @@ fn delta_checkpoint_reopen_sees_delta_only_fact_and_export_log() {
 
     assert_delta_manifest_payload_present(&path);
 
-    let db = Minigraf::open(&path).expect("database should reopen");
+    let db = ViciaDb::open(&path).expect("database should reopen");
     let name_rows = query_rows(&db, r#"(query [:find ?name :where [:delta :name ?name]])"#);
     assert_eq!(name_rows.len(), 1, "delta-only fact must survive reopen");
     match &name_rows[0][0] {
@@ -235,7 +235,7 @@ fn delta_checkpoint_preserves_base_checksum_in_page0() {
     let path = dir.path().join("base-checksum.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -245,7 +245,7 @@ fn delta_checkpoint_preserves_base_checksum_in_page0() {
     let base_page_count = read_u64_le(&base_page0, PAGE_COUNT_OFFSET);
 
     {
-        let db = Minigraf::open(&path).expect("database should reopen");
+        let db = ViciaDb::open(&path).expect("database should reopen");
         db.execute(r#"(transact [[:delta :name "Delta"]])"#)
             .expect("delta transact should execute");
         db.checkpoint().expect("delta checkpoint should succeed");
@@ -269,7 +269,7 @@ fn delta_manifest_base_root_mismatch_rejected_on_reopen() {
     let path = dir.path().join("base-root-mismatch.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -284,7 +284,7 @@ fn delta_manifest_base_root_mismatch_rejected_on_reopen() {
     write_u64_le(&mut page0, EAVT_ROOT_OFFSET, wrong_root);
     rewrite_page0(&path, page0);
 
-    let reopened = Minigraf::open(&path);
+    let reopened = ViciaDb::open(&path);
     let message = match reopened {
         Ok(_) => panic!("delta manifest base root mismatch must reject reopen"),
         Err(err) => err.to_string(),
@@ -301,7 +301,7 @@ fn second_delta_checkpoint_uses_inactive_slot_and_newest_survives_reopen() {
     let path = dir.path().join("slot-rotation.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -335,7 +335,7 @@ fn second_delta_checkpoint_uses_inactive_slot_and_newest_survives_reopen() {
         "second delta publish should rotate to the inactive secondary slot"
     );
 
-    let db = Minigraf::open(&path).expect("database should reopen");
+    let db = ViciaDb::open(&path).expect("database should reopen");
     assert_eq!(
         query_count(&db, r#"(query [:find ?name :where [:delta1 :name ?name]])"#),
         1,
@@ -354,7 +354,7 @@ fn second_delta_checkpoint_appends_only_pending_segment_pages() {
     let path = dir.path().join("append-only-segment.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -362,7 +362,7 @@ fn second_delta_checkpoint_appends_only_pending_segment_pages() {
     let base_page_count = read_u64_le(&read_page0(&path), PAGE_COUNT_OFFSET);
 
     {
-        let db = Minigraf::open(&path).expect("database should reopen");
+        let db = ViciaDb::open(&path).expect("database should reopen");
         transact_many_ref_facts(&db, "bulk-delta", 1_000);
         db.checkpoint()
             .expect("large first delta checkpoint should succeed");
@@ -371,7 +371,7 @@ fn second_delta_checkpoint_appends_only_pending_segment_pages() {
     let first_delta_growth = first_delta_page_count.saturating_sub(base_page_count);
 
     {
-        let db = Minigraf::open(&path).expect("database should reopen");
+        let db = ViciaDb::open(&path).expect("database should reopen");
         db.execute(r#"(transact [[:tiny-delta :edge/to :target]])"#)
             .expect("tiny second delta transact should execute");
         db.checkpoint()
@@ -398,7 +398,7 @@ fn multi_segment_checkpoint_reopen_sees_segment_to_segment_ref_edge() {
     let target = Uuid::from_u128(0x400);
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -418,7 +418,7 @@ fn multi_segment_checkpoint_reopen_sees_segment_to_segment_ref_edge() {
             .expect("second delta checkpoint should succeed");
     }
 
-    let db = Minigraf::open(&path).expect("database should reopen");
+    let db = ViciaDb::open(&path).expect("database should reopen");
     let edge_rows = query_rows(
         &db,
         &format!(
@@ -444,7 +444,7 @@ fn later_delta_segment_retraction_hides_earlier_delta_assertion() {
     let path = dir.path().join("segment-retraction.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -460,7 +460,7 @@ fn later_delta_segment_retraction_hides_earlier_delta_assertion() {
             .expect("second delta checkpoint should succeed");
     }
 
-    let db = Minigraf::open(&path).expect("database should reopen");
+    let db = ViciaDb::open(&path).expect("database should reopen");
     assert_eq!(
         query_count(&db, r#"(query [:find ?s :where [:item :status ?s]])"#),
         0,
@@ -482,7 +482,7 @@ fn export_fact_log_preserves_multiple_delta_segments_in_tx_order() {
     let path = dir.path().join("multi-delta-export.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -498,7 +498,7 @@ fn export_fact_log_preserves_multiple_delta_segments_in_tx_order() {
             .expect("second delta checkpoint should succeed");
     }
 
-    let db = Minigraf::open(&path).expect("database should reopen");
+    let db = ViciaDb::open(&path).expect("database should reopen");
     let records = db.export_fact_log().expect("fact log should export");
     assert_eq!(
         records.len(),
@@ -523,7 +523,7 @@ fn corrupt_newer_header_slot_falls_back_to_previous_manifest() {
     let path = dir.path().join("corrupt-newer-slot.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -540,7 +540,7 @@ fn corrupt_newer_header_slot_falls_back_to_previous_manifest() {
     let newest_slot = newest_manifest_slot(&read_page0(&path));
     corrupt_slot_checksum(&path, newest_slot);
 
-    let db = Minigraf::open(&path).expect("database should reopen through older slot");
+    let db = ViciaDb::open(&path).expect("database should reopen through older slot");
     assert_eq!(
         query_count(&db, r#"(query [:find ?name :where [:delta1 :name ?name]])"#),
         1,
@@ -559,7 +559,7 @@ fn corrupt_newer_manifest_payload_falls_back_to_previous_manifest() {
     let path = dir.path().join("corrupt-newer-manifest.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -576,7 +576,7 @@ fn corrupt_newer_manifest_payload_falls_back_to_previous_manifest() {
     let newest_slot = newest_manifest_slot(&read_page0(&path));
     corrupt_manifest_payload(&path, newest_slot);
 
-    let db = Minigraf::open(&path).expect("database should reopen through older manifest payload");
+    let db = ViciaDb::open(&path).expect("database should reopen through older manifest payload");
     assert_eq!(
         query_count(&db, r#"(query [:find ?name :where [:delta1 :name ?name]])"#),
         1,
@@ -595,7 +595,7 @@ fn corrupt_newer_delta_segment_falls_back_to_previous_manifest() {
     let path = dir.path().join("corrupt-newer-segment.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -611,7 +611,7 @@ fn corrupt_newer_delta_segment_falls_back_to_previous_manifest() {
 
     corrupt_last_delta_segment(&path);
 
-    let db = Minigraf::open(&path).expect("database should reopen through older delta segment");
+    let db = ViciaDb::open(&path).expect("database should reopen through older delta segment");
     assert_eq!(
         query_count(&db, r#"(query [:find ?name :where [:delta1 :name ?name]])"#),
         1,
@@ -630,7 +630,7 @@ fn corrupt_older_segment_in_selected_multi_segment_manifest_errors() {
     let path = dir.path().join("corrupt-selected-older-segment.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -645,7 +645,7 @@ fn corrupt_older_segment_in_selected_multi_segment_manifest_errors() {
     }
 
     corrupt_first_delta_segment(&path);
-    let reopened = Minigraf::open(&path);
+    let reopened = ViciaDb::open(&path);
     assert!(
         reopened.is_err(),
         "corrupt older segment referenced by the selected manifest must not open cleanly"
@@ -658,7 +658,7 @@ fn both_manifest_slots_invalid_with_committed_delta_errors() {
     let path = dir.path().join("both-slots-invalid.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -675,7 +675,7 @@ fn both_manifest_slots_invalid_with_committed_delta_errors() {
     corrupt_slot_checksum(&path, ManifestSlot::Primary);
     corrupt_slot_checksum(&path, ManifestSlot::Secondary);
 
-    let reopened = Minigraf::open(&path);
+    let reopened = ViciaDb::open(&path);
     assert!(
         reopened.is_err(),
         "both invalid manifest slots must not silently open base-only"
@@ -690,7 +690,7 @@ fn delta_checkpoint_reopen_sees_base_to_delta_ref_edge() {
     let target = Uuid::from_u128(0x200);
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(&format!(
             r#"(transact [[#uuid "{source}" :name "source"]])"#
         ))
@@ -705,7 +705,7 @@ fn delta_checkpoint_reopen_sees_base_to_delta_ref_edge() {
         db.checkpoint().expect("delta checkpoint should succeed");
     }
 
-    let db = Minigraf::open(&path).expect("database should reopen");
+    let db = ViciaDb::open(&path).expect("database should reopen");
     let edge_rows = query_rows(
         &db,
         &format!(
@@ -727,7 +727,7 @@ fn delta_retraction_hides_base_assertion_after_reopen() {
     let path = dir.path().join("retraction.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:item :status :active]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -737,7 +737,7 @@ fn delta_retraction_hides_base_assertion_after_reopen() {
         db.checkpoint().expect("delta checkpoint should succeed");
     }
 
-    let db = Minigraf::open(&path).expect("database should reopen");
+    let db = ViciaDb::open(&path).expect("database should reopen");
     let current = query_rows(&db, r#"(query [:find ?s :where [:item :status ?s]])"#);
     assert_eq!(
         current.len(),
@@ -758,7 +758,7 @@ fn delta_checkpoint_corrupt_segment_errors_instead_of_silent_loss() {
     let path = dir.path().join("corrupt.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -768,7 +768,7 @@ fn delta_checkpoint_corrupt_segment_errors_instead_of_silent_loss() {
     }
 
     corrupt_first_delta_segment(&path);
-    let reopened = Minigraf::open(&path);
+    let reopened = ViciaDb::open(&path);
     assert!(
         reopened.is_err(),
         "corrupt delta segment must not open cleanly"
@@ -781,7 +781,7 @@ fn full_rebuild_fallback_after_visible_delta_preserves_results() {
     let path = dir.path().join("fallback.graph");
 
     {
-        let db = Minigraf::open(&path).expect("database should open");
+        let db = ViciaDb::open(&path).expect("database should open");
         db.execute(r#"(transact [[:base :kind :root]])"#)
             .expect("base transact should execute");
         db.checkpoint().expect("base checkpoint should succeed");
@@ -802,7 +802,7 @@ fn full_rebuild_fallback_after_visible_delta_preserves_results() {
             .expect("full rebuild fallback checkpoint should succeed");
     }
 
-    let db = Minigraf::open(&path).expect("database should reopen");
+    let db = ViciaDb::open(&path).expect("database should reopen");
     let delta = query_rows(&db, r#"(query [:find ?name :where [:delta :name ?name]])"#);
     let after = query_rows(&db, r#"(query [:find ?name :where [:after :name ?name]])"#);
     assert_eq!(delta.len(), 1, "delta fact must survive fallback rebuild");

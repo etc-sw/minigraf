@@ -1,12 +1,12 @@
 // A0 browser open-at-scale runner — measures BrowserDb.open() latency and
 // JS-heap growth against a large imported fixture. Build the wasm pkg first:
-//   wasm-pack build --target web --out-dir minigraf-wasm -- --features browser
+//   wasm-pack build --target web --out-dir vicia-db-wasm -- --features browser
 // Serve from repo root and open /examples/browser/bench.html; runner steps
 // are documented in docs/BENCHMARKS.md ("Browser Open at Scale").
 
-import init, { BrowserDb } from "../../minigraf-wasm/minigraf.js";
+import init, { BrowserDb } from "../../vicia-db-wasm/vicia_db.js";
 
-const DB_NAME = "minigraf-bench";
+const DB_NAME = "vicia-db-bench";
 const PAGE_SIZE = 4096;
 const initPromise = init();
 

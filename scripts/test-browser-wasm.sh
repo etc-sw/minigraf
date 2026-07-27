@@ -42,7 +42,7 @@ artifact="$({
   select(
     .reason == "compiler-artifact"
     and .profile.test == true
-    and .target.name == "minigraf"
+    and .target.name == "vicia_db"
     and (.target.crate_types | index("rlib"))
     and .executable != null
   )

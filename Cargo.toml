@@ -4,19 +4,28 @@ exclude = ["fuzz", "tools/cross-db-bench"]
 resolver = "2"
 
 [package]
-name = "minigraf"
-version = "1.1.1"
+name = "vicia-db"
+# Restarts at 0.x. Upstream's 1.1.1 numbered a different package under a
+# different maintainer; carrying it forward would claim API continuity this fork
+# does not offer. See docs/VICIA_DB_RENAME_PLAN.md.
+version = "0.1.0"
 edition = "2024"
 description = "Zero-config, single-file, embedded graph database with bi-temporal Datalog queries"
 license = "MIT OR Apache-2.0"
-authors = ["Aditya Mukhopadhyay"]
-repository = "https://github.com/project-minigraf/minigraf"
+# This fork's maintainer. Upstream copyright is preserved in LICENSE-MIT and
+# the lineage is stated in README; `authors` names who ships this package, not
+# who holds copyright. See docs/VICIA_DB_RENAME_PLAN.md.
+authors = ["etc-sw"]
+repository = "https://github.com/etc-sw/vicia-db"
 keywords = ["graph", "datalog", "bitemporal", "embedded", "database"]
 categories = ["database-implementations", "embedded"]
 readme = "README.md"
-documentation = "https://docs.rs/minigraf"
+# `documentation` is intentionally absent until the first `vicia-db` publish
+# creates a docs.rs page. Pointing it at docs.rs/minigraf would send readers to
+# upstream's API, which has diverged from this fork since v10.
 
 [lib]
+name = "vicia_db"
 crate-type = ["cdylib", "rlib"]
 
 
@@ -79,7 +88,7 @@ sha2 = "0.10"
 wasm-bindgen-test = "0.3"
 
 [[bench]]
-name = "minigraf_bench"
+name = "vicia_db_bench"
 harness = false
 
 [[bench]]
@@ -166,7 +175,7 @@ strip = "symbols"
 # opt-level = 3, not "z". Measured on 2026-07-27: "z" cost roughly 1.6x on the
 # core read path (query/point_entity 4.09 -> 2.61 us, join_3pattern 3.05 ->
 # 1.82 ms, btree_lookup/entity_point 5.08 -> 3.13 us at 100K) and bought
-# nothing where the philosophy actually sets a budget — libminigraf.so is
+# nothing where the philosophy actually sets a budget — libvicia_db.so is
 # 302 KiB at every opt-level from "z" through 3, because the cdylib's exported
 # surface is what LTO keeps. Only the CLI binary grows (1439 -> 2270 KiB), and
 # the CLI has no philosophy budget. See the size-budget table in PHILOSOPHY.md.

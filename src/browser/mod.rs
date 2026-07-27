@@ -212,7 +212,7 @@ impl BrowserOpenMode {
 
 const BROWSER_IDB_BATCH_PAGES: u64 = 256;
 
-/// Browser-only Minigraf database handle backed by IndexedDB.
+/// Browser-only ViciaDb database handle backed by IndexedDB.
 ///
 /// All public methods return `Promise`s. Use `await` in JavaScript.
 ///
@@ -499,7 +499,7 @@ impl BrowserDb {
 
         match cmd {
             DatalogCommand::Transact(tx) => {
-                let facts = crate::db::Minigraf::materialize_transaction(&tx)
+                let facts = crate::db::ViciaDb::materialize_transaction(&tx)
                     .map_err(|e| JsValue::from_str(&e.to_string()))?;
                 self.begin_mutation()?;
                 let result = self.apply_write(facts, false).await;
@@ -507,7 +507,7 @@ impl BrowserDb {
                 result
             }
             DatalogCommand::Retract(tx) => {
-                let facts = crate::db::Minigraf::materialize_retraction(&tx)
+                let facts = crate::db::ViciaDb::materialize_retraction(&tx)
                     .map_err(|e| JsValue::from_str(&e.to_string()))?;
                 self.begin_mutation()?;
                 let result = self.apply_write(facts, true).await;
@@ -543,7 +543,7 @@ impl BrowserDb {
         self.ensure_usable()?;
         #[cfg(feature = "bench-internals")]
         let preparation_started = js_sys::Date::now();
-        let prepared = crate::db::Minigraf::materialize_atomic_write_commands(&commands)
+        let prepared = crate::db::ViciaDb::materialize_atomic_write_commands(&commands)
             .map_err(|error| JsValue::from_str(&error.to_string()))?;
         #[cfg(feature = "bench-internals")]
         let prepared = {
@@ -596,9 +596,9 @@ impl BrowserDb {
                     inner.rules.clone(),
                     inner.functions.clone(),
                 );
-                crate::db::Minigraf::resolve_forget_triples(spec, &executor, closure_time).and_then(
+                crate::db::ViciaDb::resolve_forget_triples(spec, &executor, closure_time).and_then(
                     |triples| {
-                        crate::db::Minigraf::materialize_closure(
+                        crate::db::ViciaDb::materialize_closure(
                             &inner.fact_storage,
                             &triples,
                             closure_time,
@@ -907,7 +907,7 @@ impl BrowserDb {
     /// Serialise the current database to a portable `.graph` blob.
     ///
     /// The blob is byte-for-bit compatible with native `.graph` files opened by
-    /// `Minigraf::open()`. Pages are always in ascending `page_id` order.
+    /// `ViciaDb::open()`. Pages are always in ascending `page_id` order.
     ///
     /// Call `checkpoint()` on native before importing a file here to ensure
     /// no WAL entries are missing from the main file.
@@ -5388,7 +5388,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn import_corrupt_blob_rejects_and_preserves_idb() {
-        let db_name = "minigraf-test-import-corrupt";
+        let db_name = "vicia-db-test-import-corrupt";
 
         let db = BrowserDb::open(db_name).await.expect("open");
         db.execute(r#"(transact [[:erin :lang "rust"]])"#.to_string())
@@ -5423,7 +5423,7 @@ mod tests {
     /// OLD data, otherwise later incremental writes tear the durable state.
     #[wasm_bindgen_test]
     async fn import_flush_failure_leaves_live_db_untouched() {
-        let db_name = "minigraf-test-import-flush-fail";
+        let db_name = "vicia-db-test-import-flush-fail";
 
         let db = BrowserDb::open(db_name).await.expect("open");
         db.execute(r#"(transact [[:old :marker "keep"]])"#.to_string())
@@ -5488,7 +5488,7 @@ mod tests {
     /// bloated blobs.
     #[wasm_bindgen_test]
     async fn shrinking_import_removes_stale_idb_pages() {
-        let db_name = "minigraf-test-import-shrink";
+        let db_name = "vicia-db-test-import-shrink";
 
         let db = BrowserDb::open(db_name).await.expect("open");
         // Enough facts for a multi-page database (~25 facts per 4KB page).
@@ -5562,7 +5562,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn idle_maintenance_reclaims_pages_and_preserves_temporal_ref_history() {
-        let db_name = format!("minigraf-test-maintenance-{}", js_sys::Date::now());
+        let db_name = format!("vicia-db-test-maintenance-{}", js_sys::Date::now());
         let source = "00000000-0000-0000-0000-0000000000a1";
         let target = "00000000-0000-0000-0000-0000000000b2";
         let db = BrowserDb::open(&db_name).await.expect("open");
@@ -5653,7 +5653,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn projection_maintenance_publishes_and_reopens_v13_atomically() {
-        let db_name = format!("minigraf-test-projection-v13-{}", js_sys::Date::now());
+        let db_name = format!("vicia-db-test-projection-v13-{}", js_sys::Date::now());
         let db = BrowserDb::open_paged(&db_name).await.expect("open paged");
         db.execute(
             r#"(transact [[#uuid "00000000-0000-0000-0000-000000000201" :card/title "A"]
@@ -5758,7 +5758,7 @@ mod tests {
         let result: serde_json::Value = serde_json::from_str(&result).unwrap();
         assert_eq!(result["results"].as_array().unwrap().len(), 2);
 
-        let import_name = format!("minigraf-test-projection-import-{}", js_sys::Date::now());
+        let import_name = format!("vicia-db-test-projection-import-{}", js_sys::Date::now());
         let imported = BrowserDb::open_paged(&import_name)
             .await
             .expect("open import target");
@@ -5776,7 +5776,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn projection_publication_failure_keeps_previous_browser_authority() {
-        let db_name = format!("minigraf-test-projection-failure-{}", js_sys::Date::now());
+        let db_name = format!("vicia-db-test-projection-failure-{}", js_sys::Date::now());
         let db = BrowserDb::open_paged(&db_name).await.expect("open paged");
         db.execute(r#"(transact [[:card/a :card/title "A"]])"#.to_owned())
             .await
@@ -5820,7 +5820,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn failed_idle_maintenance_preserves_live_and_durable_state() {
-        let db_name = format!("minigraf-test-maintenance-fail-{}", js_sys::Date::now());
+        let db_name = format!("vicia-db-test-maintenance-fail-{}", js_sys::Date::now());
         let db = BrowserDb::open(&db_name).await.expect("open");
         db.execute(r#"(transact [[:stable :marker "old"]])"#.to_string())
             .await
@@ -5924,7 +5924,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn failed_incremental_write_poisoning_prevents_torn_state_promotion() {
-        let db_name = format!("minigraf-test-write-poison-{}", js_sys::Date::now());
+        let db_name = format!("vicia-db-test-write-poison-{}", js_sys::Date::now());
         let db = BrowserDb::open(&db_name).await.expect("open");
         db.execute(r#"(transact [[:stable :marker "durable"]])"#.to_string())
             .await
@@ -5968,7 +5968,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn aborted_incremental_write_restores_previous_live_state() {
-        let db_name = format!("minigraf-test-write-rollback-{}", js_sys::Date::now());
+        let db_name = format!("vicia-db-test-write-rollback-{}", js_sys::Date::now());
         let db = BrowserDb::open(&db_name).await.expect("open");
         db.execute(r#"(transact [[:stable :marker "durable"]])"#.to_string())
             .await
@@ -6017,7 +6017,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn browser_write_results_report_order_and_durability() {
-        let db_name = format!("minigraf-test-write-result-{}", js_sys::Date::now());
+        let db_name = format!("vicia-db-test-write-result-{}", js_sys::Date::now());
         let db = BrowserDb::open(&db_name).await.expect("open");
         let first = db
             .execute(r#"(transact [[:ordered :value 1]])"#.to_string())
@@ -6638,7 +6638,7 @@ mod tests {
 
     #[wasm_bindgen_test]
     async fn idb_persistence_round_trip() {
-        let db_name = "minigraf-test-persistence";
+        let db_name = "vicia-db-test-persistence";
 
         let db1 = BrowserDb::open(db_name).await.expect("open db1");
         db1.execute(r#"(transact [[:carol :dept "eng"]])"#.to_string())

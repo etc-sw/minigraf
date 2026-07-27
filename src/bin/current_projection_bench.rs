@@ -1,6 +1,5 @@
 use anyhow::{Context, Result, bail};
 use chrono::{DateTime, SecondsFormat, Utc};
-use minigraf::{Minigraf, OpenOptions, QueryResult, Value};
 use serde::Serialize;
 use std::fs;
 use std::io::Read;
@@ -8,6 +7,7 @@ use std::path::Path;
 use std::process::Command;
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 use uuid::Uuid;
+use vicia_db::{OpenOptions, QueryResult, Value, ViciaDb};
 
 const BATCH: u64 = 1_000;
 const TEMPORAL_BOUNDARY: i64 = 1_735_689_600_000;
@@ -55,14 +55,14 @@ struct ProjectionMeasurement {
 struct IncrementalMeasurement {
     stale_read_rejected: bool,
     refresh_ms: f64,
-    refresh: minigraf::CurrentProjectionRefreshDiagnostics,
+    refresh: vicia_db::CurrentProjectionRefreshDiagnostics,
     count: u64,
     checksum: i128,
     deterministic_rebuild: bool,
     checkpoint_ms: f64,
     checkpoint_stale_read_rejected: bool,
     checkpoint_refresh_ms: f64,
-    checkpoint_refresh: minigraf::CurrentProjectionRefreshDiagnostics,
+    checkpoint_refresh: vicia_db::CurrentProjectionRefreshDiagnostics,
     production_checkpoint_path_changed: bool,
     checkpoint_regression_percent: f64,
 }
@@ -132,12 +132,12 @@ struct TemporalProjectionMeasurement {
 struct TemporalIncrementalMeasurement {
     stale_read_rejected: bool,
     refresh_ms: f64,
-    refresh: minigraf::CurrentProjectionRefreshDiagnostics,
+    refresh: vicia_db::CurrentProjectionRefreshDiagnostics,
     count: u64,
     checksum: i128,
     deterministic_rebuild: bool,
     checkpoint_stale_read_rejected: bool,
-    checkpoint_refresh: minigraf::CurrentProjectionRefreshDiagnostics,
+    checkpoint_refresh: vicia_db::CurrentProjectionRefreshDiagnostics,
     pre_floor_rejected: bool,
     no_write_boundary_transition: bool,
     production_checkpoint_path_changed: bool,
@@ -783,7 +783,7 @@ fn temporal_distinct_windows(facts: u64) -> u64 {
         .saturating_add(u64::from(facts >= 4))
 }
 
-fn measure_query(db: &Minigraf, query: &str, samples: usize) -> Result<AggregateMeasurement> {
+fn measure_query(db: &ViciaDb, query: &str, samples: usize) -> Result<AggregateMeasurement> {
     let mut samples_ms = Vec::with_capacity(samples);
     let mut pair = (0_u64, 0_i128);
     for _ in 0..samples {
@@ -795,8 +795,8 @@ fn measure_query(db: &Minigraf, query: &str, samples: usize) -> Result<Aggregate
 }
 
 fn measure_candidate(
-    db: &Minigraf,
-    candidate: &minigraf::CurrentProjectionCandidate,
+    db: &ViciaDb,
+    candidate: &vicia_db::CurrentProjectionCandidate,
     samples: usize,
 ) -> Result<AggregateMeasurement> {
     let mut samples_ms = Vec::with_capacity(samples);
@@ -810,8 +810,8 @@ fn measure_candidate(
 }
 
 fn measure_candidate_at(
-    db: &Minigraf,
-    candidate: &minigraf::CurrentProjectionCandidate,
+    db: &ViciaDb,
+    candidate: &vicia_db::CurrentProjectionCandidate,
     valid_at: i64,
     samples: usize,
 ) -> Result<AggregateMeasurement> {
@@ -849,7 +849,7 @@ fn summarize_timing(mut samples_ms: Vec<f64>) -> Result<TimingMeasurement> {
 
 fn measure_semantics() -> Result<SemanticMeasurement> {
     const VALID_AT_2025: i64 = 1_735_689_600_000;
-    let db = Minigraf::in_memory()?;
+    let db = ViciaDb::in_memory()?;
     let ids = (1_u128..=10).map(Uuid::from_u128).collect::<Vec<_>>();
     let id = |index: usize| {
         ids.get(index)
@@ -1120,11 +1120,11 @@ fn aggregate_pair(result: QueryResult) -> Result<(u64, i128)> {
     Ok((u64::try_from(count)?, i128::from(checksum)))
 }
 
-fn open(path: &Path) -> Result<Minigraf> {
+fn open(path: &Path) -> Result<ViciaDb> {
     open_with_fill(path, None)
 }
 
-fn open_with_fill(path: &Path, fill_percent: Option<u8>) -> Result<Minigraf> {
+fn open_with_fill(path: &Path, fill_percent: Option<u8>) -> Result<ViciaDb> {
     let mut options = OpenOptions {
         wal_checkpoint_threshold: usize::MAX,
         ..OpenOptions::default()

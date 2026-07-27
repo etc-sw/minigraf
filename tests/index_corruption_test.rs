@@ -1,7 +1,7 @@
 //! Public-API corruption gates for the v11 generation-bound page catalog.
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::db::Minigraf;
+use vicia_db::db::ViciaDb;
 
 const PAGE_SIZE: usize = 4096;
 const HEADER_CHECKSUM_OFFSET: usize = 80;
@@ -17,7 +17,7 @@ const BASE_INTEGRITY_DESCRIPTOR_OFFSET: usize =
 const CATALOG_PAGE_START_OFFSET: usize = BASE_INTEGRITY_DESCRIPTOR_OFFSET + 24;
 
 fn build_valid_db(path: &std::path::Path) {
-    let db = Minigraf::open(path).unwrap();
+    let db = ViciaDb::open(path).unwrap();
     db.execute(r#"(transact [[:alice :idx "source-a"]])"#)
         .unwrap();
     db.checkpoint().unwrap();
@@ -44,7 +44,7 @@ fn corrupted_header_checksum_is_rejected_at_open() {
     std::fs::write(&path, bytes).unwrap();
 
     assert!(
-        Minigraf::open(&path).is_err(),
+        ViciaDb::open(&path).is_err(),
         "corrupt page-0 checksum must reject open"
     );
 }
@@ -58,7 +58,7 @@ fn corrupted_fact_page_fails_on_first_public_query() {
     let fact_page = read_u64(&page0, BASE_FACT_PAGE_START_OFFSET);
     flip_page_padding(&path, fact_page);
 
-    let db = Minigraf::open(&path).expect("v11 open must not scan base fact pages");
+    let db = ViciaDb::open(&path).expect("v11 open must not scan base fact pages");
     assert!(
         db.execute("(query [:find ?v :where [:alice :idx ?v]])")
             .is_err(),
@@ -75,7 +75,7 @@ fn corrupted_index_root_fails_on_first_public_query() {
     let eavt_root = read_u64(&page0, EAVT_ROOT_OFFSET);
     flip_page_padding(&path, eavt_root);
 
-    let db = Minigraf::open(&path).expect("v11 open must not scan base index pages");
+    let db = ViciaDb::open(&path).expect("v11 open must not scan base index pages");
     assert!(
         db.execute("(query [:find ?v :where [:alice :idx ?v]])")
             .is_err(),
@@ -93,7 +93,7 @@ fn corrupted_catalog_payload_is_rejected_at_open() {
     flip_page_padding(&path, catalog_page);
 
     assert!(
-        Minigraf::open(&path).is_err(),
+        ViciaDb::open(&path).is_err(),
         "catalog corruption must reject open before a handle is exposed"
     );
 }

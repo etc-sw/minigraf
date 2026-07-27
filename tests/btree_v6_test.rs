@@ -1,8 +1,8 @@
 //! Integration tests for Phase 6.5: on-disk B+tree indexes (file format v6).
 #![cfg(not(target_arch = "wasm32"))]
 
-use minigraf::OpenOptions;
 use tempfile::NamedTempFile;
+use vicia_db::OpenOptions;
 
 fn tmp_path() -> (NamedTempFile, String) {
     let f = NamedTempFile::new().unwrap();
@@ -34,7 +34,7 @@ fn test_v6_roundtrip_basic() {
     let result = db
         .execute("(query [:find ?v :where [:e0 :val ?v]])")
         .unwrap();
-    if let minigraf::QueryResult::QueryResults { results, .. } = result {
+    if let vicia_db::QueryResult::QueryResults { results, .. } = result {
         assert!(
             results
                 .iter()
@@ -56,7 +56,7 @@ fn test_v6_range_scan_across_leaves() {
     let result = db
         .execute("(query [:find ?v :where [:e100 :val ?v]])")
         .unwrap();
-    if let minigraf::QueryResult::QueryResults { results, .. } = result {
+    if let vicia_db::QueryResult::QueryResults { results, .. } = result {
         assert!(
             results
                 .iter()
@@ -83,7 +83,7 @@ fn test_v6_pending_plus_committed_merge() {
     let r0 = db
         .execute("(query [:find ?v :where [:e0 :val ?v]])")
         .unwrap();
-    if let minigraf::QueryResult::QueryResults { results, .. } = r0 {
+    if let vicia_db::QueryResult::QueryResults { results, .. } = r0 {
         assert!(
             results
                 .iter()
@@ -97,7 +97,7 @@ fn test_v6_pending_plus_committed_merge() {
     let r10 = db
         .execute("(query [:find ?v :where [:e10 :val ?v]])")
         .unwrap();
-    if let minigraf::QueryResult::QueryResults { results, .. } = r10 {
+    if let vicia_db::QueryResult::QueryResults { results, .. } = r10 {
         assert!(
             results
                 .iter()

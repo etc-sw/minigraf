@@ -1,7 +1,7 @@
 /// Storage backend abstraction for cross-platform support.
 ///
 /// This module provides a trait-based abstraction over different storage backends,
-/// allowing Minigraf to run on native platforms (file-based), WASM (IndexedDB),
+/// allowing ViciaDb to run on native platforms (file-based), WASM (IndexedDB),
 /// and in-memory (testing/embedded).
 ///
 /// Inspired by SQLite's VFS (Virtual File System) architecture.
@@ -127,7 +127,7 @@ fn read_u64_le(bytes: &[u8], offset: usize) -> anyhow::Result<u64> {
 /// Page size for the storage engine (4KB like SQLite)
 pub const PAGE_SIZE: usize = 4096;
 
-/// Magic number for .graph files: "MGRF" (Minigraf)
+/// Magic number for .graph files: "MGRF" (ViciaDb)
 pub const MAGIC_NUMBER: [u8; 4] = *b"MGRF";
 
 /// Current file format version.

@@ -1,9 +1,9 @@
 //! Cross-feature integration tests for Phase 7.5.
 //! Each test models a realistic embedder workload combining 2–3 Datalog features.
 
-use minigraf::{Minigraf, OpenOptions, QueryResult, Value};
+use vicia_db::{OpenOptions, QueryResult, Value, ViciaDb};
 
-fn db() -> Minigraf {
+fn db() -> ViciaDb {
     OpenOptions::new().open_memory().unwrap()
 }
 

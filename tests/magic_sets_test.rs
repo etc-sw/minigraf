@@ -2,14 +2,14 @@
 //!
 //! Asserts result *correctness* only — magic sets must never change query results.
 
-use minigraf::{Minigraf, QueryResult, Value};
 use uuid::Uuid;
+use vicia_db::{QueryResult, Value, ViciaDb};
 
-fn open_db() -> Minigraf {
-    Minigraf::in_memory().expect("open db")
+fn open_db() -> ViciaDb {
+    ViciaDb::in_memory().expect("open db")
 }
 
-fn exec(db: &Minigraf, cmd: &str) -> QueryResult {
+fn exec(db: &ViciaDb, cmd: &str) -> QueryResult {
     db.execute(cmd)
         .unwrap_or_else(|e| panic!("execution error: {}", e))
 }
