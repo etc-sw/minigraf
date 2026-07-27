@@ -112,8 +112,25 @@ SQLite's success comes from a clear philosophy: be a library, not a server. Be s
 - Pure Rust implementation
 - Minimal dependency tree (currently: serde, uuid, anyhow)
 - No required system libraries (optional backends OK)
-- Target: <1MB binary for core engine
 - No runtime dependencies (no JVM, no Python, no Node.js)
+
+#### Size budgets — which artifact each number applies to
+
+This is the authoritative definition. Every other size statement in this
+repository, and the `binary-size` CI check, defers to this table. State the
+artifact whenever you quote a size; "binary size" alone is ambiguous and has
+already caused a false CI failure.
+
+| Artifact | Budget | Rationale |
+|---|---|---|
+| **Core engine** — `libminigraf.so` (the C-ABI `cdylib`) | **< 1 MiB** | The embedded library is the product. This is the number the philosophy commits to. |
+| **Browser WASM** | **< 1 MB gzipped** | Download size is user-facing. Tracked separately in ROADMAP.md. |
+| **CLI binary** — `target/release/minigraf` | no philosophy budget; guarded loosely against runaway growth | The REPL is a convenience tool, not the shipped product. It bundles the engine plus the REPL, session protocol, and argument parsing. |
+
+Caveat on the engine number: `libminigraf.so` measures the whole engine
+surface exported through a C ABI. Rust consumers link the `rlib` and, after
+dead-code elimination, pay only for what they call. The `cdylib` is a stable,
+measurable proxy for "how big is the engine" — not a floor every consumer pays.
 
 **Anti-pattern**: Requiring external services, libraries, or runtimes to function.
 
@@ -363,7 +380,7 @@ You'll know Minigraf has succeeded when:
 1. ✅ **Ubiquity**: Developers say "just use Minigraf" for embedded graph storage
 2. ✅ **Trust**: Known for never losing data, crash-safe, reliable
 3. ✅ **Simplicity**: New users are productive in under 5 minutes
-4. ✅ **Size**: Core binary under 1MB, minimal dependencies
+4. ✅ **Size**: Core engine (`cdylib`) under 1 MiB, minimal dependencies — see [Size budgets](#size-budgets--which-artifact-each-number-applies-to)
 5. ✅ **Portability**: Runs everywhere from Raspberry Pi to browsers
 6. ✅ **Stability**: API hasn't broken in years
 7. ✅ **Documentation**: Comprehensive docs with examples

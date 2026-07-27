@@ -22,7 +22,7 @@ Thank you for your interest in contributing. Minigraf is a hobby project with a 
 
 - Features that break the single-file storage philosophy
 - Client-server architecture or network protocols in core
-- Large dependency additions that increase binary size significantly
+- Large dependency additions that grow the core engine (see the size-budget table in PHILOSOPHY.md for which artifact each budget covers)
 - Breaking changes to the public API or `.graph` file format without overwhelming justification
 - Code without tests
 - Features only useful for distributed or enterprise systems

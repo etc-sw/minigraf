@@ -1,5 +1,28 @@
 # Minigraf Benchmarks
 
+> ## ⚠️ Every number below predates the 2026-07-27 `opt-level` change
+>
+> All results on this page were measured with `[profile.release] opt-level = "z"`.
+> That profile is now `opt-level = 3`, after an A/B on 2026-07-27 showed `"z"`
+> was costing roughly **1.6x on the core read path** while saving nothing in the
+> artifact the philosophy actually budgets — `libminigraf.so` is 302 KiB at
+> every optimization level.
+>
+> Sample of the measured delta (`"z"` -> `3`, same host, same day):
+>
+> | Benchmark | `opt-level = "z"` | `opt-level = 3` |
+> |---|---:|---:|
+> | `query/point_entity/10k` | 4.09 µs | 2.61 µs |
+> | `query/point_attribute/10k` | 8.55 ms | 4.98 ms |
+> | `query/join_3pattern/1k` | 3.05 ms | 1.82 ms |
+> | `btree_lookup/entity_point/100k` | 5.08 µs | 3.13 µs |
+> | `query/predicate_pushdown/10k` | 26.5 ms | 16.5 ms |
+>
+> Treat the tables below as a conservative floor until a dedicated-host refresh
+> lands. Only `query` and `btree_lookup` were sampled, so the write, checkpoint,
+> and browser paths have an unmeasured — not a zero — delta. The refresh must
+> run with `MINIGRAF_BENCH_MODE=full`; a default run no longer emits 1M rows.
+
 ## Post-1.0 Updates
 
 v1.1.x shipped several query and storage path changes that affect benchmark numbers:
@@ -22,7 +45,7 @@ Benchmark results for Minigraf. Core query benchmarks were updated in v0.13.1 (P
 | RAM | 16 GB |
 | OS | Manjaro Linux 6.12.73-1 |
 | Rust | 1.94.0 |
-| Profile | `release` (`opt-level = "z"`, `lto = true`, `codegen-units = 1`, `panic = "abort"`, `strip = "symbols"`) |
+| Profile | `release` (`opt-level = 3`, `lto = true`, `codegen-units = 1`, `panic = "abort"`, `strip = "symbols"`) |
 | Swap | None |
 
 Sections marked "A0 environment" (Query Latency, Time-Travel, and the A0

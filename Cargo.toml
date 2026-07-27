@@ -161,7 +161,14 @@ panic = "abort"
 lto = true
 codegen-units = 1
 strip = "symbols"
-opt-level = "z"
+# opt-level = 3, not "z". Measured on 2026-07-27: "z" cost roughly 1.6x on the
+# core read path (query/point_entity 4.09 -> 2.61 us, join_3pattern 3.05 ->
+# 1.82 ms, btree_lookup/entity_point 5.08 -> 3.13 us at 100K) and bought
+# nothing where the philosophy actually sets a budget — libminigraf.so is
+# 302 KiB at every opt-level from "z" through 3, because the cdylib's exported
+# surface is what LTO keeps. Only the CLI binary grows (1439 -> 2270 KiB), and
+# the CLI has no philosophy budget. See the size-budget table in PHILOSOPHY.md.
+opt-level = 3
 
 # uniffi-bindgen reads UNIFFI_META symbols from .symtab (not .dynsym).
 
