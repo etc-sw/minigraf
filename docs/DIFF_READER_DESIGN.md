@@ -314,11 +314,11 @@ Applicable rows from the roadmap correctness matrix, plus diff-specific rows:
 
 ---
 
-## 11. Open Defect — Browser Yield Clamp (handoff, 2026-07-27)
+## 11. Closed Defect — Browser Yield Clamp (fixed 2026-07-27)
 
-A-3 shipped correct but not fast. The browser performance receipt exists,
-fails its latency gates, and the cause is measured. This section is the
-working brief for the fix; it is not a proposal to be re-derived.
+A-3 shipped correct but not fast. The browser performance receipt existed,
+failed its latency gates, and the cause was measured. This section was the
+working brief for the fix; §11.6 records the outcome.
 
 ### 11.1 What is wrong
 
@@ -443,3 +443,27 @@ the yield primitive is on every paged read path, not just the diff.
   150.0.7871.115 is at `/opt/chrome-for-testing/`.
 - Unrelated pre-existing debt, unchanged and not caused by this line: 23
   wasm-target clippy errors identical on `main`, and CI runs no clippy at all.
+
+### 11.6 Outcome (2026-07-27)
+
+Fixed as diagnosed. `yield_browser_task` now resolves one primitive per thread
+— `scheduler.yield()` where the realm has it, else a per-yield
+`MessageChannel` hop, else the old `setTimeout(0)`. Chrome for Testing 150
+takes the `scheduler.yield()` path.
+
+The A-3 receipt is admitted at commit `cafdb98`:
+`benchmarks/baselines/browser-valid-time-diff/2026-07-27-hal7800-a3-admitted/receipt.json`,
+all six gates pass. Entity-set warm p50 518.9 ms → 2.0 ms (4.9x native's
+0.408 ms, in line with the 8.6x the attribute scope shows), warm p95 3.8 ms,
+cold 8.5 ms. `coldPaysPageFaults` flipped to pass in both scopes, which §11.3
+named as the sharpest single signal. Per-entity cost fell from 4.048 ms to
+0.017 ms at 128 entities and now *decreases* with scope size. Full tables in
+`docs/BENCHMARKS.md`, "Browser measurement — ADMITTED".
+
+Two wasm tests guard the primitive: one asserts the resolved primitive is not
+the clamped fallback, one asserts 64 warmed hops finish under 100 ms (clamped
+they cost ≥ 256 ms).
+
+Still open, and deliberately not folded in: whether `step_entity_set` should
+yield once per entity at all. It is now a pacing question worth ~0.017 ms per
+entity, not a latency defect.

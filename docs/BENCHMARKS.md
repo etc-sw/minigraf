@@ -2521,7 +2521,10 @@ VICIA_DIFF_FIXTURE=/tmp/bench-fixtures/bench-1m-diff.graph \
   --ignored measure_valid_time_diff_fixture --nocapture
 ```
 
-### Browser measurement — NOT ADMITTED (2026-07-27)
+### Browser measurement — NOT ADMITTED (2026-07-27, superseded)
+
+Kept as the diagnostic record. The admitted receipt is the next section; the
+defect this run found was fixed in `yield_browser_task`.
 
 A-3 browser evidence for `BrowserReadView.validTimeDiff()`, taken against the
 same `bench-1m-diff.graph` as the native baseline above, in Chrome for Testing
@@ -2573,6 +2576,44 @@ Correctness is unaffected — every sample returned the exact expected page.
 The fix is to the yield primitive, which is shared by every paged browser
 read, so it is tracked as its own change rather than folded into this
 measurement.
+
+### Browser measurement — ADMITTED (2026-07-27)
+
+Same fixture, same host, same Chrome for Testing 150.0.7871.115, re-measured
+after `yield_browser_task` stopped using the clamped `setTimeout(…, 0)` and
+started resolving `scheduler.yield()` (with a `MessageChannel` fallback).
+Receipt: `benchmarks/baselines/browser-valid-time-diff/2026-07-27-hal7800-a3-admitted/receipt.json`,
+`admitted: true`, source commit `cafdb98`, tree clean. Import staged the same
+75,486 IndexedDB pages, `headerNodeCount` 1,000,256.
+
+| Scope | cold | warm p50 | warm p95 | native p50 | vs native |
+|---|---:|---:|---:|---:|---:|
+| 128-entity exact set | 8.5 ms | 2.0 ms | 3.8 ms | 0.408 ms | 4.9x |
+| Whole-attribute range | 6.5 ms | 0.8 ms | 1.3 ms | 0.093 ms | 8.6x |
+
+All six gates pass. The entity-set scope went from 518.9 ms warm p50 to 2.0 ms
+— 259x — with no change to the storage path, and `coldPaysPageFaults` flipped
+to pass in both scopes (cold 8.5 ms > warm 2.0 ms), which is the signal that
+page-fault work, not scheduling, now dominates the cold call. Peak RSS delta
+53 MiB / PSS 47 MiB on the 309 MB fixture. The attribute scope is unchanged at
+0.8 ms warm p50, as expected: it yields a handful of times, so it never paid
+much clamp.
+
+The per-entity constant collapsed with it:
+
+| Entities | warm p50 | per entity | was (clamped) |
+|---:|---:|---:|---:|
+| 1 | 0.1 ms | 0.100 ms | 0.100 ms |
+| 8 | 0.3 ms | 0.038 ms | 3.600 ms |
+| 16 | 0.4 ms | 0.025 ms | 3.844 ms |
+| 32 | 0.8 ms | 0.025 ms | 3.959 ms |
+| 64 | 1.2 ms | 0.019 ms | 4.022 ms |
+| 128 | 2.2 ms | 0.017 ms | 4.048 ms |
+
+Per-entity cost now *falls* with scope size instead of converging on 4 ms —
+fixed per-call overhead amortising over real range work, which is the shape a
+scan should have. Whether `step_entity_set` should still yield once per entity
+is a separate, now much cheaper, question.
 
 ```bash
 # serve the repo root first: python3 -m http.server 8123
