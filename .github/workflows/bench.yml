@@ -22,9 +22,27 @@ jobs:
     name: bench / compile
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    outputs:
+      has_bencher: ${{ steps.bencher_configured.outputs.has_bencher }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      # The `secrets` context is not available in `if:` conditions, so resolve
+      # it once here and expose the answer as a job output. Without a Bencher
+      # project + token the whole benchmark matrix exists only to upload
+      # nowhere, so it is skipped rather than run for 40 minutes and fail.
+      - name: Detect Bencher configuration
+        id: bencher_configured
+        env:
+          BENCHER_API_TOKEN: ${{ secrets.BENCHER_API_TOKEN }}
+        run: |
+          if [ -n "$BENCHER_API_TOKEN" ]; then
+            echo "has_bencher=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_bencher=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::BENCHER_API_TOKEN is not set; skipping the benchmark matrix. The local coverage and smoke-receipt gates in this job still run."
+          fi
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -72,7 +90,7 @@ jobs:
 
   benchmark:
     name: bench / ${{ matrix.name }}
-    if: github.event_name != 'pull_request'
+    if: github.event_name != 'pull_request' && needs.compile.outputs.has_bencher == 'true'
     runs-on: ubuntu-latest
     needs: [compile]
     timeout-minutes: 360
@@ -274,7 +292,7 @@ jobs:
         continue-on-error: true
         run: |
           bencher run \
-            --project minigraf \
+            --project vicia-db \
             --token "${{ secrets.BENCHER_API_TOKEN }}" \
             --branch main \
             --testbed ubuntu-latest \
@@ -285,8 +303,11 @@ jobs:
             --adapter rust_criterion \
             --file ${{ matrix.file }}
 
+      # Best-effort. Repositories with Issues disabled (the default for a fork)
+      # must not turn a benchmark report into a red build.
       - name: Open regression issue
         if: steps.bencher.outcome == 'failure'
+        continue-on-error: true
         uses: actions/github-script@v6
         with:
           script: |
