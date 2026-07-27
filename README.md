@@ -34,120 +34,19 @@
 
 A tiny, self-contained graph database with **Datalog queries** and **bi-temporal time travel**. Think SQLite, but for connected data with full history.
 
-## Vicia DB Transition
+## Naming
 
-This repository is **Vicia DB**, the Vetch-oriented successor name for the
-forked Minigraf line.
+The crate is `vicia-db`, the import path is `vicia_db`, and `ViciaDb` is the
+primary handle type. `Minigraf` remains as a type alias — it names the same type
+with the same API, so source written against the pre-rename package keeps
+compiling — and is not deprecated.
 
-The Rust package rename has landed. The crate is `vicia-db`, the import path is
-`vicia_db`, and `ViciaDb` is the primary handle type. `Minigraf` remains as a
-type alias — it names the same type with the same API, so pre-rename source
-keeps compiling — and is not deprecated. The version restarts at `0.1.0` rather
-than continuing upstream's `1.1.1`; that number belongs to a different package
-under a different maintainer.
+Versioning restarts at `0.1.0` rather than continuing upstream's `1.1.1`; that
+number belongs to a different package under a different maintainer.
 
-**Both packages are published.** `vicia-db 0.1.0` is on crates.io and
-`@vicia-db/browser 0.1.0` is on npm, released by hand on 2026-07-27.
-
-**Publishing stays manual.** The release workflows in `.github/workflows/` are
-disarmed on purpose: there is no tag trigger and no registry token in CI, so a
-routine `git push --tags` cannot publish anything. Every release is a deliberate
-local command — see [Releasing](#releasing). This is a decision, not an unfinished
-step; adding a registry token would arm a publish nobody asked for.
-
-The browser binding is published under this fork's own name. The Python,
-Node.js, Java, and C bindings still carry upstream's. They move in a later slice.
-
-The file format does not change. `.graph` files, the `MGRF` header magic, and
-every format version remain exactly as they are — format stability outranks
-name consistency.
-
-See [docs/VICIA_DB_RENAME_PLAN.md](docs/VICIA_DB_RENAME_PLAN.md) for the staged
-rename plan, compatibility policy, downstream impact list, and attribution
-checklist.
-
-See [docs/MAINTENANCE_API_CONTRACT.md](docs/MAINTENANCE_API_CONTRACT.md) for
-the `run_idle_maintenance()` caller contract.
-
-## Local Vetch browser sync
-
-Vicia's browser binding lives in `bindings/browser` and publishes to npm as
-`@vicia-db/browser`. Vetch does not consume the published package; it links a
-vendored build of the current checkout, so local iteration never waits on a
-release. Build the current checkout and atomically sync it into the sibling
-Vetch checkout with:
-
-```bash
-just sync
-```
-
-To target a Vetch worktree explicitly:
-
-```bash
-just sync /absolute/path/to/vetch-worktree
-```
-
-The synced package includes `vicia-build.json` with the exact source commit,
-dirty-state flag, wasm hash, and wasm-pack version. Vetch consumes it through a
-`link:` dependency, so replacing the package directory takes effect without
-overwriting `node_modules` or changing imports. Publishing the same staged
-package to npm is a separate, explicit command — see
-[Releasing](#releasing) — and does not change how Vetch resolves it.
-
-## Releasing
-
-Releases are run by hand, from a clean checkout. CI cannot publish: the release
-workflows have no tag trigger and no registry token, and that is deliberate —
-see the DISARMED banners in `.github/workflows/release.yml` and `cascade.yml`.
-
-**Rust crate — `vicia-db` on crates.io**
-
-```sh
-cargo publish --dry-run     # full build of the packaged crate; uploads nothing
-cargo publish               # IRREVERSIBLE
-```
-
-The root `Cargo.lock` is not tracked, so a release is not byte-reproducible
-from the repository alone — two checkouts of the same commit can resolve
-different dependency versions. This has already bitten once: a stale lock pinned
-`wasm-bindgen` to a version the installed test runner did not match, and the
-browser integration gate caught it before publishing. If a gate fails on a
-version mismatch, regenerate the lock (`rm Cargo.lock && cargo generate-lockfile`)
-before assuming the code is wrong.
-
-**Browser package — `@vicia-db/browser` on npm**
-
-```sh
-just publish-browser-dry-run   # every gate, publishes nothing
-just publish-browser           # IRREVERSIBLE
-```
-
-If the npm account requires a one-time password, `just publish-browser` will
-fail with `EOTP` when run non-interactively: the gate chain takes minutes and an
-OTP lives about thirty seconds, so a code supplied up front is always expired by
-the time the publish starts. Split the two instead:
-
-```sh
-just publish-browser-stage                       # every gate, publishes nothing
-cd target/npm-package
-npm publish --access public --otp=<6 digits>     # IRREVERSIBLE
-```
-
-The staged package is bound to the commit it was built from. If the working
-tree moves before you publish, rebuild it.
-
-`publish-browser` reuses the Vetch sync pipeline: it builds the package with
-`wasm-pack`, stamps `vicia-build.json` with the source commit and wasm hash,
-runs the browser integration gates against the sibling Vetch checkout, and
-re-checks that the source did not change while those gates ran. It refuses a
-dirty checkout with no override, because a published artifact has to be
-reproducible from a commit. It does **not** touch Vetch's vendored package —
-Vetch keeps linking its local build, so a release never moves Vetch underneath
-you. Run `just sync` separately for that.
-
-Neither registry lets you take a release back. crates.io versions can be
-yanked but never deleted, and the crate name is held permanently. Check the
-version number before running either command.
+The file format is unaffected. `.graph` files, the `MGRF` header magic, and
+every format version are exactly as they were — format stability outranks name
+consistency.
 
 ## Vision
 
@@ -252,7 +151,7 @@ first 2.0 conditions and exact migration table are documented in
 [`docs/API_COMPATIBILITY_AND_MIGRATION.md`](docs/API_COMPATIBILITY_AND_MIGRATION.md).
 
 ```rust
-use vicia_db::{Vicia DB, OpenOptions};
+use vicia_db::{OpenOptions, ViciaDb};
 
 // Open or create a file-backed database
 let db = OpenOptions::new().path("myapp.graph").open()?;
@@ -405,9 +304,22 @@ This fork publishes [`@vicia-db/browser`](https://www.npmjs.com/package/@vicia-d
 npm install @vicia-db/browser
 ```
 
-Upstream's [`@minigraf/browser`](https://www.npmjs.com/package/@minigraf/browser) is a different package and is not a drop-in substitute. Vetch consumes the current checkout through its local `@vicia-db/browser` package boundary. `BrowserDb` remains the low-level 1.x compatibility surface. Ordinary foreground callers should open `BrowserInteractiveLedger`, which always uses the paged path and exposes only bounded transaction-pinned read views plus `executeAtomic(commands)`. Reads require row and byte budgets, reject unindexed plans or incomplete results, and select current, any-valid-time, `asOf`, or exact valid time through the read-view constructor. Portability and O(total) work belong to `BrowserMaintenanceLedger`, which owns verified export, strict import, caller-scheduled idle maintenance, and explicit current-projection rebuilds but cannot query or write. Keep foreground writer ownership under a Web Lock; run legacy migration, import, full export, and maintenance in a disposable worker that acquires the same lock, reports its outcome, terminates, and lets the caller reopen the interactive capability. See the runnable [`examples/browser`](examples/browser) flow, [`docs/API_COMPATIBILITY_AND_MIGRATION.md`](docs/API_COMPATIBILITY_AND_MIGRATION.md), [`docs/DURABILITY_AND_CALLER_RULES.md`](docs/DURABILITY_AND_CALLER_RULES.md), and [`docs/MAINTENANCE_API_CONTRACT.md`](docs/MAINTENANCE_API_CONTRACT.md).
+Upstream's [`@minigraf/browser`](https://www.npmjs.com/package/@minigraf/browser) is a different package and is not a drop-in substitute. `BrowserDb` remains the low-level 1.x compatibility surface. Ordinary foreground callers should open `BrowserInteractiveLedger`, which always uses the paged path and exposes only bounded transaction-pinned read views plus `executeAtomic(commands)`. Reads require row and byte budgets, reject unindexed plans or incomplete results, and select current, any-valid-time, `asOf`, or exact valid time through the read-view constructor. Portability and O(total) work belong to `BrowserMaintenanceLedger`, which owns verified export, strict import, caller-scheduled idle maintenance, and explicit current-projection rebuilds but cannot query or write. Keep foreground writer ownership under a Web Lock; run legacy migration, import, full export, and maintenance in a disposable worker that acquires the same lock, reports its outcome, terminates, and lets the caller reopen the interactive capability. See the runnable [`examples/browser`](examples/browser) flow, [`docs/API_COMPATIBILITY_AND_MIGRATION.md`](docs/API_COMPATIBILITY_AND_MIGRATION.md), [`docs/DURABILITY_AND_CALLER_RULES.md`](docs/DURABILITY_AND_CALLER_RULES.md), and [`docs/MAINTENANCE_API_CONTRACT.md`](docs/MAINTENANCE_API_CONTRACT.md).
 
-WASI build (`wasm32-wasip1`) remains available as [`@minigraf/wasi`](https://www.npmjs.com/package/@minigraf/wasi) and as a GitHub Releases artifact. File format v12 retains v11's generation-bound, page-local base integrity checks and adds adaptive prefix-compressed index leaves. V11 remains directly readable: foreground open and delta checkpoints preserve its bytes, while caller-scheduled idle maintenance is the COW upgrade boundary. Explicit native and browser maintenance capabilities can publish a bounded attribute list as a v13 current-projection catalog; ordinary writes remain v12. Transaction-pinned read views use the catalog only for exact-watermark, single-attribute, ungrouped `count`/`sum` queries, with a bounded resident tail overlay keeping post-publication writes on that route and generation changes, unsupported query shapes, corrupt projection copies, or over-budget tails falling back to the full-history ledger. Browser publication is one atomic IndexedDB transaction and reopens the selected v13 authority after commit. On the recorded 1M-fact Chrome 150 matrix, paged open starts in a 17.8 ms five-run maximum and the open-plus-six-probe phase adds at most 51.1 MiB of sampled PSS; one-fact writes remain 8.3 ms p95. Legacy migration, import, full verified export, recompact, and projection rebuild are explicit O(total) operations and must run in a disposable worker. R2-C5 and its bounded-contract correction deliver the complete v13 boundary to Vetch from clean source `77a3008`; the generated JS glue, declarations, manifests, licenses, WASM, and provenance pass the 78-test real-Chrome package matrix, complete Vetch authority suite, TypeScript check, and production build. Foreground read views independently cap complete results at 10,000 rows, while resident projection tails count empty replacements toward both their entity and byte bounds. The package version, ordinary v12 writer default, and Vetch scheduling policy remain unchanged. R3 bounded-memory recompact is next.
+On a recorded 1M-fact Chrome 150 matrix, paged open completes within 17.8 ms
+across five runs, open plus six probes adds at most 51.1 MiB of sampled PSS, and
+one-fact writes are 8.3 ms p95. Foreground read views cap complete results at
+10,000 rows. Legacy migration, import, full verified export, recompact, and
+projection rebuild are explicit O(total) operations and must run in a disposable
+worker.
+
+WASI build (`wasm32-wasip1`) remains available as [`@minigraf/wasi`](https://www.npmjs.com/package/@minigraf/wasi) and as a GitHub Releases artifact.
+
+The current file format is v12, with an optional v13 current-projection catalog
+that explicit maintenance can publish. v11 files remain directly readable, and
+foreground opens and delta checkpoints preserve their bytes; the copy-on-write
+upgrade happens only during caller-scheduled idle maintenance. See
+[CHANGELOG.md](CHANGELOG.md) for per-version detail.
 
 ### For Python / Node.js / Java / C
 
