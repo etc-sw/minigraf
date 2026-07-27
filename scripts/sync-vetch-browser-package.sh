@@ -173,7 +173,11 @@ pkg.name = "@vicia-db/browser";
 pkg.description = "Vicia DB browser WebAssembly package";
 pkg.repository = {
   type: "git",
-  url: "https://github.com/etc-sw/vicia-db.git",
+  // `git+https://`, not `https://`. npm normalizes the bare form on publish,
+  // which rewrites package.json inside the tarball and makes the published
+  // shasum differ from the staged one. Everything downstream of this script
+  // verifies by hash, so the artifact has to leave here already normalized.
+  url: "git+https://github.com/etc-sw/vicia-db.git",
 };
 pkg.files = [
   ...new Set([
@@ -201,6 +205,21 @@ fs.writeFileSync(
   `${JSON.stringify(provenance, null, 2)}\n`,
 );
 NODE
+
+if [[ "$release_mode" == 1 ]]; then
+  # npm silently rewrites fields it considers malformed at publish time, which
+  # changes package.json inside the tarball and breaks the equality between the
+  # package we gated and the package that ships. Fail instead of shipping a
+  # tarball we did not verify: if npm still has a correction to make, the
+  # generator above is what needs updating.
+  cp "$stage_package/package.json" "$stage_root/package.json.staged"
+  npm pkg fix --prefix "$stage_package" >/dev/null 2>&1 || true
+  if ! diff -u "$stage_root/package.json.staged" "$stage_package/package.json"; then
+    echo "error: npm would rewrite package.json at publish time (diff above)" >&2
+    echo "hint: apply the same normalization in this script's package.json generator" >&2
+    exit 1
+  fi
+fi
 
 latest_receipt="$repo_root/target/vetch-integration/latest.json"
 mkdir -p "$(dirname "$latest_receipt")"
