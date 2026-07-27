@@ -825,7 +825,7 @@ fn measure_valid_time_diff_1m() {
         .collect::<Vec<_>>();
     let view = view_any(&db);
 
-    let mut measure = |label: &str, entities: Option<&[uuid::Uuid]>| {
+    let measure = |label: &str, entities: Option<&[uuid::Uuid]>| {
         let mut samples = Vec::with_capacity(SAMPLES);
         for iteration in 0..=SAMPLES {
             let started = std::time::Instant::now();
