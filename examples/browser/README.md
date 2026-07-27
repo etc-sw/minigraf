@@ -1,4 +1,4 @@
-# Minigraf Browser Capability Demo
+# Vicia DB Browser Capability Demo
 
 This no-bundler demo runs the recommended persistent browser shape:
 
@@ -30,7 +30,7 @@ caller after success or failure.
 ## Headless Chrome Receipt
 
 The driver uses the same external `puppeteer`/`puppeteer-core` convention as
-the browser benchmark driver and adds no runtime dependency to Minigraf:
+the browser benchmark driver and adds no runtime dependency to Vicia DB:
 
 ```bash
 CHROME_PATH=/usr/local/bin/google-chrome \

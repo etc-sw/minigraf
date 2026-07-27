@@ -410,7 +410,7 @@ VICIA_DIFF_FIXTURE=target/bench-fixtures/bench-1m-diff.graph \
   --ignored measure_valid_time_diff_fixture --nocapture
 
 # 2. rebuild wasm, serve repo root
-wasm-pack build --target web --out-dir minigraf-wasm --features browser
+wasm-pack build --target web --out-dir vicia-db-wasm --features browser
 python3 -m http.server 8123
 
 # 3. browser receipt on a CLEAN tree (trackedClean must be true)

@@ -1,4 +1,4 @@
-# Minigraf Refactoring and Algorithm Improvement Plan
+# Vicia DB Refactoring and Algorithm Improvement Plan
 
 Historical branch: `vetch/minigraf-refactor-plan`
 
@@ -10,7 +10,7 @@ delta-storage line.
 
 ## Philosophy Fit
 
-This plan fits Minigraf's "SQLite for bi-temporal graph databases" philosophy when it stays inside these constraints:
+This plan fits Vicia DB's "SQLite for bi-temporal graph databases" philosophy when it stays inside these constraints:
 
 - Keep the database embedded, zero-configuration, and dependency-light.
 - Prefer reliability and clarity over clever indexing changes.
@@ -65,7 +65,7 @@ R1 and R5 are the safest maintainability wins. R2 should run before any storage 
 
 ### Problem
 
-Several improvement candidates are plausible, but Minigraf should not trade simple, reliable behavior for unmeasured complexity.
+Several improvement candidates are plausible, but Vicia DB should not trade simple, reliable behavior for unmeasured complexity.
 
 ### Proposed Work
 
@@ -248,7 +248,7 @@ Current roadmap scope for this worktree:
 
 - Define the delta index target: small append checkpoint/flush cost should be tied to pending/delta size, not committed graph size.
 - Treat checkpointing as work that Vetch can push outside the interactive agent rhythm.
-- Translate GrafeoDB's writable layered compact store idea into Minigraf terms: committed base B+trees plus append-friendly delta index segments plus explicit `recompact()`/full-rebuild fallback.
+- Translate GrafeoDB's writable layered compact store idea into Vicia DB terms: committed base B+trees plus append-friendly delta index segments plus explicit `recompact()`/full-rebuild fallback.
 - Consider Bloom filters and zone maps only as segment-level skip metadata for facts/index entries, not as a general query-engine rewrite.
 - Consider streaming execution for checkpoint, export, rebuild, and compaction paths where buffering all committed entries is the current cost source.
 - Borrow design patterns from existing Rust storage engines without adopting them wholesale:
@@ -264,11 +264,11 @@ First implementation slice design and test spec: `docs/DELTA_INDEX_DESIGN.md`.
 
 Future roadmap parking lot outside this worktree's implementation scope:
 
-- Vector-first storage in Minigraf core, including `Value::Vector`, HNSW, SIMD distance functions, and vector quantization.
-- BM25, hybrid text/vector search, RRF, and graph+vector query planning as Minigraf core features. These belong first in Vetch projection/search layers backed by receipts.
-- Heavy multimodal payload storage, embedding bulk storage, OCR/transcript/chunk payloads, and object-detection artifacts. Minigraf should store authority graph pointers, hashes, metadata, and relationships; Vetch should own rebuildable object/search/vector stores.
+- Vector-first storage in Vicia DB core, including `Value::Vector`, HNSW, SIMD distance functions, and vector quantization.
+- BM25, hybrid text/vector search, RRF, and graph+vector query planning as Vicia DB core features. These belong first in Vetch projection/search layers backed by receipts.
+- Heavy multimodal payload storage, embedding bulk storage, OCR/transcript/chunk payloads, and object-detection artifacts. Vicia DB should store authority graph pointers, hashes, metadata, and relationships; Vetch should own rebuildable object/search/vector stores.
 - Broad execution-engine rewrites such as push-based vectorized execution, morsel-driven parallelism, Block-STM, full columnar storage, DPccp join optimization, adaptive query execution, and transparent spilling.
-- Adopting an external Rust database backend as a dependency. Revisit only if a later benchmark-backed migration proposal proves that preserving Minigraf's single-file, bi-temporal, full-history identity semantics is cheaper than implementing a narrow delta-index layer.
+- Adopting an external Rust database backend as a dependency. Revisit only if a later benchmark-backed migration proposal proves that preserving Vicia DB's single-file, bi-temporal, full-history identity semantics is cheaper than implementing a narrow delta-index layer.
 
 ## R3: Split Positive Candidate Fetch from Nested Clauses
 

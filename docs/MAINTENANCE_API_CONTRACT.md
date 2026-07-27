@@ -5,7 +5,7 @@ Status: Q3-B native contract, A5-4 browser atomic compact maintenance, A5-6d
 
 `MaintenanceLedger::run_idle_maintenance()` and browser
 `BrowserMaintenanceLedger.runIdleMaintenance()` are the preferred maintenance
-hooks for new embedding code. `Minigraf::run_idle_maintenance()` and
+hooks for new embedding code. `ViciaDb::run_idle_maintenance()` and
 `BrowserDb.runIdleMaintenance()` remain supported on the raw compatibility
 surfaces. These hooks move recompact work out of foreground receipt capture
 without exposing `PersistentFactStorage`, `CheckpointOutcome`, or raw recompact
@@ -75,7 +75,7 @@ For capability-scoped native use, drop `InteractiveLedger` before opening
 `MaintenanceLedger` on the same path. Interactive drop deliberately performs no
 hidden checkpoint: WAL-backed writes remain durable, and the maintenance open
 replays them before an explicit idle-maintenance call publishes page 0 and
-retires the WAL. Raw `Minigraf` keeps its legacy best-effort drop checkpoint for
+retires the WAL. Raw `ViciaDb` keeps its legacy best-effort drop checkpoint for
 backwards compatibility.
 
 For browser use, keep foreground writes behind the caller-owned Web Lock, but

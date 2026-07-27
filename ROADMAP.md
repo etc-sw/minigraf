@@ -1,4 +1,4 @@
-# Minigraf Roadmap
+# Vicia DB Roadmap
 
 > The path from property graph PoC to production-ready bi-temporal Datalog database
 
@@ -35,7 +35,7 @@
 - ✅ Single-file `.graph` format (4KB pages)
 - ✅ Cross-platform file format (endian-safe)
 - ✅ Persistent graph storage with serialization
-- ✅ Embedded database API (`Minigraf::open()`)
+- ✅ Embedded database API (`ViciaDb::open()`)
 - ✅ Auto-save on drop
 - ✅ Thread-safe concurrent access
 - ✅ Comprehensive test suite (54 tests)
@@ -490,7 +490,7 @@ Current v5 stores index data as paged blobs (page type `0x11`). v6 introduces pr
 - Memory: index memory usage drops from O(facts) to O(cache_pages) — same bound as fact pages
 - Write amplification: checkpoint writes O(changed_paths) pages instead of O(all_index_pages)
 - Startup: open time drops from O(index_size) to O(1)
-- Mobile: makes Minigraf viable on memory-constrained devices without special tuning
+- Mobile: makes Vicia DB viable on memory-constrained devices without special tuning
 
 **Deliverable**: All four covering indexes (EAVT, AEVT, AVET, VAET) backed by proper on-disk B+tree pages; file format v6 with automatic v5 migration; index memory usage proportional to cache size, not database size
 
@@ -739,7 +739,7 @@ Current v5 stores index data as paged blobs (page type `0x11`). v6 introduces pr
 
 Most people are familiar with point-in-time queries (`:as-of`, `:valid-at`), but a complete bi-temporal query model covers four classes:
 
-| Class | Description | Minigraf before 7.6 |
+| Class | Description | Vicia DB before 7.6 |
 |---|---|---|
 | **Point-in-Time** | Snapshot of state at a specific moment | ✅ `:as-of` / `:valid-at` |
 | **Time Interval** | Facts alive at any point during [T1, T2] | ⚠️ `:any-valid-time` only (no range predicate) |
@@ -894,7 +894,7 @@ UDFs are the natural generalisation: if the engine can call built-in aggregates 
 
 **Status**: ✅ Complete (v0.17.0, 2026-04-02)
 
-**Summary**: `register_aggregate` and `register_predicate` public API added to `Minigraf`.
+**Summary**: `register_aggregate` and `register_predicate` public API added to `ViciaDb`.
 UDFs plug into grouping aggregation, window computation, and `:where` predicate filtering
 via type-erased `Box<dyn Any + Send>` accumulators and `Arc<dyn Fn>` closures.
 `FunctionRegistry` extended with `AggImpl` discriminator and `PredicateDesc`.
@@ -956,7 +956,7 @@ db.register_predicate(
   - `PredicateDesc`: one-argument `Fn(&Value) -> bool` closure
 - All built-in aggregates (Phase 7.2) and window functions (Phase 7.7a) are registered into `FunctionRegistry` at startup — UDFs use exactly the same path
 - Parser: recognise registered function names in `:find` aggregate positions and `:where` predicate call positions at parse time (registry consulted at parse time for validation)
-- `Minigraf::register_aggregate(name, init, step, finalise)` and `Minigraf::register_predicate(name, fn)` — new public API methods, callable before or after `open()`
+- `ViciaDb::register_aggregate(name, init, step, finalise)` and `ViciaDb::register_predicate(name, fn)` — new public API methods, callable before or after `open()`
 - Functions are not persisted to the `.graph` file — they must be re-registered on each open, exactly as SQLite requires (this is correct: executable code is never stored in the data file)
 
 **Tests**:
@@ -982,7 +982,7 @@ db.register_predicate(
 
 **Status**: ✅ Complete (v0.18.0, 2026-04-04)
 
-**Summary**: `Minigraf::prepare(query_str)` returns a `PreparedQuery` that can be executed many
+**Summary**: `ViciaDb::prepare(query_str)` returns a `PreparedQuery` that can be executed many
 times with different `BindValue` bindings. Named `$slot` tokens are substituted at execute time
 via deep-clone + AST walk; the executor, optimizer, and matcher are unchanged.
 780 tests.
@@ -1064,7 +1064,7 @@ The query optimizer uses selectivity estimates to pick join order. Different `:a
 - Parser: recognise `$identifier` as a `BindSlot` token in entity, value, `:as-of`, and `:valid-at` positions
 - `DatalogQuery` type: add `bind_slots: Vec<BindSlot>` field
 - New `PreparedQuery` struct: stores parsed AST + optimised plan + slot positions
-- `Minigraf::prepare(query_str) -> Result<PreparedQuery>` — new public API method
+- `ViciaDb::prepare(query_str) -> Result<PreparedQuery>` — new public API method
 - `PreparedQuery::execute(bindings: &[(&str, BindValue)]) -> Result<QueryResult>` — substitutes values, runs execution against current fact store state
 - `db.execute(str)` path unchanged — no breaking change
 
@@ -1089,7 +1089,7 @@ The query optimizer uses selectivity estimates to pick join order. Different `:a
 **Status**: ✅ Complete (v0.19.0, 2026-04-08)
 
 **Scope**:
-- Narrow `lib.rs` exports — expose only `Minigraf`, `WriteTransaction`, and the query/result types; mark internal types (`PersistentFactStorage`, `FileHeader`, `PAGE_SIZE`, `Repl`, `Wal`, etc.) as `pub(crate)` or remove re-exports
+- Narrow `lib.rs` exports — expose only `ViciaDb`, `WriteTransaction`, and the query/result types; mark internal types (`PersistentFactStorage`, `FileHeader`, `PAGE_SIZE`, `Repl`, `Wal`, etc.) as `pub(crate)` or remove re-exports
 - Rustdoc sweep — add doc comments with examples to all public API items
 - Clippy clean — `cargo clippy -- -D warnings` passes with zero warnings
 - `cargo doc --no-deps` builds without warnings
@@ -1117,7 +1117,7 @@ The query optimizer uses selectivity estimates to pick join order. Different `:a
 
 ### 8.1 WebAssembly Support ✅ COMPLETE
 
-**Goal**: Run Minigraf as a WASM module in two distinct environments: browser (JavaScript/TypeScript) and server-side WASM runtimes (WASI).
+**Goal**: Run Vicia DB as a WASM module in two distinct environments: browser (JavaScript/TypeScript) and server-side WASM runtimes (WASI).
 
 **Status**: ✅ Completed (April 2026) — v0.20.0
 
@@ -1144,7 +1144,7 @@ A naive implementation would store the entire `.graph` file as a single IndexedD
 | 100K facts | ~16MB | Write 16MB on every checkpoint |
 | 1M facts | ~160MB | Write 160MB on every checkpoint |
 
-The correct approach maps directly onto Minigraf's existing `StorageBackend` trait:
+The correct approach maps directly onto Vicia DB's existing `StorageBackend` trait:
 
 ```
 IndexedDB object store: { key: page_id (u64), value: page_bytes (4KB Uint8Array) }
@@ -1184,9 +1184,9 @@ wasm-pack publish
 
 #### 8.1b Server-side WASM (`wasm32-wasip1` / WASI) ✅
 
-**Goal**: Run Minigraf inside server-side WASM runtimes (Wasmtime, Wasmer, Cloudflare Workers with WASI, Fastly Compute).
+**Goal**: Run Vicia DB inside server-side WASM runtimes (Wasmtime, Wasmer, Cloudflare Workers with WASI, Fastly Compute).
 
-**Why this matters**: Agent frameworks running in sandboxed server-side WASM environments (more secure than Docker containers) can embed Minigraf without any JavaScript bridge. Standard Rust code — no `wasm-bindgen`, no `#[wasm_bindgen]` annotations needed.
+**Why this matters**: Agent frameworks running in sandboxed server-side WASM environments (more secure than Docker containers) can embed Vicia DB without any JavaScript bridge. Standard Rust code — no `wasm-bindgen`, no `#[wasm_bindgen]` annotations needed.
 
 **Features**:
 - ✅ `FileBackend` verified under WASI's capability-based filesystem
@@ -1201,13 +1201,13 @@ cargo build --target wasm32-wasip1 --release
 
 **Constraint**: WASI filesystem access requires the host runtime to grant explicit capability permissions (`--dir` in Wasmtime). Document this for users.
 
-**Deliverable**: ✅ Minigraf `.wasm` binary runs under Wasmtime/Wasmer with file-backed storage; suitable for use in Cloudflare Workers (WASI) and similar edge runtimes
+**Deliverable**: ✅ Vicia DB `.wasm` binary runs under Wasmtime/Wasmer with file-backed storage; suitable for use in Cloudflare Workers (WASI) and similar edge runtimes
 
 ### 8.2 Mobile Bindings ✅ COMPLETE
 
 **Status**: ✅ Completed (April 2026) — v0.21.0
 
-**Goal**: Ship Minigraf as a drop-in native library for Android (Kotlin/Java) and iOS (Swift), with pre-built artifacts so mobile developers don't need to touch Rust.
+**Goal**: Ship Vicia DB as a drop-in native library for Android (Kotlin/Java) and iOS (Swift), with pre-built artifacts so mobile developers don't need to touch Rust.
 
 **Architecture: SDK approach, not engine-only**
 
@@ -1232,7 +1232,7 @@ minigraf-ffi/         ← separate crate: UniFFI bridge, no core logic
 - iOS: `aarch64-apple-ios` (physical devices), `aarch64-apple-ios-sim` (simulators on Apple Silicon)
 
 **Build outputs**:
-- Android: `libminigraf.so` per ABI → bundled into a `.aar` (Android Archive) for easy Gradle import
+- Android: `libvicia_db.so` per ABI → bundled into a `.aar` (Android Archive) for easy Gradle import
 - iOS: Static `.a` per target → lipo'd and wrapped into an `.xcframework` (Apple's standard multi-arch bundle)
 - Both generated by a GitHub Actions workflow on every release tag
 
@@ -1257,7 +1257,7 @@ MinigrafKit-v0.9.0.zip            ← Swift Package Manager checksum source
 - ✅ `.xcframework` and `.aar` assembly in CI (`mobile.yml`)
 - ✅ Swift Package manifest (`Package.swift` at repo root, CI-updated checksum)
 - ✅ Android Gradle project with GitHub Packages publishing
-- ✅ Memory/resource management: `Arc<Mutex<Minigraf>>` behind UniFFI object ref-counting
+- ✅ Memory/resource management: `Arc<Mutex<Vicia DB>>` behind UniFFI object ref-counting
 
 **Post-1.0 FFI deferrals** (complex to represent safely over UniFFI):
 - 🎯 `register_aggregate` / `register_predicate` over UniFFI — requires closure-passing across FFI (not supported by UniFFI 0.31.1); needs a callback-based redesign
@@ -1346,9 +1346,9 @@ MinigrafKit-v0.9.0.zip            ← Swift Package Manager checksum source
 **Goal**: Close the gap between "interesting concept" and "I can use this today" for the agent and mobile audiences.
 
 **Features**:
-- 🎯 GraphRAG pattern: runnable example wiring Minigraf to a vector store (entity UUID as the bridge between fuzzy retrieval and structured graph traversal)
-- 🎯 LangChain / LangChain.js integration example — agent memory backed by Minigraf
-- 🎯 LlamaIndex integration example — Minigraf as a knowledge graph store
+- 🎯 GraphRAG pattern: runnable example wiring Vicia DB to a vector store (entity UUID as the bridge between fuzzy retrieval and structured graph traversal)
+- 🎯 LangChain / LangChain.js integration example — agent memory backed by Vicia DB
+- 🎯 LlamaIndex integration example — Vicia DB as a knowledge graph store
 - 🎯 Standalone `examples/` crate with annotated end-to-end scenarios (agentic memory, offline-first mobile, audit log)
 
 **Note**: These are documentation and example artifacts, not library features. They are tracked and maintained in the `minigraf-examples` repository.
@@ -1369,11 +1369,11 @@ MinigrafKit-v0.9.0.zip            ← Swift Package Manager checksum source
 
 ### 9.5 Database Branching / Forking (Exploratory)
 
-**Goal**: Allow a Minigraf database to be forked into an independent copy — a new `.graph` file pre-populated with all facts from the parent at a given transaction count.
+**Goal**: Allow a Vicia DB database to be forked into an independent copy — a new `.graph` file pre-populated with all facts from the parent at a given transaction count.
 
 **Conceptual basis**:
 
-In the bi-temporal model, all temporal dimensions and fact versions together represent *one version of reality*. A branch is a child reality pre-populated from a parent reality. This maps naturally to Minigraf's single-file philosophy: one file = one reality; `db.branch()` produces a new, independent `.graph` file.
+In the bi-temporal model, all temporal dimensions and fact versions together represent *one version of reality*. A branch is a child reality pre-populated from a parent reality. This maps naturally to Vicia DB's single-file philosophy: one file = one reality; `db.branch()` produces a new, independent `.graph` file.
 
 ```rust
 // Fork the database at its current state
@@ -1382,7 +1382,7 @@ let branched_db = db.branch("branch.graph")?;
 // Or fork at a specific past transaction
 let branched_db = db.branch_as_of("branch.graph", tx_count)?;
 
-// The branch is a fully independent Minigraf database
+// The branch is a fully independent Vicia DB database
 branched_db.execute("(transact [[:x :y 1]])")?;
 // — does not affect the parent
 ```
@@ -1526,7 +1526,7 @@ Push `Expr` predicate clauses (e.g. `[(> ?age 30)]`) down to filter bindings as 
 - ✅ `$identifier` bind slot tokens: `EdnValue::BindSlot`, `AsOf::Slot`, `ValidAt::Slot`, `Expr::Slot` AST variants
 - ✅ `BindValue` enum: `Entity(Uuid)`, `Val(Value)`, `TxCount(u64)`, `Timestamp(i64)`, `AnyValidTime`
 - ✅ `PreparedQuery` struct — stores parsed AST + optimised plan; re-executes against live fact store
-- ✅ `Minigraf::prepare(query_str) -> Result<PreparedQuery>` and `PreparedQuery::execute(bindings)` public API
+- ✅ `ViciaDb::prepare(query_str) -> Result<PreparedQuery>` and `PreparedQuery::execute(bindings)` public API
 - ✅ Deep-clone + AST walk substitution (executor, optimizer, matcher unchanged)
 - ✅ Panic guards in `executor.rs` and `storage.rs` for unsubstituted slots
 - ✅ `BindValue` and `PreparedQuery` re-exported from `lib.rs`

@@ -4,9 +4,8 @@ Status: H5-B canonical guidance, 2026-07-14.
 
 Capability-scoped handles are the default for new application code. They make
 foreground work bounds and maintenance ownership visible in the type surface.
-`Minigraf` and `BrowserDb` remain supported throughout 1.x for advanced
-Datalog and compatibility workloads that do not yet have a capability-scoped
-replacement.
+`ViciaDb` and `BrowserDb` remain supported for advanced Datalog and
+compatibility workloads that do not yet have a capability-scoped replacement.
 
 ## Choose a Handle by Responsibility
 
@@ -14,8 +13,8 @@ replacement.
 | --- | --- | --- |
 | Foreground transact/retract and bounded reads | `InteractiveLedger` | `BrowserInteractiveLedger` |
 | Idle maintenance and portability | `MaintenanceLedger` | `BrowserMaintenanceLedger` in a disposable worker |
-| Rules, prepared queries, UDF registration, semantic `forget`, REPL-style mixed commands | `Minigraf` | `BrowserDb` where the feature exists |
-| Benchmarks, corruption fixtures, migration recovery | `Minigraf` | `BrowserDb` |
+| Rules, prepared queries, UDF registration, semantic `forget`, REPL-style mixed commands | `ViciaDb` | `BrowserDb` where the feature exists |
+| Benchmarks, corruption fixtures, migration recovery | `ViciaDb` | `BrowserDb` |
 
 Do not keep an interactive and maintenance handle open on the same database
 at once. Browser writers and maintenance workers must acquire the same
@@ -24,10 +23,10 @@ reject incomplete results instead of returning a truncated prefix.
 
 ## Native Migration
 
-Replace ordinary mixed `Minigraf` use with two explicit lifetimes:
+Replace ordinary mixed `ViciaDb` use with two explicit lifetimes:
 
 ```rust
-use minigraf::{InteractiveLedger, MaintenanceLedger, QueryResult, ReadViewOptions};
+use vicia_db::{InteractiveLedger, MaintenanceLedger, QueryResult, ReadViewOptions};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -57,7 +56,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 ```
 
-Keep `Minigraf` when the caller actually needs rules, prepared queries, UDFs,
+Keep `ViciaDb` when the caller actually needs rules, prepared queries, UDFs,
 semantic `forget`, or REPL-style command dispatch. Do not simulate those
 features with application-side scans merely to avoid the raw handle.
 
@@ -69,7 +68,7 @@ in a disposable module worker that opens `BrowserMaintenanceLedger` under the
 same Web Lock. The runnable implementation is in `examples/browser/`.
 
 ```js
-await navigator.locks.request(`minigraf:${dbName}`, async () => {
+await navigator.locks.request(`vicia-db:${dbName}`, async () => {
   const ledger = await BrowserInteractiveLedger.open(dbName);
   try {
     await ledger.executeAtomic([
@@ -97,22 +96,27 @@ structured outcome, frees the handle, and terminates. Foreground code must
 reopen after a maintenance or import operation rather than reuse a stale paged
 generation.
 
-## 2.0 Compatibility Policy
+## Compatibility Policy
 
-- `Minigraf` and `BrowserDb` remain source-compatible and supported for all
-  1.x releases.
-- Capability-covered mixed-authority methods are candidates for removal in
-  2.0, not scheduled removals in the current release.
+This policy was written against the pre-rename `minigraf` 1.x version line. The
+`vicia-db` package restarts at `0.1.0`, so "1.x" and "2.0" below name the
+guarantee, not the number: the raw types are supported for the whole current
+major line, and removal is reserved for the next major bump after it.
+
+- `ViciaDb` and `BrowserDb` remain source-compatible and supported for the
+  whole current major line.
+- Capability-covered mixed-authority methods are candidates for removal at the
+  next major bump, not scheduled removals in the current release.
 - Removal requires an exact replacement, a migration example, and regression
   evidence for every affected workload.
-- No removal may ship before both 2.0 and twelve months after the first
-  published release containing its explicit removal notice.
+- No removal may ship before both that major bump and twelve months after the
+  first published release containing its explicit removal notice.
 - The raw types cannot be removed while rules, prepared queries, UDF
   registration, semantic `forget`, REPL execution, eager recovery, or fixture
   construction still depend on them.
 - This policy does not authorize a file-format, Datalog, or bi-temporal
   compatibility break.
 
-No raw type or method is marked deprecated by H5-B. A future 2.0 API slice must
-first close the replacement gaps above; only then may it add deprecation
+No raw type or method is marked deprecated by H5-B. A future major API slice
+must first close the replacement gaps above; only then may it add deprecation
 attributes and start a method-specific removal clock.

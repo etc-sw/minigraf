@@ -1,6 +1,6 @@
-# Contributing to Minigraf
+# Contributing to Vicia DB
 
-Thank you for your interest in contributing. Minigraf is a hobby project with a long-term vision — quality and correctness matter more than pace. Please read this document before opening an issue or pull request.
+Thank you for your interest in contributing. Vicia DB is a hobby project with a long-term vision — quality and correctness matter more than pace. Please read this document before opening an issue or pull request.
 
 ## Before You Contribute
 
@@ -31,8 +31,8 @@ Thank you for your interest in contributing. Minigraf is a hobby project with a 
 
 ```bash
 # Clone and build
-git clone https://github.com/project-minigraf/minigraf.git
-cd minigraf
+git clone https://github.com/etc-sw/vicia-db.git
+cd vicia-db
 cargo build
 
 # Activate the pre-push hook (runs fmt, clippy, and tests before every push)

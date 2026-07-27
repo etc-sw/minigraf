@@ -1,12 +1,12 @@
-# Minigraf Design Philosophy
+# Vicia DB Design Philosophy
 
-> "Minigraf is not trying to replace Neo4j. It's trying to replace `serde_json` for graph data."
+> "Vicia DB is not trying to replace Neo4j. It's trying to replace `serde_json` for graph data."
 
-Minigraf aims to be **the embedded graph memory layer for AI agents, mobile apps, and the browser** — built on the SQLite philosophy: small, fast, reliable, zero-configuration, single-file.
+Vicia DB aims to be **the embedded graph memory layer for AI agents, mobile apps, and the browser** — built on the SQLite philosophy: small, fast, reliable, zero-configuration, single-file.
 
 ## Why Datalog?
 
-Minigraf uses Datalog as its query language. Here's why it's the right choice:
+Vicia DB uses Datalog as its query language. Here's why it's the right choice:
 
 ### 1. Better Philosophy Alignment
 
@@ -51,13 +51,13 @@ We can ship a useful, reliable database faster with Datalog.
 
 **Datalog space**: Gap exists for single-file embedded bi-temporal DB
 
-Minigraf = embedded graph memory for agents/mobile/browser + SQLite's simplicity + Datomic's temporal model (no one else offers this combination)
+Vicia DB = embedded graph memory for agents/mobile/browser + SQLite's simplicity + Datomic's temporal model (no one else offers this combination)
 
 ---
 
 ## Core Inspiration: SQLite
 
-SQLite's success comes from a clear philosophy: be a library, not a server. Be small, not feature-complete. Be reliable, not cutting-edge. Minigraf adopts these same principles for graph databases.
+SQLite's success comes from a clear philosophy: be a library, not a server. Be small, not feature-complete. Be reliable, not cutting-edge. Vicia DB adopts these same principles for graph databases.
 
 ## Guiding Principles
 
@@ -70,13 +70,13 @@ SQLite's success comes from a clear philosophy: be a library, not a server. Be s
 - No server process to start or manage
 - No configuration files to edit
 - No connection strings or authentication for local use
-- `Minigraf::open("data.graph")` and you're done
+- `ViciaDb::open("data.graph")` and you're done
 
 **Anti-pattern**: Requiring users to install external dependencies, start services, or edit config files.
 
 ### 2. Embedded-First Design
 
-**Philosophy**: Minigraf is a library you link against, not a server you connect to.
+**Philosophy**: Vicia DB is a library you link against, not a server you connect to.
 
 **Implementation**:
 - In-process execution - direct function calls, no network overhead
@@ -123,11 +123,11 @@ already caused a false CI failure.
 
 | Artifact | Budget | Rationale |
 |---|---|---|
-| **Core engine** — `libminigraf.so` (the C-ABI `cdylib`) | **< 1 MiB** | The embedded library is the product. This is the number the philosophy commits to. |
+| **Core engine** — `libvicia_db.so` (the C-ABI `cdylib`) | **< 1 MiB** | The embedded library is the product. This is the number the philosophy commits to. |
 | **Browser WASM** | **< 1 MB gzipped** | Download size is user-facing. Tracked separately in ROADMAP.md. |
-| **CLI binary** — `target/release/minigraf` | no philosophy budget; guarded loosely against runaway growth | The REPL is a convenience tool, not the shipped product. It bundles the engine plus the REPL, session protocol, and argument parsing. |
+| **CLI binary** — `target/release/vicia-db` | no philosophy budget; guarded loosely against runaway growth | The REPL is a convenience tool, not the shipped product. It bundles the engine plus the REPL, session protocol, and argument parsing. |
 
-Caveat on the engine number: `libminigraf.so` measures the whole engine
+Caveat on the engine number: `libvicia_db.so` measures the whole engine
 surface exported through a C ABI. Rust consumers link the `rlib` and, after
 dead-code elimination, pay only for what they call. The `cdylib` is a stable,
 measurable proxy for "how big is the engine" — not a floor every consumer pays.
@@ -241,7 +241,7 @@ measurable proxy for "how big is the engine" — not a floor every consumer pays
 
 **Anti-pattern**: Framework churn, major rewrites, abandoned versions.
 
-## What Minigraf IS
+## What Vicia DB IS
 
 ✅ **An embedded graph database library**
 - Link it into your application like SQLite
@@ -281,7 +281,7 @@ measurable proxy for "how big is the engine" — not a floor every consumer pays
 - Well-documented internals
 - Clear architecture
 
-## What Minigraf IS NOT
+## What Vicia DB IS NOT
 
 ❌ **Not a distributed database**
 - No clustering, no sharding, no replication
@@ -332,7 +332,7 @@ measurable proxy for "how big is the engine" — not a floor every consumer pays
 
 **Secondary use cases** (should work, but not optimized for):
 
-11. **Server applications** - Using Minigraf as an embedded component
+11. **Server applications** - Using Vicia DB as an embedded component
 12. **Data analysis** - Exploring graph datasets locally
 13. **Education** - Learning Datalog and temporal databases
 
@@ -366,7 +366,7 @@ When evaluating a feature or design choice, ask:
 
 ### 5. Can it be a separate crate instead?
 - Could this be an optional feature flag?
-- Could this be a separate library on top of Minigraf?
+- Could this be a separate library on top of Vicia DB?
 
 ### Decision rubric:
 - **YES**: Aligns with philosophy, improves reliability, serves primary use cases
@@ -375,9 +375,9 @@ When evaluating a feature or design choice, ask:
 
 ## Success Metrics
 
-You'll know Minigraf has succeeded when:
+You'll know Vicia DB has succeeded when:
 
-1. ✅ **Ubiquity**: Developers say "just use Minigraf" for embedded graph storage
+1. ✅ **Ubiquity**: Developers say "just use Vicia DB" for embedded graph storage
 2. ✅ **Trust**: Known for never losing data, crash-safe, reliable
 3. ✅ **Simplicity**: New users are productive in under 5 minutes
 4. ✅ **Size**: Core engine (`cdylib`) under 1 MiB, minimal dependencies — see [Size budgets](#size-budgets--which-artifact-each-number-applies-to)
@@ -492,7 +492,7 @@ It's important to say "no" to preserve the project's focus:
 - Features that should be separate libraries
 - Premature optimization
 
-**It's OK to say**: "That's a great feature, but it's better suited for a library built on top of Minigraf."
+**It's OK to say**: "That's a great feature, but it's better suited for a library built on top of Vicia DB."
 
 ## Inspirations
 
@@ -508,7 +508,7 @@ Beyond SQLite, we draw inspiration from:
 
 ## Closing Thoughts
 
-Minigraf is a decades-long project. We optimize for:
+Vicia DB is a decades-long project. We optimize for:
 - **Reliability** over features
 - **Simplicity** over flexibility
 - **Longevity** over hype
@@ -516,7 +516,7 @@ Minigraf is a decades-long project. We optimize for:
 
 The goal is not to be the most feature-complete graph database. The goal is to be the one that's always there when you need it, works reliably, and never gets in your way.
 
-Be boring. Be reliable. Be Minigraf.
+Be boring. Be reliable. Be Vicia DB.
 
 ---
 
