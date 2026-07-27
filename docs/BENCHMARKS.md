@@ -2521,6 +2521,72 @@ VICIA_DIFF_FIXTURE=/tmp/bench-fixtures/bench-1m-diff.graph \
   --ignored measure_valid_time_diff_fixture --nocapture
 ```
 
+### Browser measurement — NOT ADMITTED (2026-07-27)
+
+A-3 browser evidence for `BrowserReadView.validTimeDiff()`, taken against the
+same `bench-1m-diff.graph` as the native baseline above, in Chrome for Testing
+150.0.7871.115 on the A0 host. The receipt is preserved at
+`benchmarks/baselines/browser-valid-time-diff/2026-07-27-hal7800-a3/receipt.json`
+with `admitted: false`. It is recorded because it is the artifact that found
+the defect below, not because it clears the gate.
+
+Import staged 75,486 IndexedDB pages, `headerNodeCount` 1,000,256. Each scope
+was measured in its own fresh browser, 1 cold call plus 20 warm samples.
+
+| Scope | cold | warm p50 | warm p95 | native p50 |
+|---|---:|---:|---:|---:|
+| 128-entity exact set | 429.4 ms | 518.9 ms | 520.3 ms | 0.408 ms |
+| Whole-attribute range | 5.9 ms | 0.8 ms | 1.1 ms | 0.093 ms |
+
+| Gate | Result |
+|---|---|
+| `exactAuthority` | pass — both scopes returned exactly 256 rows, 128 appeared / 128 disappeared, no continuation |
+| `rss` / `pss` | pass — peak delta well under 1 GiB on a 309 MB fixture |
+| `coldPaysPageFaults` | **fail** — entity-set warm is *slower* than cold |
+| `coldLatency` / `warmLatency` | **fail** — entity-set scope |
+
+The attribute scope behaves as designed: ~9x the native cost, which is the
+expected WASM-plus-IndexedDB tax, and it warms up.
+
+**The entity-set number is scheduler overhead, not storage work.** Varying the
+entity count on the same fixture pins the per-entity cost at Chrome's nested
+`setTimeout` clamp:
+
+| Entities | warm p50 | per entity |
+|---:|---:|---:|
+| 1 | 0.1 ms | 0.100 ms |
+| 8 | 28.8 ms | 3.600 ms |
+| 16 | 61.5 ms | 3.844 ms |
+| 32 | 126.7 ms | 3.959 ms |
+| 64 | 257.4 ms | 4.022 ms |
+| 128 | 518.1 ms | 4.048 ms |
+
+`ValidTimeDiffScan::step_entity_set` returns `Yielded` once per entity, and
+`yield_browser_task` (`src/browser/mod.rs`) resolves a `setTimeout(…, 0)`.
+Chrome clamps nested timeouts to 4 ms past five levels, so a 128-entity diff
+pays ~127 x 4 ms of pure scheduling. A single-entity diff, which completes in
+one step with no yield, costs 0.1 ms. That is also why warm exceeds cold:
+a cold call takes the page-fault branch, which stages a page and retries
+*without* yielding, skipping some of the clamped hops.
+
+Correctness is unaffected — every sample returned the exact expected page.
+The fix is to the yield primitive, which is shared by every paged browser
+read, so it is tracked as its own change rather than folded into this
+measurement.
+
+```bash
+# serve the repo root first: python3 -m http.server 8123
+cargo run --release --example generate_bench_fixture -- \
+  1000000 target/bench-fixtures/bench-1m-diff.graph 128
+wasm-pack build --target web --out-dir minigraf-wasm --features browser
+CHROME_PATH=<chrome> NODE_PATH=<dir with puppeteer-core> \
+BENCH_PAGE=http://localhost:8123/examples/browser/bench.html \
+BENCH_PROFILE=/tmp/vicia-diff-profile \
+  node examples/browser/bench-driver.cjs valid-time-diff \
+  /target/bench-fixtures/bench-1m-diff.graph 20 > receipt.json
+node scripts/validate-browser-valid-time-diff-receipt.mjs receipt.json
+```
+
 ---
 
 ## Reproducing
