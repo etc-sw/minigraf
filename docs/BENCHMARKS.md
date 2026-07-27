@@ -296,7 +296,7 @@ Measures time to flush the WAL to committed `.graph` pages (including B+tree reb
 |---|---|---|---|
 | `checkpoint` | 1.25 ms | 11.80 ms | — |
 
-> 100K and 1M variants added in v0.20.1 but not yet run on this machine (each iteration requires a fresh 100K/1M-fact WAL setup — setup cost dominates at `sample_size(10)`). Numbers will be added in the next benchmark pass.
+> The Criterion 100K and 1M variants added in v0.20.1 were never run on this machine (each iteration requires a fresh 100K/1M-fact WAL setup — setup cost dominates at `sample_size(10)`), and they are now superseded rather than pending. Checkpoint behaviour at 100K and 1M is covered by the R2 through T8C sections below, which measure the full-rebuild and delta paths through the public API, and by the Gate D exact caller trace in the A0 suites.
 
 Checkpoint now includes a merge-sort of committed + pending entries and a B+tree rebuild across all four indexes (EAVT, AEVT, AVET, VAET). At 10K facts this is **11.8 ms** — slightly faster than the v5 paged-blob serialisation (16.5 ms), as the B+tree writer makes fewer random-access passes.
 
