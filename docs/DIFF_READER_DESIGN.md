@@ -276,8 +276,17 @@ Applicable rows from the roadmap correctness matrix, plus diff-specific rows:
 - No new index, no file-format change, no new dependency, no maintenance
   coupling; WAL/publication/recovery rules untouched.
 - Public API growth is additive on `ReadView`/`BrowserReadView` under the
-  existing 1.x compatibility policy; `#[non_exhaustive]` on the new enums and
-  request struct builder-or-defaults to keep later fields additive.
+  existing 1.x compatibility policy. `#[non_exhaustive]` is applied per
+  direction, not uniformly — A-2 resolved this after finding that a blanket
+  application would have made the request unconstructible:
+
+  | Type | Direction | `#[non_exhaustive]` | Why |
+  | --- | --- | --- | --- |
+  | `ValidTimeDiffChange` | out | yes | A later change kind must not break an exhaustive `match`. |
+  | `ValidTimeDiffRow` | out | yes | §8 promises further provenance fields stay additive. |
+  | `ValidTimeDiffPage` | out | yes | Page-level metadata is a plausible later addition. |
+  | `ValidTimeDiffRequest` | **in** | **no** | Callers build it with a struct literal. Marking it would make it unconstructible outside the crate without a builder, and the sibling `CurrentEntitiesRequest` / `EntityAttributeHistoryRequest` are plain structs. Adding a required field is a breaking change either way; adding an optional one needs a builder, which is the moment to introduce it. |
+  | `ValidTimeDiffCursor` | opaque | not needed | Every field is `pub(crate)`, so external construction and exhaustive destructuring are already impossible. The attribute would be a no-op. |
 - Bi-temporal first-class: this primitive is an argument *for* the
   philosophy — it is exactly the read that only a bi-temporal ledger can
   answer, and it makes the valid axis useful to agent consumers instead of

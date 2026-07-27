@@ -450,6 +450,11 @@ pub enum ValidTimeDiffChange {
 }
 
 /// One net visibility difference between two valid-time instants.
+// Non-exhaustive: DIFF_READER_DESIGN.md section 8 resolves row provenance as
+// "one covering window per row" and promises further fields stay additive.
+// Without this, adding a field would break every downstream struct literal and
+// exhaustive destructure, so the promise would be false.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, serde::Serialize)]
 pub struct ValidTimeDiffRow {
     /// Entity owning the changed value.
@@ -507,6 +512,10 @@ pub struct ValidTimeDiffRequest<'a> {
 }
 
 /// One complete page of net valid-time differences.
+// Non-exhaustive for the same additive-growth reason as `ValidTimeDiffRow`:
+// page-level metadata (budget accounting, scope echo) is a plausible later
+// addition and must not require a major version.
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub struct ValidTimeDiffPage {
     /// Rows grouped by entity in scope order; values in canonical byte order.
