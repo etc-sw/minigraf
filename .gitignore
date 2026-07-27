@@ -26,3 +26,11 @@ minigraf-ffi/python/**/__pycache__/
 minigraf-ffi/python/.venv/
 minigraf-ffi/python/dist/
 .omc/
+.serena/
+
+# Third-party source trees kept locally for invariant comparison only.
+# These are other projects' code — never commit them into this repository.
+reference/
+
+# Tool scratch output (graphify skill)
+src/graphify-out/
