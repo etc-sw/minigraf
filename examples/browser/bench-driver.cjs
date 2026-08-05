@@ -273,6 +273,7 @@ async function currentOpenSegmentMatrixMain() {
       totalMemoryBytes: os.totalmem(),
       node: process.version,
     },
+    seed: null,
     cases: [],
     gates: {},
   };
@@ -281,6 +282,16 @@ async function currentOpenSegmentMatrixMain() {
     await page.evaluate(() => window.benchReset());
     await page.evaluate(() => window.benchReady());
   });
+  evidence.seed = await withCurrentOpenPage(
+    mode,
+    async (page, browser) => {
+      await page.evaluate(() => window.benchReady());
+      return measureBrowserRss(browser, async () => JSON.parse(
+        await page.evaluate(() => window.benchCurrentOpenSeed()),
+      ));
+    },
+    { forwardConsole: true },
+  );
 
   let previousTarget = 0;
   for (const target of targets) {

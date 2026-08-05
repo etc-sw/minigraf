@@ -376,6 +376,26 @@ window.benchPagedOpen = async () => {
 // Build an exact visible-segment lineage without importing or recompacting the
 // authority. Each atomic one-fact transaction publishes one delta segment, so
 // the following fresh renderer can measure current-only open at named counts.
+window.benchCurrentOpenSeed = async () => {
+  await initPromise;
+  const db = await BrowserDb.openPaged(DB_NAME);
+  const started = performance.now();
+  try {
+    const write = JSON.parse(
+      await db.execute(
+        "(transact [[:current-open/base :current-open/value 0]])",
+      ),
+    );
+    return show(JSON.stringify({
+      totalMs: Math.round((performance.now() - started) * 1000) / 1000,
+      durability: write.durability ?? null,
+      stats: await idbStats(),
+    }));
+  } finally {
+    db.free();
+  }
+};
+
 window.benchCurrentOpenGrow = async (fromSegmentCount, toSegmentCount) => {
   await initPromise;
   if (
