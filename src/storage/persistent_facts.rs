@@ -449,6 +449,14 @@ impl BrowserPageRange {
         })
     }
 
+    #[cfg(all(test, target_arch = "wasm32"))]
+    pub(crate) fn fixture(start_page: u64, page_count: u64) -> Self {
+        Self {
+            start_page,
+            page_count,
+        }
+    }
+
     pub(crate) fn start_page(self) -> u64 {
         self.start_page
     }

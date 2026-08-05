@@ -3029,18 +3029,16 @@ async fn open_current_sparse_storage_with_metrics(
     let metadata_read_ms = js_sys::Date::now() - metadata_started;
 
     let segment_started = js_sys::Date::now();
-    for range in resident_plan.candidate_segment_ranges() {
-        if let Some(loaded) = load_optional_range(idb, range).await? {
-            for (page_id, page) in &loaded {
-                resident_plan
-                    .verify_fetched_published_page(*page_id, page)
-                    .map_err(|error| JsValue::from_str(&error.to_string()))?;
-            }
-            backend
-                .stage_clean_pages(loaded)
-                .map_err(|error| JsValue::from_str(&error.to_string()))?;
-        }
+    let segment_ranges = resident_plan.candidate_segment_ranges();
+    let loaded = load_optional_exact_ranges(idb, &segment_ranges).await?;
+    for (page_id, page) in &loaded {
+        resident_plan
+            .verify_fetched_published_page(*page_id, page)
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
     }
+    backend
+        .stage_clean_pages(loaded)
+        .map_err(|error| JsValue::from_str(&error.to_string()))?;
     let segment_load_ms = js_sys::Date::now() - segment_started;
 
     let pins = authority_pin_ids(&plan, &resident_plan, &backend);
@@ -3167,6 +3165,47 @@ async fn load_optional_range(
             .ok_or_else(|| JsValue::from_str("optional browser page range overflow"))?;
     }
     Ok(Some(loaded))
+}
+
+/// Fetch exact optional pages in bounded IndexedDB transactions, then retain
+/// only complete segment ranges. This preserves manifest fallback semantics:
+/// one missing page invalidates its segment, while complete ranges belonging
+/// to an older candidate remain available to the persistent loader.
+async fn load_optional_exact_ranges(
+    idb: &IndexedDbBackend,
+    ranges: &[BrowserPageRange],
+) -> Result<Vec<(u64, Vec<u8>)>, JsValue> {
+    let mut page_ids = Vec::new();
+    for range in ranges {
+        page_ids.extend(range.start_page()..range.end_page());
+    }
+    page_ids.sort_unstable();
+    page_ids.dedup();
+
+    let batch_pages = usize::try_from(BROWSER_IDB_BATCH_PAGES)
+        .map_err(|_| JsValue::from_str("browser page batch exceeds usize"))?;
+    let mut fetched = HashMap::with_capacity(page_ids.len());
+    for chunk in page_ids.chunks(batch_pages) {
+        for (page_id, page) in idb.load_optional_pages(chunk).await? {
+            fetched.insert(page_id, page);
+        }
+    }
+
+    let mut complete_page_ids = HashSet::new();
+    for range in ranges {
+        let complete =
+            (range.start_page()..range.end_page()).all(|page_id| fetched.contains_key(&page_id));
+        if complete {
+            complete_page_ids.extend(range.start_page()..range.end_page());
+        }
+    }
+
+    let mut complete_pages: Vec<_> = fetched
+        .into_iter()
+        .filter(|(page_id, _)| complete_page_ids.contains(page_id))
+        .collect();
+    complete_pages.sort_unstable_by_key(|(page_id, _)| *page_id);
+    Ok(complete_pages)
 }
 
 fn insert_bootstrap_pages(
@@ -3623,6 +3662,43 @@ mod tests {
                 "operation staging pages must be released after the query"
             );
         });
+    }
+
+    #[wasm_bindgen_test]
+    async fn exact_segment_batches_keep_only_complete_ranges() {
+        let db_name = format!("vicia-exact-segment-batch-{}", js_sys::Math::random());
+        let idb = IndexedDbBackend::open(&db_name)
+            .await
+            .expect("open exact segment batch database");
+        idb.replace_all_pages(vec![
+            (0, vec![50; crate::storage::PAGE_SIZE]),
+            (1, vec![51; crate::storage::PAGE_SIZE]),
+            (2, vec![52; crate::storage::PAGE_SIZE]),
+            (4, vec![54; crate::storage::PAGE_SIZE]),
+        ])
+        .await
+        .expect("seed exact segment batch records");
+        let ranges = [
+            BrowserPageRange::fixture(1, 2),
+            BrowserPageRange::fixture(3, 2),
+        ];
+        idb.reset_read_counters_for_test();
+
+        let pages = load_optional_exact_ranges(&idb, &ranges)
+            .await
+            .expect("load exact segment ranges");
+        assert_eq!(
+            pages
+                .iter()
+                .map(|(page_id, _)| *page_id)
+                .collect::<Vec<_>>(),
+            vec![1, 2]
+        );
+        let counters = idb.read_counters_for_test();
+        assert_eq!(counters.transactions, 1);
+        assert_eq!(counters.pages_requested, 4);
+        assert_eq!(counters.pages_returned, 3);
+        assert_eq!(counters.full_store_reads, 0);
     }
 
     #[wasm_bindgen_test]

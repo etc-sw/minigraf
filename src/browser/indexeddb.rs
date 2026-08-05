@@ -461,6 +461,80 @@ impl IndexedDbBackend {
         Ok(Some(pages))
     }
 
+    /// Load independently optional pages from one IndexedDB snapshot.
+    ///
+    /// Page 0 is checked once for the whole batch. Missing or malformed page
+    /// values are omitted so a caller can reconstruct complete recovery
+    /// candidates without turning one bad candidate page into an authority
+    /// failure. IndexedDB failures and changed page-0 authority remain errors.
+    pub(crate) async fn load_optional_pages(
+        &self,
+        page_ids: &[u64],
+    ) -> Result<Vec<(u64, Vec<u8>)>, JsValue> {
+        if page_ids.is_empty() {
+            self.verify_current_authority().await?;
+            return Ok(Vec::new());
+        }
+        for page_id in page_ids {
+            validate_page_id(*page_id)?;
+        }
+        #[cfg(test)]
+        self.record_read_for_test(
+            u64::try_from(page_ids.len())
+                .map_err(|_| JsValue::from_str("IndexedDB exact page batch exceeds u64"))?,
+            false,
+        );
+
+        let tx = self
+            .db
+            .transaction_with_str_and_mode(&self.store_name, IdbTransactionMode::Readonly)?;
+        let store = tx.object_store(&self.store_name)?;
+        let authority_request = store.get(&JsValue::from_f64(0.0))?;
+        let authority_promise = request_to_promise(authority_request.as_ref());
+        let page_promises = Array::new();
+        for page_id in page_ids {
+            let key = JsValue::from_f64(*page_id as f64);
+            let request = store.get(&key)?;
+            page_promises.push(&request_to_promise(request.as_ref()));
+        }
+        let pages_promise = Promise::all(&page_promises);
+
+        let authority_value = JsFuture::from(authority_promise).await?;
+        let observed_authority = decode_optional_page_zero(authority_value)?;
+        self.ensure_pinned_authority(&observed_authority)?;
+        let values: Array = JsFuture::from(pages_promise)
+            .await?
+            .dyn_into()
+            .map_err(|_| JsValue::from_str("IndexedDB exact page result is not an Array"))?;
+        let expected_len = u32::try_from(page_ids.len())
+            .map_err(|_| JsValue::from_str("IndexedDB exact page batch exceeds Array length"))?;
+        if values.length() != expected_len {
+            return Err(JsValue::from_str(
+                "IndexedDB exact page result length does not match the request",
+            ));
+        }
+
+        let mut pages = Vec::with_capacity(page_ids.len());
+        for (offset, page_id) in page_ids.iter().copied().enumerate() {
+            let offset = u32::try_from(offset)
+                .map_err(|_| JsValue::from_str("IndexedDB exact page offset exceeds u32"))?;
+            let value = values.get(offset);
+            if value.is_undefined() {
+                continue;
+            }
+            if let Ok(page) = decode_page_value(page_id, value) {
+                pages.push((page_id, page));
+            }
+        }
+
+        #[cfg(test)]
+        self.record_returned_pages_for_test(
+            u64::try_from(pages.len())
+                .map_err(|_| JsValue::from_str("IndexedDB returned page count exceeds u64"))?,
+        );
+        Ok(pages)
+    }
+
     /// Load a required contiguous batch of complete pages in ascending order.
     ///
     /// This strict wrapper turns an invalid recovery candidate into an error;
@@ -996,6 +1070,34 @@ mod tests {
         assert_eq!(counters.transactions, 3);
         assert_eq!(counters.pages_requested, 4);
         assert_eq!(counters.pages_returned, 4);
+        assert_eq!(counters.full_store_reads, 0);
+    }
+
+    #[wasm_bindgen_test]
+    async fn exact_optional_pages_share_one_authority_snapshot() {
+        let db_name = format!("vicia-idb-exact-pages-{}", js_sys::Math::random());
+        let idb = IndexedDbBackend::open(&db_name)
+            .await
+            .expect("open exact-pages test database");
+        idb.replace_all_pages(vec![
+            (0, page(40)),
+            (1, page(41)),
+            (3, vec![43; PAGE_SIZE - 1]),
+        ])
+        .await
+        .expect("seed exact-pages test records");
+        idb.reset_read_counters_for_test();
+
+        let pages = idb
+            .load_optional_pages(&[1, 2, 3])
+            .await
+            .expect("load independently optional pages");
+        assert_eq!(pages, vec![(1, page(41))]);
+
+        let counters = idb.read_counters_for_test();
+        assert_eq!(counters.transactions, 1);
+        assert_eq!(counters.pages_requested, 3);
+        assert_eq!(counters.pages_returned, 1);
         assert_eq!(counters.full_store_reads, 0);
     }
 
