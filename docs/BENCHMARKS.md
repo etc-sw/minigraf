@@ -1132,6 +1132,31 @@ and reopen behavior in real Chrome. Together with this matrix, Gate E passes;
 the separate Gate A authority cutover and packaged WebView2 host smoke are not
 claimed by this benchmark.
 
+### Browser current-open visible-segment risk probe (2026-08-05)
+
+`examples/browser/bench-driver.cjs current-open-segment-matrix` isolates the
+current v12 delta lineage behind the typed
+`BrowserInteractiveLedger.openCurrent()` receipt. It creates a compact
+one-fact base, grows exact 1/100/500/1,024-segment lineages, and runs 20 fresh
+page/WASM-context opens at each count. The second mode uses a 390x844 touch
+viewport, 6x CPU throttling, and a 512 MiB JavaScript heap limit; it is labeled
+`simulated-mobile` and is not real-device admission evidence.
+
+| Visible segments | Desktop wall p50 / p95 | Simulated-mobile wall p50 / p95 | Simulated-mobile segment-load p95 |
+|---:|---:|---:|---:|
+| 1 | 7.8 / 8.3 ms | 61.5 / 73.2 ms | 4 ms |
+| 100 | 40.7 / 42.7 ms | 262.6 / 294.8 ms | 211 ms |
+| 500 | 178.5 / 185.4 ms | 953.3 / 1,027.3 ms | 934 ms |
+| 1,024 | 390.3 / 427.1 ms | 1,837.8 / 1,935.3 ms | 1,839 ms |
+
+At 1,024 segments, segment loading owns about 95% of p95 current-open time in
+both modes. This supports a lazy, generation-pinned segment read investigation;
+it does not yet justify a storage or file-format change. The full raw receipts,
+clock-anomaly handling, constraints, and reproduction context are in
+`benchmarks/baselines/browser-current-open/2026-08-05-hal7800-risk-probe/`.
+The simulated p95 exceeds the provisional 1,000 ms real-mobile budget, but only
+a physical Android run can pass or fail that gate.
+
 ---
 
 ## Concurrency (In-Memory)

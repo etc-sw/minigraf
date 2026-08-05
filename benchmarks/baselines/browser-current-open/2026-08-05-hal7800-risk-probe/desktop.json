@@ -1,0 +1,4943 @@
+{
+  "schema": "vicia.browser-current-open-segment-matrix.v1",
+  "generatedAt": "2026-08-05T14:15:46.660Z",
+  "mode": "desktop-headless",
+  "admissionEligible": false,
+  "admissionReason": "desktop or simulated-mobile evidence is a risk probe, not a real-mobile release gate",
+  "chrome": "/usr/local/bin/google-chrome",
+  "chromeVersion": "Google Chrome for Testing 150.0.7871.115",
+  "profile": "/tmp/vicia-current-open-desktop-final-v2",
+  "configuration": {
+    "runs": 20,
+    "segmentTargets": [
+      1,
+      100,
+      500,
+      1024
+    ],
+    "cpuThrottlingRate": 1,
+    "viewport": null,
+    "jsHeapLimitMiB": null,
+    "network": "unthrottled-local-assets; IndexedDB open has no network dependency",
+    "freshPageAndWasmContextPerOpen": true
+  },
+  "source": {
+    "commit": "25c26b90346ccc9010484bb13d71918f49eb1b2b",
+    "trackedClean": true,
+    "wasmSha256": "26c6cffb0269b2bf3f7c9c77eabb8735564833f1d5113c8be5f1568038ac8fa7"
+  },
+  "environment": {
+    "platform": "linux",
+    "release": "6.6.87.2-microsoft-standard-WSL2",
+    "cpu": "AMD Ryzen 7 7800X3D 8-Core Processor",
+    "logicalCpus": 16,
+    "totalMemoryBytes": 33655275520,
+    "node": "v23.11.1"
+  },
+  "seed": {
+    "result": {
+      "totalMs": 5.2,
+      "durability": "published",
+      "stats": {
+        "idbCount": 7,
+        "headerVersion": 12,
+        "headerPageCount": 7,
+        "headerNodeCount": 1
+      }
+    },
+    "rss": {
+      "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+      "beforeBytes": 1009938432,
+      "peakBytes": 1021079552,
+      "afterBytes": 1021079552,
+      "peakDeltaBytes": 11141120
+    },
+    "pss": {
+      "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+      "beforeBytes": 377208832,
+      "peakBytes": 385622016,
+      "afterBytes": 385622016,
+      "peakDeltaBytes": 8413184
+    },
+    "private": {
+      "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+      "beforeBytes": 203472896,
+      "peakBytes": 210092032,
+      "afterBytes": 210092032,
+      "peakDeltaBytes": 6619136
+    }
+  },
+  "cases": [
+    {
+      "segmentCount": 1,
+      "visibleDeltaPages": 1,
+      "growth": {
+        "result": {
+          "fromSegmentCount": 0,
+          "toSegmentCount": 1,
+          "writes": 1,
+          "totalMs": 10,
+          "writeP50Ms": 4.9,
+          "writeP95Ms": 4.9,
+          "writeMaxMs": 4.9,
+          "finalAdvice": "none",
+          "proofMs": 5.1,
+          "stats": {
+            "idbCount": 9,
+            "headerVersion": 12,
+            "headerPageCount": 9,
+            "headerNodeCount": 2
+          }
+        },
+        "rss": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+          "beforeBytes": 1013698560,
+          "peakBytes": 1022873600,
+          "afterBytes": 1022873600,
+          "peakDeltaBytes": 9175040
+        },
+        "pss": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+          "beforeBytes": 379481088,
+          "peakBytes": 388405248,
+          "afterBytes": 388405248,
+          "peakDeltaBytes": 8924160
+        },
+        "private": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+          "beforeBytes": 205365248,
+          "peakBytes": 212590592,
+          "afterBytes": 212590592,
+          "peakDeltaBytes": 7225344
+        }
+      },
+      "opens": [
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.6,
+            "proofMs": 6.6,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200379,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 1,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 0,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 6
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1015853056,
+            "peakBytes": 1026449408,
+            "afterBytes": 1026449408,
+            "peakDeltaBytes": 10596352
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 379942912,
+            "peakBytes": 389006336,
+            "afterBytes": 389006336,
+            "peakDeltaBytes": 9063424
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 205615104,
+            "peakBytes": 212783104,
+            "afterBytes": 212783104,
+            "peakDeltaBytes": 7168000
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.9,
+            "proofMs": 6.9,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200355,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 1,
+                "segment_load_ms": 1,
+                "persistent_storage_construct_ms": 1,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1016188928,
+            "peakBytes": 1027514368,
+            "afterBytes": 1027514368,
+            "peakDeltaBytes": 11325440
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 380549120,
+            "peakBytes": 389440512,
+            "afterBytes": 389440512,
+            "peakDeltaBytes": 8891392
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 206086144,
+            "peakBytes": 213098496,
+            "afterBytes": 213098496,
+            "peakDeltaBytes": 7012352
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.3,
+            "proofMs": 7.2,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200379,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 1,
+                "segment_load_ms": 1,
+                "persistent_storage_construct_ms": 1,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1016307712,
+            "peakBytes": 1027067904,
+            "afterBytes": 1027067904,
+            "peakDeltaBytes": 10760192
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 380304384,
+            "peakBytes": 389191680,
+            "afterBytes": 389191680,
+            "peakDeltaBytes": 8887296
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 205885440,
+            "peakBytes": 212893696,
+            "afterBytes": 212893696,
+            "peakDeltaBytes": 7008256
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.5,
+            "proofMs": 5.9,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200379,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 1,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 0,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 6
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1017974784,
+            "peakBytes": 1027108864,
+            "afterBytes": 1027108864,
+            "peakDeltaBytes": 9134080
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 381519872,
+            "peakBytes": 390191104,
+            "afterBytes": 390191104,
+            "peakDeltaBytes": 8671232
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 207101952,
+            "peakBytes": 213893120,
+            "afterBytes": 213893120,
+            "peakDeltaBytes": 6791168
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.5,
+            "proofMs": 6.2,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200367,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 1,
+                "persistent_storage_construct_ms": 1,
+                "total_ms": 6
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1018228736,
+            "peakBytes": 1030553600,
+            "afterBytes": 1030553600,
+            "peakDeltaBytes": 12324864
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 381663232,
+            "peakBytes": 390984704,
+            "afterBytes": 390984704,
+            "peakDeltaBytes": 9321472
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 207200256,
+            "peakBytes": 214642688,
+            "afterBytes": 214642688,
+            "peakDeltaBytes": 7442432
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.5,
+            "proofMs": 6.3,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200367,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 0,
+                "persistent_storage_construct_ms": 1,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1018122240,
+            "peakBytes": 1028968448,
+            "afterBytes": 1028968448,
+            "peakDeltaBytes": 10846208
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 381404160,
+            "peakBytes": 390449152,
+            "afterBytes": 390449152,
+            "peakDeltaBytes": 9044992
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 206983168,
+            "peakBytes": 214147072,
+            "afterBytes": 214147072,
+            "peakDeltaBytes": 7163904
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.8,
+            "proofMs": 6.2,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200379,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 0,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1018265600,
+            "peakBytes": 1029042176,
+            "afterBytes": 1029042176,
+            "peakDeltaBytes": 10776576
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 381683712,
+            "peakBytes": 390625280,
+            "afterBytes": 390625280,
+            "peakDeltaBytes": 8941568
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 207261696,
+            "peakBytes": 214323200,
+            "afterBytes": 214323200,
+            "peakDeltaBytes": 7061504
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.5,
+            "proofMs": 6,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200015,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 1,
+                "segment_load_ms": 1,
+                "persistent_storage_construct_ms": 1,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1018392576,
+            "peakBytes": 1029595136,
+            "afterBytes": 1029595136,
+            "peakDeltaBytes": 11202560
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 382588928,
+            "peakBytes": 391308288,
+            "afterBytes": 391308288,
+            "peakDeltaBytes": 8719360
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 208166912,
+            "peakBytes": 215003136,
+            "afterBytes": 215003136,
+            "peakDeltaBytes": 6836224
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.5,
+            "proofMs": 6,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200015,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 1,
+                "segment_load_ms": 1,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1018650624,
+            "peakBytes": 1030205440,
+            "afterBytes": 1030205440,
+            "peakDeltaBytes": 11554816
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 382442496,
+            "peakBytes": 391718912,
+            "afterBytes": 391718912,
+            "peakDeltaBytes": 9276416
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 208019456,
+            "peakBytes": 215412736,
+            "afterBytes": 215412736,
+            "peakDeltaBytes": 7393280
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.8,
+            "proofMs": 6.4,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200379,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 0,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 6
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1017393152,
+            "peakBytes": 1028874240,
+            "afterBytes": 1028874240,
+            "peakDeltaBytes": 11481088
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 382472192,
+            "peakBytes": 391744512,
+            "afterBytes": 391744512,
+            "peakDeltaBytes": 9272320
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 208048128,
+            "peakBytes": 214990848,
+            "afterBytes": 214990848,
+            "peakDeltaBytes": 6942720
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.8,
+            "proofMs": 6.5,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200367,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 1,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 0,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 6
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1018576896,
+            "peakBytes": 1028706304,
+            "afterBytes": 1028706304,
+            "peakDeltaBytes": 10129408
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 382868480,
+            "peakBytes": 390701056,
+            "afterBytes": 390701056,
+            "peakDeltaBytes": 7832576
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 207998976,
+            "peakBytes": 213950464,
+            "afterBytes": 213950464,
+            "peakDeltaBytes": 5951488
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.9,
+            "proofMs": 6.3,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200379,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 1,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1020420096,
+            "peakBytes": 1032212480,
+            "afterBytes": 1032212480,
+            "peakDeltaBytes": 11792384
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 384076800,
+            "peakBytes": 392993792,
+            "afterBytes": 392993792,
+            "peakDeltaBytes": 8916992
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 209260544,
+            "peakBytes": 216293376,
+            "afterBytes": 216293376,
+            "peakDeltaBytes": 7032832
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.5,
+            "proofMs": 6.4,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200367,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 1,
+                "segment_load_ms": 1,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1019486208,
+            "peakBytes": 1029242880,
+            "afterBytes": 1029242880,
+            "peakDeltaBytes": 9756672
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 383349760,
+            "peakBytes": 392224768,
+            "afterBytes": 392224768,
+            "peakDeltaBytes": 8875008
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 208433152,
+            "peakBytes": 215425024,
+            "afterBytes": 215425024,
+            "peakDeltaBytes": 6991872
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 8,
+            "proofMs": 6.1,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1199963,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 0,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1019482112,
+            "peakBytes": 1031946240,
+            "afterBytes": 1031946240,
+            "peakDeltaBytes": 12464128
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 384397312,
+            "peakBytes": 393695232,
+            "afterBytes": 393695232,
+            "peakDeltaBytes": 9297920
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 209526784,
+            "peakBytes": 216940544,
+            "afterBytes": 216940544,
+            "peakDeltaBytes": 7413760
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.8,
+            "proofMs": 6.3,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200367,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 1,
+                "segment_load_ms": 1,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1020403712,
+            "peakBytes": 1030930432,
+            "afterBytes": 1030930432,
+            "peakDeltaBytes": 10526720
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 384258048,
+            "peakBytes": 393109504,
+            "afterBytes": 393109504,
+            "peakDeltaBytes": 8851456
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 209387520,
+            "peakBytes": 216354816,
+            "afterBytes": 216354816,
+            "peakDeltaBytes": 6967296
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 8,
+            "proofMs": 6,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1199611,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 1,
+                "persistent_storage_construct_ms": 1,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1020137472,
+            "peakBytes": 1029931008,
+            "afterBytes": 1029931008,
+            "peakDeltaBytes": 9793536
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 384406528,
+            "peakBytes": 393105408,
+            "afterBytes": 393105408,
+            "peakDeltaBytes": 8698880
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 209534976,
+            "peakBytes": 216350720,
+            "afterBytes": 216350720,
+            "peakDeltaBytes": 6815744
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.7,
+            "proofMs": 6,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200015,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 0,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1020026880,
+            "peakBytes": 1030807552,
+            "afterBytes": 1030807552,
+            "peakDeltaBytes": 10780672
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 383702016,
+            "peakBytes": 392613888,
+            "afterBytes": 392613888,
+            "peakDeltaBytes": 8911872
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 208830464,
+            "peakBytes": 215859200,
+            "afterBytes": 215859200,
+            "peakDeltaBytes": 7028736
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 8.4,
+            "proofMs": 6.1,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200367,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 1,
+                "segment_load_ms": 1,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1020678144,
+            "peakBytes": 1031987200,
+            "afterBytes": 1031987200,
+            "peakDeltaBytes": 11309056
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 384284672,
+            "peakBytes": 393076736,
+            "afterBytes": 393076736,
+            "peakDeltaBytes": 8792064
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 209412096,
+            "peakBytes": 216322048,
+            "afterBytes": 216322048,
+            "peakDeltaBytes": 6909952
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 8.3,
+            "proofMs": 6,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200015,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 0,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 7
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1021915136,
+            "peakBytes": 1032093696,
+            "afterBytes": 1032093696,
+            "peakDeltaBytes": 10178560
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 384647168,
+            "peakBytes": 393331712,
+            "afterBytes": 393331712,
+            "peakDeltaBytes": 8684544
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 209772544,
+            "peakBytes": 216576000,
+            "afterBytes": 216576000,
+            "peakDeltaBytes": 6803456
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1,
+            "wallOpenMs": 7.8,
+            "proofMs": 6.1,
+            "heapBeforeBytes": 950511,
+            "heapAfterOpenBytes": 1200355,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 9,
+              "manifest_candidate_count": 1,
+              "selected_manifest_generation": 2,
+              "visible_delta_segment_count": 1,
+              "visible_delta_pages": 1,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 0,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 6
+              }
+            },
+            "stats": {
+              "idbCount": 9,
+              "headerVersion": 12,
+              "headerPageCount": 9,
+              "headerNodeCount": 2
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1021665280,
+            "peakBytes": 1031397376,
+            "afterBytes": 1031397376,
+            "peakDeltaBytes": 9732096
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 384857088,
+            "peakBytes": 393939968,
+            "afterBytes": 393939968,
+            "peakDeltaBytes": 9082880
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 209985536,
+            "peakBytes": 217186304,
+            "afterBytes": 217186304,
+            "peakDeltaBytes": 7200768
+          }
+        }
+      ],
+      "summary": {
+        "sampleCount": 20,
+        "clockCoherentSampleCount": 20,
+        "clockAnomalyCount": 0,
+        "wallOpenMs": {
+          "p50": 7.8,
+          "p95": 8.3,
+          "max": 8.4
+        },
+        "receiptTotalMs": {
+          "p50": 7,
+          "p95": 7,
+          "max": 7
+        },
+        "indexedDbOpenMs": {
+          "p50": 2,
+          "p95": 2,
+          "max": 2
+        },
+        "page0ReadDecodeMs": {
+          "p50": 0,
+          "p95": 1,
+          "max": 1
+        },
+        "metadataReadMs": {
+          "p50": 2,
+          "p95": 2,
+          "max": 2
+        },
+        "segmentLoadMs": {
+          "p50": 0,
+          "p95": 1,
+          "max": 1
+        },
+        "persistentStorageConstructMs": {
+          "p50": 2,
+          "p95": 2,
+          "max": 2
+        },
+        "proofMs": {
+          "p50": 6.2,
+          "p95": 6.9,
+          "max": 7.2
+        },
+        "pssPeakDeltaBytes": {
+          "p50": 8891392,
+          "p95": 9297920,
+          "max": 9321472
+        }
+      }
+    },
+    {
+      "segmentCount": 100,
+      "visibleDeltaPages": 100,
+      "growth": {
+        "result": {
+          "fromSegmentCount": 1,
+          "toSegmentCount": 100,
+          "writes": 99,
+          "totalMs": 93.7,
+          "writeP50Ms": 0.9,
+          "writeP95Ms": 1,
+          "writeMaxMs": 3.7,
+          "finalAdvice": "none",
+          "proofMs": 5.5,
+          "stats": {
+            "idbCount": 207,
+            "headerVersion": 12,
+            "headerPageCount": 207,
+            "headerNodeCount": 101
+          }
+        },
+        "rss": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+          "beforeBytes": 1021304832,
+          "peakBytes": 1044766720,
+          "afterBytes": 1044766720,
+          "peakDeltaBytes": 23461888
+        },
+        "pss": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+          "beforeBytes": 384829440,
+          "peakBytes": 406202368,
+          "afterBytes": 406202368,
+          "peakDeltaBytes": 21372928
+        },
+        "private": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+          "beforeBytes": 209956864,
+          "peakBytes": 229343232,
+          "afterBytes": 229343232,
+          "peakDeltaBytes": 19386368
+        }
+      },
+      "opens": [
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 40.1,
+            "proofMs": 6,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716627,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 31,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 39
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1021992960,
+            "peakBytes": 1041399808,
+            "afterBytes": 1041399808,
+            "peakDeltaBytes": 19406848
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 385419264,
+            "peakBytes": 401339392,
+            "afterBytes": 401339392,
+            "peakDeltaBytes": 15920128
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 210558976,
+            "peakBytes": 224280576,
+            "afterBytes": 224280576,
+            "peakDeltaBytes": 13721600
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 39.9,
+            "proofMs": 5.7,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716991,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 31,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 38
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1022988288,
+            "peakBytes": 1042079744,
+            "afterBytes": 1042079744,
+            "peakDeltaBytes": 19091456
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 386277376,
+            "peakBytes": 402532352,
+            "afterBytes": 402532352,
+            "peakDeltaBytes": 16254976
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 211361792,
+            "peakBytes": 225415168,
+            "afterBytes": 225415168,
+            "peakDeltaBytes": 14053376
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 40.7,
+            "proofMs": 5.7,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716991,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 32,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 40
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1024131072,
+            "peakBytes": 1043030016,
+            "afterBytes": 1043030016,
+            "peakDeltaBytes": 18898944
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 387164160,
+            "peakBytes": 403141632,
+            "afterBytes": 403141632,
+            "peakDeltaBytes": 15977472
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 212262912,
+            "peakBytes": 226041856,
+            "afterBytes": 226041856,
+            "peakDeltaBytes": 13778944
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 41.6,
+            "proofMs": 5.7,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716979,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 32,
+                "persistent_storage_construct_ms": 4,
+                "total_ms": 41
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1024380928,
+            "peakBytes": 1043398656,
+            "afterBytes": 1043398656,
+            "peakDeltaBytes": 19017728
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 387020800,
+            "peakBytes": 403039232,
+            "afterBytes": 403039232,
+            "peakDeltaBytes": 16018432
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 212107264,
+            "peakBytes": 225927168,
+            "afterBytes": 225927168,
+            "peakDeltaBytes": 13819904
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 40.7,
+            "proofMs": 5.6,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716991,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 33,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 40
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1024016384,
+            "peakBytes": 1044283392,
+            "afterBytes": 1044283392,
+            "peakDeltaBytes": 20267008
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 387718144,
+            "peakBytes": 403469312,
+            "afterBytes": 403469312,
+            "peakDeltaBytes": 15751168
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 212807680,
+            "peakBytes": 226357248,
+            "afterBytes": 226357248,
+            "peakDeltaBytes": 13549568
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 39.9,
+            "proofMs": 6,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716627,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 32,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 39
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1024970752,
+            "peakBytes": 1044774912,
+            "afterBytes": 1044774912,
+            "peakDeltaBytes": 19804160
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 387301376,
+            "peakBytes": 403121152,
+            "afterBytes": 403121152,
+            "peakDeltaBytes": 15819776
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 212389888,
+            "peakBytes": 226009088,
+            "afterBytes": 226009088,
+            "peakDeltaBytes": 13619200
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 39.7,
+            "proofMs": 6.5,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716979,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 31,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 39
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1025589248,
+            "peakBytes": 1044365312,
+            "afterBytes": 1044365312,
+            "peakDeltaBytes": 18776064
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 388354048,
+            "peakBytes": 404440064,
+            "afterBytes": 404440064,
+            "peakDeltaBytes": 16086016
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 213393408,
+            "peakBytes": 227282944,
+            "afterBytes": 227282944,
+            "peakDeltaBytes": 13889536
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 40.7,
+            "proofMs": 5.7,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716967,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 31,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 39
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1024860160,
+            "peakBytes": 1045381120,
+            "afterBytes": 1045381120,
+            "peakDeltaBytes": 20520960
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 388602880,
+            "peakBytes": 404820992,
+            "afterBytes": 404820992,
+            "peakDeltaBytes": 16218112
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 213688320,
+            "peakBytes": 227708928,
+            "afterBytes": 227708928,
+            "peakDeltaBytes": 14020608
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 41.4,
+            "proofMs": 5.9,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716991,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 32,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 40
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1026486272,
+            "peakBytes": 1044865024,
+            "afterBytes": 1044865024,
+            "peakDeltaBytes": 18378752
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 388856832,
+            "peakBytes": 404616192,
+            "afterBytes": 404616192,
+            "peakDeltaBytes": 15759360
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 213954560,
+            "peakBytes": 227516416,
+            "afterBytes": 227516416,
+            "peakDeltaBytes": 13561856
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 40.8,
+            "proofMs": 7,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716627,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 1,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 32,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 39
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1025540096,
+            "peakBytes": 1044758528,
+            "afterBytes": 1044758528,
+            "peakDeltaBytes": 19218432
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 388929536,
+            "peakBytes": 404603904,
+            "afterBytes": 404603904,
+            "peakDeltaBytes": 15674368
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 214016000,
+            "peakBytes": 227491840,
+            "afterBytes": 227491840,
+            "peakDeltaBytes": 13475840
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 41.6,
+            "proofMs": 5.9,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716991,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 33,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 41
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1026605056,
+            "peakBytes": 1045348352,
+            "afterBytes": 1045348352,
+            "peakDeltaBytes": 18743296
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 389326848,
+            "peakBytes": 406008832,
+            "afterBytes": 406008832,
+            "peakDeltaBytes": 16681984
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 214380544,
+            "peakBytes": 229388288,
+            "afterBytes": 229388288,
+            "peakDeltaBytes": 15007744
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 39.9,
+            "proofMs": 6.5,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716991,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 31,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 39
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1027022848,
+            "peakBytes": 1045794816,
+            "afterBytes": 1045794816,
+            "peakDeltaBytes": 18771968
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 389493760,
+            "peakBytes": 405738496,
+            "afterBytes": 405738496,
+            "peakDeltaBytes": 16244736
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 214536192,
+            "peakBytes": 228581376,
+            "afterBytes": 228581376,
+            "peakDeltaBytes": 14045184
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 42.7,
+            "proofMs": 5.7,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716991,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 33,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 42
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1026191360,
+            "peakBytes": 1046781952,
+            "afterBytes": 1046781952,
+            "peakDeltaBytes": 20590592
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 389734400,
+            "peakBytes": 405856256,
+            "afterBytes": 405856256,
+            "peakDeltaBytes": 16121856
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 214818816,
+            "peakBytes": 228741120,
+            "afterBytes": 228741120,
+            "peakDeltaBytes": 13922304
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 40.1,
+            "proofMs": 6,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716627,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 31,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 40
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1027088384,
+            "peakBytes": 1045475328,
+            "afterBytes": 1045475328,
+            "peakDeltaBytes": 18386944
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 389401600,
+            "peakBytes": 405427200,
+            "afterBytes": 405427200,
+            "peakDeltaBytes": 16025600
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 214487040,
+            "peakBytes": 228315136,
+            "afterBytes": 228315136,
+            "peakDeltaBytes": 13828096
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 40.4,
+            "proofMs": 5.6,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716967,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 32,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 40
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1026519040,
+            "peakBytes": 1046216704,
+            "afterBytes": 1046216704,
+            "peakDeltaBytes": 19697664
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 389215232,
+            "peakBytes": 405103616,
+            "afterBytes": 405103616,
+            "peakDeltaBytes": 15888384
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 214315008,
+            "peakBytes": 228003840,
+            "afterBytes": 228003840,
+            "peakDeltaBytes": 13688832
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 42.9,
+            "proofMs": 6.4,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716979,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 1,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 34,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 42
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1027325952,
+            "peakBytes": 1045979136,
+            "afterBytes": 1045979136,
+            "peakDeltaBytes": 18653184
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 389975040,
+            "peakBytes": 405882880,
+            "afterBytes": 405882880,
+            "peakDeltaBytes": 15907840
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 215015424,
+            "peakBytes": 228724736,
+            "afterBytes": 228724736,
+            "peakDeltaBytes": 13709312
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 40.8,
+            "proofMs": 5.9,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716991,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 1,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 32,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 39
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1027215360,
+            "peakBytes": 1047396352,
+            "afterBytes": 1047396352,
+            "peakDeltaBytes": 20180992
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 390409216,
+            "peakBytes": 405788672,
+            "afterBytes": 405788672,
+            "peakDeltaBytes": 15379456
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 215482368,
+            "peakBytes": 228728832,
+            "afterBytes": 228728832,
+            "peakDeltaBytes": 13246464
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 40.1,
+            "proofMs": 6.2,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716991,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 32,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 39
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1028640768,
+            "peakBytes": 1047265280,
+            "afterBytes": 1047265280,
+            "peakDeltaBytes": 18624512
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 390166528,
+            "peakBytes": 406108160,
+            "afterBytes": 406108160,
+            "peakDeltaBytes": 15941632
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 215384064,
+            "peakBytes": 229064704,
+            "afterBytes": 229064704,
+            "peakDeltaBytes": 13680640
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 39.2,
+            "proofMs": 6,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716627,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 30,
+                "persistent_storage_construct_ms": 2,
+                "total_ms": 39
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1028165632,
+            "peakBytes": 1047859200,
+            "afterBytes": 1047859200,
+            "peakDeltaBytes": 19693568
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 390969344,
+            "peakBytes": 407291904,
+            "afterBytes": 407291904,
+            "peakDeltaBytes": 16322560
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 216219648,
+            "peakBytes": 230281216,
+            "afterBytes": 230281216,
+            "peakDeltaBytes": 14061568
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 100,
+            "wallOpenMs": 41.2,
+            "proofMs": 5.6,
+            "heapBeforeBytes": 950515,
+            "heapAfterOpenBytes": 2716991,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 207,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 101,
+              "visible_delta_segment_count": 100,
+              "visible_delta_pages": 100,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 33,
+                "persistent_storage_construct_ms": 3,
+                "total_ms": 40
+              }
+            },
+            "stats": {
+              "idbCount": 207,
+              "headerVersion": 12,
+              "headerPageCount": 207,
+              "headerNodeCount": 101
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1028628480,
+            "peakBytes": 1047273472,
+            "afterBytes": 1047273472,
+            "peakDeltaBytes": 18644992
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 391102464,
+            "peakBytes": 407053312,
+            "afterBytes": 407053312,
+            "peakDeltaBytes": 15950848
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 216412160,
+            "peakBytes": 230199296,
+            "afterBytes": 230199296,
+            "peakDeltaBytes": 13787136
+          }
+        }
+      ],
+      "summary": {
+        "sampleCount": 20,
+        "clockCoherentSampleCount": 20,
+        "clockAnomalyCount": 0,
+        "wallOpenMs": {
+          "p50": 40.7,
+          "p95": 42.7,
+          "max": 42.9
+        },
+        "receiptTotalMs": {
+          "p50": 39,
+          "p95": 42,
+          "max": 42
+        },
+        "indexedDbOpenMs": {
+          "p50": 2,
+          "p95": 2,
+          "max": 2
+        },
+        "page0ReadDecodeMs": {
+          "p50": 0,
+          "p95": 1,
+          "max": 1
+        },
+        "metadataReadMs": {
+          "p50": 2,
+          "p95": 3,
+          "max": 3
+        },
+        "segmentLoadMs": {
+          "p50": 32,
+          "p95": 33,
+          "max": 34
+        },
+        "persistentStorageConstructMs": {
+          "p50": 3,
+          "p95": 3,
+          "max": 4
+        },
+        "proofMs": {
+          "p50": 5.9,
+          "p95": 6.5,
+          "max": 7
+        },
+        "pssPeakDeltaBytes": {
+          "p50": 15950848,
+          "p95": 16322560,
+          "max": 16681984
+        }
+      }
+    },
+    {
+      "segmentCount": 500,
+      "visibleDeltaPages": 500,
+      "growth": {
+        "result": {
+          "fromSegmentCount": 100,
+          "toSegmentCount": 500,
+          "writes": 400,
+          "totalMs": 382.9,
+          "writeP50Ms": 0.9,
+          "writeP95Ms": 1.1,
+          "writeMaxMs": 4,
+          "finalAdvice": "none",
+          "proofMs": 5,
+          "stats": {
+            "idbCount": 1065,
+            "headerVersion": 12,
+            "headerPageCount": 1065,
+            "headerNodeCount": 501
+          }
+        },
+        "rss": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+          "beforeBytes": 1027305472,
+          "peakBytes": 1068171264,
+          "afterBytes": 1068171264,
+          "peakDeltaBytes": 40865792
+        },
+        "pss": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+          "beforeBytes": 391013376,
+          "peakBytes": 427799552,
+          "afterBytes": 427799552,
+          "peakDeltaBytes": 36786176
+        },
+        "private": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+          "beforeBytes": 216367104,
+          "peakBytes": 250998784,
+          "afterBytes": 250998784,
+          "peakDeltaBytes": 34631680
+        }
+      },
+      "opens": [
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 177.5,
+            "proofMs": 6.5,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6748278,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 166,
+                "persistent_storage_construct_ms": 6,
+                "total_ms": 177
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1029906432,
+            "peakBytes": 1068634112,
+            "afterBytes": 1068634112,
+            "peakDeltaBytes": 38727680
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 393667584,
+            "peakBytes": 427781120,
+            "afterBytes": 427781120,
+            "peakDeltaBytes": 34113536
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 219029504,
+            "peakBytes": 250732544,
+            "afterBytes": 250732544,
+            "peakDeltaBytes": 31703040
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 177.6,
+            "proofMs": 6.2,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6758506,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 165,
+                "persistent_storage_construct_ms": 6,
+                "total_ms": 177
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1031380992,
+            "peakBytes": 1070297088,
+            "afterBytes": 1070297088,
+            "peakDeltaBytes": 38916096
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 394896384,
+            "peakBytes": 429575168,
+            "afterBytes": 429575168,
+            "peakDeltaBytes": 34678784
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 220246016,
+            "peakBytes": 252514304,
+            "afterBytes": 252514304,
+            "peakDeltaBytes": 32268288
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 177,
+            "proofMs": 8.1,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6750618,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 164,
+                "persistent_storage_construct_ms": 7,
+                "total_ms": 176
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1032622080,
+            "peakBytes": 1070800896,
+            "afterBytes": 1070800896,
+            "peakDeltaBytes": 38178816
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 395585536,
+            "peakBytes": 430097408,
+            "afterBytes": 430097408,
+            "peakDeltaBytes": 34511872
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 220946432,
+            "peakBytes": 253050880,
+            "afterBytes": 253050880,
+            "peakDeltaBytes": 32104448
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 172.3,
+            "proofMs": 6.3,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6743786,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 160,
+                "persistent_storage_construct_ms": 6,
+                "total_ms": 171
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1034096640,
+            "peakBytes": 1071861760,
+            "afterBytes": 1071861760,
+            "peakDeltaBytes": 37765120
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 397464576,
+            "peakBytes": 432132096,
+            "afterBytes": 432132096,
+            "peakDeltaBytes": 34667520
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 222814208,
+            "peakBytes": 255074304,
+            "afterBytes": 255074304,
+            "peakDeltaBytes": 32260096
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 185.4,
+            "proofMs": 8.2,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6754298,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 1,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 169,
+                "persistent_storage_construct_ms": 9,
+                "total_ms": 184
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1035055104,
+            "peakBytes": 1073455104,
+            "afterBytes": 1073455104,
+            "peakDeltaBytes": 38400000
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 398564352,
+            "peakBytes": 433170432,
+            "afterBytes": 433170432,
+            "peakDeltaBytes": 34606080
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 223981568,
+            "peakBytes": 256176128,
+            "afterBytes": 256176128,
+            "peakDeltaBytes": 32194560
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 182.7,
+            "proofMs": 6,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6770470,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 171,
+                "persistent_storage_construct_ms": 6,
+                "total_ms": 181
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1035943936,
+            "peakBytes": 1074257920,
+            "afterBytes": 1074257920,
+            "peakDeltaBytes": 38313984
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 399091712,
+            "peakBytes": 433847296,
+            "afterBytes": 433847296,
+            "peakDeltaBytes": 34755584
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 224395264,
+            "peakBytes": 256741376,
+            "afterBytes": 256741376,
+            "peakDeltaBytes": 32346112
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 178.1,
+            "proofMs": 5.8,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6750102,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 166,
+                "persistent_storage_construct_ms": 6,
+                "total_ms": 177
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1037099008,
+            "peakBytes": 1074016256,
+            "afterBytes": 1074016256,
+            "peakDeltaBytes": 36917248
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 399449088,
+            "peakBytes": 432990208,
+            "afterBytes": 432990208,
+            "peakDeltaBytes": 33541120
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 224763904,
+            "peakBytes": 256315392,
+            "afterBytes": 256315392,
+            "peakDeltaBytes": 31551488
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 180.6,
+            "proofMs": 6.4,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6755770,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 168,
+                "persistent_storage_construct_ms": 7,
+                "total_ms": 180
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1038434304,
+            "peakBytes": 1076256768,
+            "afterBytes": 1076256768,
+            "peakDeltaBytes": 37822464
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 400763904,
+            "peakBytes": 435612672,
+            "afterBytes": 435612672,
+            "peakDeltaBytes": 34848768
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 226529280,
+            "peakBytes": 258969600,
+            "afterBytes": 258969600,
+            "peakDeltaBytes": 32440320
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 178.8,
+            "proofMs": 6,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6743842,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 166,
+                "persistent_storage_construct_ms": 6,
+                "total_ms": 178
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1038630912,
+            "peakBytes": 1076699136,
+            "afterBytes": 1076699136,
+            "peakDeltaBytes": 38068224
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 401586176,
+            "peakBytes": 436323328,
+            "afterBytes": 436323328,
+            "peakDeltaBytes": 34737152
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 227364864,
+            "peakBytes": 260231168,
+            "afterBytes": 260231168,
+            "peakDeltaBytes": 32866304
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 177.5,
+            "proofMs": 5.7,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6749814,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 165,
+                "persistent_storage_construct_ms": 6,
+                "total_ms": 177
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1038794752,
+            "peakBytes": 1077121024,
+            "afterBytes": 1077121024,
+            "peakDeltaBytes": 38326272
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 401553408,
+            "peakBytes": 435799040,
+            "afterBytes": 435799040,
+            "peakDeltaBytes": 34245632
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 227332096,
+            "peakBytes": 259170304,
+            "afterBytes": 259170304,
+            "peakDeltaBytes": 31838208
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 183.2,
+            "proofMs": 6.7,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6744886,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 171,
+                "persistent_storage_construct_ms": 5,
+                "total_ms": 183
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1040658432,
+            "peakBytes": 1078706176,
+            "afterBytes": 1078706176,
+            "peakDeltaBytes": 38047744
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 402825216,
+            "peakBytes": 437074944,
+            "afterBytes": 437074944,
+            "peakDeltaBytes": 34249728
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 228614144,
+            "peakBytes": 260456448,
+            "afterBytes": 260456448,
+            "peakDeltaBytes": 31842304
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 187.1,
+            "proofMs": 6,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6756890,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 176,
+                "persistent_storage_construct_ms": 6,
+                "total_ms": 186
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1041915904,
+            "peakBytes": 1080487936,
+            "afterBytes": 1080487936,
+            "peakDeltaBytes": 38572032
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 403753984,
+            "peakBytes": 438272000,
+            "afterBytes": 438272000,
+            "peakDeltaBytes": 34518016
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 229531648,
+            "peakBytes": 261627904,
+            "afterBytes": 261627904,
+            "peakDeltaBytes": 32096256
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 178.5,
+            "proofMs": 6.6,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6742558,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 167,
+                "persistent_storage_construct_ms": 5,
+                "total_ms": 177
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1043542016,
+            "peakBytes": 1080676352,
+            "afterBytes": 1080676352,
+            "peakDeltaBytes": 37134336
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 405099520,
+            "peakBytes": 439638016,
+            "afterBytes": 439638016,
+            "peakDeltaBytes": 34538496
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 230875136,
+            "peakBytes": 263008256,
+            "afterBytes": 263008256,
+            "peakDeltaBytes": 32133120
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 181,
+            "proofMs": 5.8,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6737022,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 169,
+                "persistent_storage_construct_ms": 5,
+                "total_ms": 180
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1042563072,
+            "peakBytes": 1079476224,
+            "afterBytes": 1079476224,
+            "peakDeltaBytes": 36913152
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 405251072,
+            "peakBytes": 439243776,
+            "afterBytes": 439243776,
+            "peakDeltaBytes": 33992704
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 230600704,
+            "peakBytes": 262180864,
+            "afterBytes": 262180864,
+            "peakDeltaBytes": 31580160
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 178.5,
+            "proofMs": 5.8,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6737686,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 167,
+                "persistent_storage_construct_ms": 6,
+                "total_ms": 178
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1044127744,
+            "peakBytes": 1081413632,
+            "afterBytes": 1081413632,
+            "peakDeltaBytes": 37285888
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 406603776,
+            "peakBytes": 440726528,
+            "afterBytes": 440726528,
+            "peakDeltaBytes": 34122752
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 231952384,
+            "peakBytes": 263667712,
+            "afterBytes": 263667712,
+            "peakDeltaBytes": 31715328
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 175.5,
+            "proofMs": 6.5,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6744934,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 163,
+                "persistent_storage_construct_ms": 5,
+                "total_ms": 174
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1044672512,
+            "peakBytes": 1083240448,
+            "afterBytes": 1083240448,
+            "peakDeltaBytes": 38567936
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 406696960,
+            "peakBytes": 441095168,
+            "afterBytes": 441095168,
+            "peakDeltaBytes": 34398208
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 232034304,
+            "peakBytes": 264024064,
+            "afterBytes": 264024064,
+            "peakDeltaBytes": 31989760
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 178.5,
+            "proofMs": 6.7,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6747762,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 1,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 165,
+                "persistent_storage_construct_ms": 7,
+                "total_ms": 177
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1044905984,
+            "peakBytes": 1082343424,
+            "afterBytes": 1082343424,
+            "peakDeltaBytes": 37437440
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 407585792,
+            "peakBytes": 441374720,
+            "afterBytes": 441374720,
+            "peakDeltaBytes": 33788928
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 232939520,
+            "peakBytes": 264318976,
+            "afterBytes": 264318976,
+            "peakDeltaBytes": 31379456
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 175,
+            "proofMs": 6.7,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6752246,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 1,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 163,
+                "persistent_storage_construct_ms": 5,
+                "total_ms": 173
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1046085632,
+            "peakBytes": 1083396096,
+            "afterBytes": 1083396096,
+            "peakDeltaBytes": 37310464
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 408349696,
+            "peakBytes": 442696704,
+            "afterBytes": 442696704,
+            "peakDeltaBytes": 34347008
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 233689088,
+            "peakBytes": 265625600,
+            "afterBytes": 265625600,
+            "peakDeltaBytes": 31936512
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 183.9,
+            "proofMs": 5.9,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6728378,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 172,
+                "persistent_storage_construct_ms": 5,
+                "total_ms": 183
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1046503424,
+            "peakBytes": 1084948480,
+            "afterBytes": 1084948480,
+            "peakDeltaBytes": 38445056
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 409400320,
+            "peakBytes": 444133376,
+            "afterBytes": 444133376,
+            "peakDeltaBytes": 34733056
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 234749952,
+            "peakBytes": 267075584,
+            "afterBytes": 267075584,
+            "peakDeltaBytes": 32325632
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 500,
+            "wallOpenMs": 185.3,
+            "proofMs": 6,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 6728258,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 1065,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 501,
+              "visible_delta_segment_count": 500,
+              "visible_delta_pages": 500,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 174,
+                "persistent_storage_construct_ms": 6,
+                "total_ms": 185
+              }
+            },
+            "stats": {
+              "idbCount": 1065,
+              "headerVersion": 12,
+              "headerPageCount": 1065,
+              "headerNodeCount": 501
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1046962176,
+            "peakBytes": 1084350464,
+            "afterBytes": 1084350464,
+            "peakDeltaBytes": 37388288
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 409881600,
+            "peakBytes": 444020736,
+            "afterBytes": 444020736,
+            "peakDeltaBytes": 34139136
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 235220992,
+            "peakBytes": 266952704,
+            "afterBytes": 266952704,
+            "peakDeltaBytes": 31731712
+          }
+        }
+      ],
+      "summary": {
+        "sampleCount": 20,
+        "clockCoherentSampleCount": 20,
+        "clockAnomalyCount": 0,
+        "wallOpenMs": {
+          "p50": 178.5,
+          "p95": 185.4,
+          "max": 187.1
+        },
+        "receiptTotalMs": {
+          "p50": 177,
+          "p95": 185,
+          "max": 186
+        },
+        "indexedDbOpenMs": {
+          "p50": 2,
+          "p95": 2,
+          "max": 2
+        },
+        "page0ReadDecodeMs": {
+          "p50": 0,
+          "p95": 1,
+          "max": 1
+        },
+        "metadataReadMs": {
+          "p50": 2,
+          "p95": 3,
+          "max": 3
+        },
+        "segmentLoadMs": {
+          "p50": 166,
+          "p95": 174,
+          "max": 176
+        },
+        "persistentStorageConstructMs": {
+          "p50": 6,
+          "p95": 7,
+          "max": 9
+        },
+        "proofMs": {
+          "p50": 6.2,
+          "p95": 8.1,
+          "max": 8.2
+        },
+        "pssPeakDeltaBytes": {
+          "p50": 34398208,
+          "p95": 34755584,
+          "max": 34848768
+        }
+      }
+    },
+    {
+      "segmentCount": 1024,
+      "visibleDeltaPages": 1024,
+      "growth": {
+        "result": {
+          "fromSegmentCount": 500,
+          "toSegmentCount": 1024,
+          "writes": 524,
+          "totalMs": 617.9,
+          "writeP50Ms": 1.1,
+          "writeP95Ms": 1.4,
+          "writeMaxMs": 4.6,
+          "finalAdvice": "reduce_checkpoint_cadence",
+          "proofMs": 5.4,
+          "stats": {
+            "idbCount": 2810,
+            "headerVersion": 12,
+            "headerPageCount": 2810,
+            "headerNodeCount": 1025
+          }
+        },
+        "rss": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+          "beforeBytes": 1046175744,
+          "peakBytes": 1109352448,
+          "afterBytes": 1109352448,
+          "peakDeltaBytes": 63176704
+        },
+        "pss": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+          "beforeBytes": 409977856,
+          "peakBytes": 469056512,
+          "afterBytes": 469054464,
+          "peakDeltaBytes": 59078656
+        },
+        "private": {
+          "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+          "beforeBytes": 235331584,
+          "peakBytes": 292257792,
+          "afterBytes": 292257792,
+          "peakDeltaBytes": 56926208
+        }
+      },
+      "opens": [
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 369.5,
+            "proofMs": 6.2,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11969906,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 1,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 353,
+                "persistent_storage_construct_ms": 9,
+                "total_ms": 368
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1050451968,
+            "peakBytes": 1113853952,
+            "afterBytes": 1113853952,
+            "peakDeltaBytes": 63401984
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 413340672,
+            "peakBytes": 472727552,
+            "afterBytes": 472727552,
+            "peakDeltaBytes": 59386880
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 238632960,
+            "peakBytes": 295612416,
+            "afterBytes": 295612416,
+            "peakDeltaBytes": 56979456
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 386.7,
+            "proofMs": 6.6,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11943267,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 3,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 5,
+                "segment_load_ms": 362,
+                "persistent_storage_construct_ms": 14,
+                "total_ms": 386
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1051672576,
+            "peakBytes": 1113665536,
+            "afterBytes": 1113665536,
+            "peakDeltaBytes": 61992960
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 414323712,
+            "peakBytes": 472526848,
+            "afterBytes": 472526848,
+            "peakDeltaBytes": 58203136
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 239673344,
+            "peakBytes": 295469056,
+            "afterBytes": 295469056,
+            "peakDeltaBytes": 55795712
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 390.1,
+            "proofMs": 7.7,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11970851,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 1,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 371,
+                "persistent_storage_construct_ms": 11,
+                "total_ms": 388
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1053208576,
+            "peakBytes": 1115627520,
+            "afterBytes": 1115627520,
+            "peakDeltaBytes": 62418944
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 415780864,
+            "peakBytes": 474260480,
+            "afterBytes": 474256384,
+            "peakDeltaBytes": 58479616
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 241119232,
+            "peakBytes": 297189376,
+            "afterBytes": 297185280,
+            "peakDeltaBytes": 56070144
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 368,
+            "proofMs": 6.6,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11942331,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 346,
+                "persistent_storage_construct_ms": 15,
+                "total_ms": 367
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1054937088,
+            "peakBytes": 1118101504,
+            "afterBytes": 1118101504,
+            "peakDeltaBytes": 63164416
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 417486848,
+            "peakBytes": 476836864,
+            "afterBytes": 476836864,
+            "peakDeltaBytes": 59350016
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 242839552,
+            "peakBytes": 299778048,
+            "afterBytes": 299778048,
+            "peakDeltaBytes": 56938496
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 402.7,
+            "proofMs": 8.8,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11997207,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 3,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 382,
+                "persistent_storage_construct_ms": 12,
+                "total_ms": 402
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1055862784,
+            "peakBytes": 1115353088,
+            "afterBytes": 1115353088,
+            "peakDeltaBytes": 59490304
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 418656256,
+            "peakBytes": 473896960,
+            "afterBytes": 473896960,
+            "peakDeltaBytes": 55240704
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 243994624,
+            "peakBytes": 297086976,
+            "afterBytes": 297086976,
+            "peakDeltaBytes": 53092352
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 411,
+            "proofMs": 10.5,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11909743,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 389,
+                "persistent_storage_construct_ms": 14,
+                "total_ms": 410
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1057148928,
+            "peakBytes": 1117118464,
+            "afterBytes": 1117118464,
+            "peakDeltaBytes": 59969536
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 419436544,
+            "peakBytes": 476039168,
+            "afterBytes": 475439104,
+            "peakDeltaBytes": 56602624
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 245198848,
+            "peakBytes": 300457984,
+            "afterBytes": 298795008,
+            "peakDeltaBytes": 55259136
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 475.1,
+            "proofMs": 13.2,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11949751,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 445,
+                "persistent_storage_construct_ms": 20,
+                "total_ms": 473
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1060118528,
+            "peakBytes": 1119494144,
+            "afterBytes": 1119494144,
+            "peakDeltaBytes": 59375616
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 421936128,
+            "peakBytes": 477225984,
+            "afterBytes": 477225984,
+            "peakDeltaBytes": 55289856
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 247660544,
+            "peakBytes": 300544000,
+            "afterBytes": 300544000,
+            "peakDeltaBytes": 52883456
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 411,
+            "proofMs": 8.8,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11932023,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 386,
+                "persistent_storage_construct_ms": 17,
+                "total_ms": 410
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1061064704,
+            "peakBytes": 1124859904,
+            "afterBytes": 1124859904,
+            "peakDeltaBytes": 63795200
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 422976512,
+            "peakBytes": 482419712,
+            "afterBytes": 482419712,
+            "peakDeltaBytes": 59443200
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 248737792,
+            "peakBytes": 305774592,
+            "afterBytes": 305774592,
+            "peakDeltaBytes": 57036800
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 390.3,
+            "proofMs": 7.9,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11991919,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 368,
+                "persistent_storage_construct_ms": 14,
+                "total_ms": 389
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1061326848,
+            "peakBytes": 1124753408,
+            "afterBytes": 1124753408,
+            "peakDeltaBytes": 63426560
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 423487488,
+            "peakBytes": 482856960,
+            "afterBytes": 482856960,
+            "peakDeltaBytes": 59369472
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 249237504,
+            "peakBytes": 306200576,
+            "afterBytes": 306200576,
+            "peakDeltaBytes": 56963072
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 405,
+            "proofMs": 6.7,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11966299,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 381,
+                "persistent_storage_construct_ms": 16,
+                "total_ms": 404
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1062625280,
+            "peakBytes": 1124990976,
+            "afterBytes": 1124990976,
+            "peakDeltaBytes": 62365696
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 424463360,
+            "peakBytes": 482992128,
+            "afterBytes": 482992128,
+            "peakDeltaBytes": 58528768
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 250224640,
+            "peakBytes": 306348032,
+            "afterBytes": 306348032,
+            "peakDeltaBytes": 56123392
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 396.9,
+            "proofMs": 8.4,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11961995,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 379,
+                "persistent_storage_construct_ms": 10,
+                "total_ms": 395
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1063718912,
+            "peakBytes": 1123172352,
+            "afterBytes": 1123172352,
+            "peakDeltaBytes": 59453440
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 425064448,
+            "peakBytes": 480747520,
+            "afterBytes": 480747520,
+            "peakDeltaBytes": 55683072
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 250814464,
+            "peakBytes": 304091136,
+            "afterBytes": 304091136,
+            "peakDeltaBytes": 53276672
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 405.3,
+            "proofMs": 7.1,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11946595,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 4,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 381,
+                "persistent_storage_construct_ms": 15,
+                "total_ms": 405
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1064570880,
+            "peakBytes": 1123422208,
+            "afterBytes": 1123422208,
+            "peakDeltaBytes": 58851328
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 426257408,
+            "peakBytes": 481266688,
+            "afterBytes": 481266688,
+            "peakDeltaBytes": 55009280
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 251977728,
+            "peakBytes": 304840704,
+            "afterBytes": 304840704,
+            "peakDeltaBytes": 52862976
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 386.3,
+            "proofMs": 6.9,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11943539,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 3,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 363,
+                "persistent_storage_construct_ms": 15,
+                "total_ms": 386
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1065934848,
+            "peakBytes": 1129254912,
+            "afterBytes": 1129254912,
+            "peakDeltaBytes": 63320064
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 427382784,
+            "peakBytes": 486436864,
+            "afterBytes": 486436864,
+            "peakDeltaBytes": 59054080
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 253394944,
+            "peakBytes": 310042624,
+            "afterBytes": 310042624,
+            "peakDeltaBytes": 56647680
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 378.2,
+            "proofMs": 7.3,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11965219,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 354,
+                "persistent_storage_construct_ms": 15,
+                "total_ms": 377
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1066364928,
+            "peakBytes": 1129562112,
+            "afterBytes": 1129562112,
+            "peakDeltaBytes": 63197184
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 427788288,
+            "peakBytes": 486703104,
+            "afterBytes": 486703104,
+            "peakDeltaBytes": 58914816
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 253812736,
+            "peakBytes": 310321152,
+            "afterBytes": 310321152,
+            "peakDeltaBytes": 56508416
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 376.3,
+            "proofMs": 6.9,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11937039,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 355,
+                "persistent_storage_construct_ms": 14,
+                "total_ms": 376
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1067900928,
+            "peakBytes": 1129332736,
+            "afterBytes": 1129332736,
+            "peakDeltaBytes": 61431808
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 429172736,
+            "peakBytes": 486793216,
+            "afterBytes": 486793216,
+            "peakDeltaBytes": 57620480
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 255184896,
+            "peakBytes": 310398976,
+            "afterBytes": 310398976,
+            "peakDeltaBytes": 55214080
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 389.3,
+            "proofMs": 7.8,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11955415,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 366,
+                "persistent_storage_construct_ms": 14,
+                "total_ms": 388
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1066676224,
+            "peakBytes": 1129504768,
+            "afterBytes": 1129504768,
+            "peakDeltaBytes": 62828544
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 429242368,
+            "peakBytes": 487920640,
+            "afterBytes": 487920640,
+            "peakDeltaBytes": 58678272
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 255266816,
+            "peakBytes": 311537664,
+            "afterBytes": 311537664,
+            "peakDeltaBytes": 56270848
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 411.1,
+            "proofMs": 13.3,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11946531,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 1,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 386,
+                "persistent_storage_construct_ms": 16,
+                "total_ms": 410
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1067655168,
+            "peakBytes": 1129873408,
+            "afterBytes": 1129873408,
+            "peakDeltaBytes": 62218240
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 429944832,
+            "peakBytes": 488493056,
+            "afterBytes": 488493056,
+            "peakDeltaBytes": 58548224
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 255959040,
+            "peakBytes": 312115200,
+            "afterBytes": 312115200,
+            "peakDeltaBytes": 56156160
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 388.2,
+            "proofMs": 8.8,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11985831,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 366,
+                "persistent_storage_construct_ms": 14,
+                "total_ms": 387
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1069379584,
+            "peakBytes": 1129508864,
+            "afterBytes": 1129508864,
+            "peakDeltaBytes": 60129280
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 431539200,
+            "peakBytes": 487714816,
+            "afterBytes": 487714816,
+            "peakDeltaBytes": 56175616
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 257409024,
+            "peakBytes": 311177216,
+            "afterBytes": 311177216,
+            "peakDeltaBytes": 53768192
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 427.1,
+            "proofMs": 7.3,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11946687,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 2,
+                "segment_load_ms": 404,
+                "persistent_storage_construct_ms": 16,
+                "total_ms": 426
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1071104000,
+            "peakBytes": 1132421120,
+            "afterBytes": 1132421120,
+            "peakDeltaBytes": 61317120
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 433548288,
+            "peakBytes": 490959872,
+            "afterBytes": 490959872,
+            "peakDeltaBytes": 57411584
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 259346432,
+            "peakBytes": 314351616,
+            "afterBytes": 314351616,
+            "peakDeltaBytes": 55005184
+          }
+        },
+        {
+          "result": {
+            "expectedSegmentCount": 1024,
+            "wallOpenMs": 407,
+            "proofMs": 9.3,
+            "heapBeforeBytes": 950519,
+            "heapAfterOpenBytes": 11940139,
+            "receipt": {
+              "schema": "vicia.browser-current-open-stage-receipt.v1",
+              "outcome": "ready_current",
+              "source_format_version": 12,
+              "resulting_format_version": 12,
+              "declared_page_count": 2810,
+              "manifest_candidate_count": 2,
+              "selected_manifest_generation": 1025,
+              "visible_delta_segment_count": 1024,
+              "visible_delta_pages": 1024,
+              "projection_catalog_present": false,
+              "stages": {
+                "indexed_db_open_ms": 2,
+                "page0_read_decode_ms": 0,
+                "metadata_read_ms": 3,
+                "segment_load_ms": 385,
+                "persistent_storage_construct_ms": 13,
+                "total_ms": 405
+              }
+            },
+            "stats": {
+              "idbCount": 2810,
+              "headerVersion": 12,
+              "headerPageCount": 2810,
+              "headerNodeCount": 1025
+            }
+          },
+          "rss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree RSS; shared pages may be counted once per process",
+            "beforeBytes": 1070952448,
+            "peakBytes": 1134166016,
+            "afterBytes": 1134166016,
+            "peakDeltaBytes": 63213568
+          },
+          "pss": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree proportional set size",
+            "beforeBytes": 433307648,
+            "peakBytes": 492413952,
+            "afterBytes": 492413952,
+            "peakDeltaBytes": 59106304
+          },
+          "private": {
+            "measurement": "200 ms sampled sum of Linux Chrome process-tree private clean plus private dirty bytes",
+            "beforeBytes": 259072000,
+            "peakBytes": 315772928,
+            "afterBytes": 315772928,
+            "peakDeltaBytes": 56700928
+          }
+        }
+      ],
+      "summary": {
+        "sampleCount": 20,
+        "clockCoherentSampleCount": 20,
+        "clockAnomalyCount": 0,
+        "wallOpenMs": {
+          "p50": 390.3,
+          "p95": 427.1,
+          "max": 475.1
+        },
+        "receiptTotalMs": {
+          "p50": 389,
+          "p95": 426,
+          "max": 473
+        },
+        "indexedDbOpenMs": {
+          "p50": 2,
+          "p95": 3,
+          "max": 4
+        },
+        "page0ReadDecodeMs": {
+          "p50": 0,
+          "p95": 1,
+          "max": 1
+        },
+        "metadataReadMs": {
+          "p50": 2,
+          "p95": 3,
+          "max": 5
+        },
+        "segmentLoadMs": {
+          "p50": 371,
+          "p95": 404,
+          "max": 445
+        },
+        "persistentStorageConstructMs": {
+          "p50": 14,
+          "p95": 17,
+          "max": 20
+        },
+        "proofMs": {
+          "p50": 7.7,
+          "p95": 13.2,
+          "max": 13.3
+        },
+        "pssPeakDeltaBytes": {
+          "p50": 58479616,
+          "p95": 59386880,
+          "max": 59443200
+        }
+      }
+    }
+  ],
+  "gates": {
+    "currentFormatOnly": true,
+    "exactSegmentCounts": true,
+    "exactLatestFact": true,
+    "stageClockCoverage": true,
+    "sourceTrackedClean": true
+  }
+}
