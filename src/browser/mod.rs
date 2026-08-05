@@ -238,6 +238,7 @@ pub struct BrowserReadView {
 #[wasm_bindgen]
 pub struct BrowserInteractiveLedger {
     db: BrowserDb,
+    current_open_receipt: Option<String>,
 }
 
 #[wasm_bindgen]
@@ -247,6 +248,21 @@ impl BrowserInteractiveLedger {
     pub async fn open(db_name: &str) -> Result<BrowserInteractiveLedger, JsValue> {
         Ok(Self {
             db: BrowserDb::open_paged(db_name).await?,
+            current_open_receipt: None,
+        })
+    }
+
+    /// Open only when the stored authority is already current-format and
+    /// return a content-free physical receipt through [`open_receipt`].
+    ///
+    /// Existing legacy images are classified from page 0 and rejected with a
+    /// JSON `migration_required` receipt before any O(total) read or mutation.
+    #[wasm_bindgen(js_name = openCurrent)]
+    pub async fn open_current(db_name: &str) -> Result<BrowserInteractiveLedger, JsValue> {
+        let (db, receipt) = BrowserDb::open_current_paged(db_name).await?;
+        Ok(Self {
+            db,
+            current_open_receipt: Some(receipt),
         })
     }
 
@@ -255,7 +271,14 @@ impl BrowserInteractiveLedger {
     pub fn open_in_memory() -> Result<BrowserInteractiveLedger, JsValue> {
         Ok(Self {
             db: BrowserDb::open_in_memory()?,
+            current_open_receipt: None,
         })
+    }
+
+    /// Content-free receipt for the successful `openCurrent()` call.
+    #[wasm_bindgen(getter, js_name = openReceipt)]
+    pub fn open_receipt(&self) -> Option<String> {
+        self.current_open_receipt.clone()
     }
 
     /// Execute a bounded transact/retract command list as one atomic write.
@@ -429,6 +452,20 @@ impl BrowserDb {
         Self::open_from_idb_mode(idb, BrowserOpenMode::Paged).await
     }
 
+    async fn open_current_paged(db_name: &str) -> Result<(BrowserDb, String), JsValue> {
+        let total_started = js_sys::Date::now();
+        let indexed_db_started = js_sys::Date::now();
+        let idb = IndexedDbBackend::open(db_name).await?;
+        let indexed_db_open_ms = js_sys::Date::now() - indexed_db_started;
+        let (pfs, mut receipt) =
+            open_current_persistent_storage(&idb, indexed_db_open_ms, total_started).await?;
+        let db = Self::from_persistent_storage(idb, pfs, BrowserOpenMode::Paged, true);
+        receipt.stages.total_ms = js_sys::Date::now() - total_started;
+        let receipt = serde_json::to_string(&receipt)
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        Ok((db, receipt))
+    }
+
     async fn open_from_idb(idb: IndexedDbBackend) -> Result<BrowserDb, JsValue> {
         Self::open_from_idb_mode(idb, BrowserOpenMode::EagerCompatibility).await
     }
@@ -443,9 +480,18 @@ impl BrowserDb {
         mode: BrowserOpenMode,
     ) -> Result<BrowserDb, JsValue> {
         let (pfs, paged) = open_persistent_storage(&idb, mode).await?;
+        Ok(Self::from_persistent_storage(idb, pfs, mode, paged))
+    }
+
+    fn from_persistent_storage(
+        idb: IndexedDbBackend,
+        pfs: PersistentFactStorage<BrowserBufferBackend>,
+        mode: BrowserOpenMode,
+        paged: bool,
+    ) -> BrowserDb {
         let fact_storage = pfs.storage().clone();
 
-        Ok(BrowserDb {
+        BrowserDb {
             inner: Rc::new(RefCell::new(BrowserDbInner {
                 fact_storage,
                 rules: Arc::new(RwLock::new(RuleRegistry::new())),
@@ -462,7 +508,7 @@ impl BrowserDb {
                 projection_tail_cache:
                     crate::graph::current_projection::CurrentProjectionTailCache::default(),
             })),
-        })
+        }
     }
 
     /// Execute a Datalog command string and return a JSON-encoded result.
@@ -2714,6 +2760,163 @@ impl BrowserDb {
     }
 }
 
+#[derive(serde::Serialize)]
+struct BrowserCurrentOpenStageDurations {
+    indexed_db_open_ms: f64,
+    page0_read_decode_ms: f64,
+    metadata_read_ms: f64,
+    segment_load_ms: f64,
+    persistent_storage_construct_ms: f64,
+    total_ms: f64,
+}
+
+#[derive(serde::Serialize)]
+struct BrowserCurrentOpenStageReceipt {
+    schema: &'static str,
+    outcome: &'static str,
+    source_format_version: Option<u32>,
+    resulting_format_version: Option<u32>,
+    declared_page_count: Option<u64>,
+    manifest_candidate_count: u64,
+    selected_manifest_generation: Option<u64>,
+    visible_delta_segment_count: u64,
+    visible_delta_pages: u64,
+    projection_catalog_present: bool,
+    stages: BrowserCurrentOpenStageDurations,
+}
+
+struct BrowserSparseOpenMetrics {
+    manifest_candidate_count: u64,
+    selected_manifest_generation: Option<u64>,
+    visible_delta_segment_count: u64,
+    visible_delta_pages: u64,
+    projection_catalog_present: bool,
+    metadata_read_ms: f64,
+    segment_load_ms: f64,
+    persistent_storage_construct_ms: f64,
+}
+
+impl BrowserCurrentOpenStageReceipt {
+    fn new(
+        outcome: &'static str,
+        source_format_version: Option<u32>,
+        resulting_format_version: Option<u32>,
+        declared_page_count: Option<u64>,
+        indexed_db_open_ms: f64,
+        page0_read_decode_ms: f64,
+    ) -> Self {
+        Self {
+            schema: "vicia.browser-current-open-stage-receipt.v1",
+            outcome,
+            source_format_version,
+            resulting_format_version,
+            declared_page_count,
+            manifest_candidate_count: 0,
+            selected_manifest_generation: None,
+            visible_delta_segment_count: 0,
+            visible_delta_pages: 0,
+            projection_catalog_present: false,
+            stages: BrowserCurrentOpenStageDurations {
+                indexed_db_open_ms,
+                page0_read_decode_ms,
+                metadata_read_ms: 0.0,
+                segment_load_ms: 0.0,
+                persistent_storage_construct_ms: 0.0,
+                total_ms: 0.0,
+            },
+        }
+    }
+}
+
+async fn open_current_persistent_storage(
+    idb: &IndexedDbBackend,
+    indexed_db_open_ms: f64,
+    total_started: f64,
+) -> Result<
+    (
+        PersistentFactStorage<BrowserBufferBackend>,
+        BrowserCurrentOpenStageReceipt,
+    ),
+    JsValue,
+> {
+    let page0_started = js_sys::Date::now();
+    let page0 = idb.load_page_if_present(0).await?;
+    let Some(page0) = page0 else {
+        let page0_read_decode_ms = js_sys::Date::now() - page0_started;
+        let numeric_pages = idb.count_numeric_pages().await?;
+        if numeric_pages != 0 {
+            return Err(JsValue::from_str(
+                "IndexedDB contains page records but published page 0 is missing",
+            ));
+        }
+        let construct_started = js_sys::Date::now();
+        let page0 =
+            crate::storage::header_extension::build_header_page(crate::storage::FileHeader::new())
+                .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        idb.replace_all_pages(vec![(0, page0.clone())]).await?;
+        let buffer = BrowserBufferBackend::load_sparse_pages(
+            HashMap::from([(0, page0)]),
+            1,
+            HashSet::from([0]),
+        )
+        .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        let pfs = PersistentFactStorage::new(buffer, 256)
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        let mut receipt = BrowserCurrentOpenStageReceipt::new(
+            "fresh_current",
+            None,
+            Some(crate::storage::FORMAT_VERSION),
+            Some(1),
+            indexed_db_open_ms,
+            page0_read_decode_ms,
+        );
+        receipt.stages.persistent_storage_construct_ms = js_sys::Date::now() - construct_started;
+        return Ok((pfs, receipt));
+    };
+
+    let header = crate::storage::FileHeader::from_bytes(&page0)
+        .map_err(|error| JsValue::from_str(&error.to_string()))?;
+    header
+        .validate()
+        .map_err(|error| JsValue::from_str(&error.to_string()))?;
+    let page0_read_decode_ms = js_sys::Date::now() - page0_started;
+    if header.version != crate::storage::FORMAT_VERSION
+        && header.version != crate::storage::MAX_READABLE_FORMAT_VERSION
+    {
+        let mut receipt = BrowserCurrentOpenStageReceipt::new(
+            "migration_required",
+            Some(header.version),
+            None,
+            Some(header.page_count),
+            indexed_db_open_ms,
+            page0_read_decode_ms,
+        );
+        receipt.stages.total_ms = js_sys::Date::now() - total_started;
+        let encoded = serde_json::to_string(&receipt)
+            .map_err(|error| JsValue::from_str(&error.to_string()))?;
+        return Err(JsValue::from_str(&encoded));
+    }
+
+    let (pfs, metrics) = open_current_sparse_storage_with_metrics(idb, page0).await?;
+    let mut receipt = BrowserCurrentOpenStageReceipt::new(
+        "ready_current",
+        Some(header.version),
+        Some(header.version),
+        Some(header.page_count),
+        indexed_db_open_ms,
+        page0_read_decode_ms,
+    );
+    receipt.manifest_candidate_count = metrics.manifest_candidate_count;
+    receipt.selected_manifest_generation = metrics.selected_manifest_generation;
+    receipt.visible_delta_segment_count = metrics.visible_delta_segment_count;
+    receipt.visible_delta_pages = metrics.visible_delta_pages;
+    receipt.projection_catalog_present = metrics.projection_catalog_present;
+    receipt.stages.metadata_read_ms = metrics.metadata_read_ms;
+    receipt.stages.segment_load_ms = metrics.segment_load_ms;
+    receipt.stages.persistent_storage_construct_ms = metrics.persistent_storage_construct_ms;
+    Ok((pfs, receipt))
+}
+
 async fn open_persistent_storage(
     idb: &IndexedDbBackend,
     mode: BrowserOpenMode,
@@ -2775,8 +2978,26 @@ async fn open_current_sparse_storage(
     idb: &IndexedDbBackend,
     page0: Vec<u8>,
 ) -> Result<PersistentFactStorage<BrowserBufferBackend>, JsValue> {
+    open_current_sparse_storage_with_metrics(idb, page0)
+        .await
+        .map(|(pfs, _)| pfs)
+}
+
+async fn open_current_sparse_storage_with_metrics(
+    idb: &IndexedDbBackend,
+    page0: Vec<u8>,
+) -> Result<
+    (
+        PersistentFactStorage<BrowserBufferBackend>,
+        BrowserSparseOpenMetrics,
+    ),
+    JsValue,
+> {
+    let metadata_started = js_sys::Date::now();
     let plan = BrowserV11BootstrapPlan::from_page0(&page0)
         .map_err(|error| JsValue::from_str(&error.to_string()))?;
+    let manifest_candidate_count = u64::try_from(plan.manifest_candidates().len())
+        .map_err(|_| JsValue::from_str("Manifest candidate count exceeds u64"))?;
     let mut pages = HashMap::from([(0u64, page0)]);
     let mut pinned = HashSet::from([0u64]);
 
@@ -2789,10 +3010,11 @@ async fn open_current_sparse_storage(
             insert_bootstrap_pages(&mut pages, &mut pinned, loaded);
         }
     }
-    for range in plan
+    let projection_catalog_ranges = plan
         .projection_catalog_ranges()
-        .map_err(|error| JsValue::from_str(&error.to_string()))?
-    {
+        .map_err(|error| JsValue::from_str(&error.to_string()))?;
+    let projection_catalog_present = !projection_catalog_ranges.is_empty();
+    for range in projection_catalog_ranges {
         if let Some(loaded) = load_optional_range(idb, range).await? {
             insert_bootstrap_pages(&mut pages, &mut pinned, loaded);
         }
@@ -2804,7 +3026,9 @@ async fn open_current_sparse_storage(
     let resident_plan = plan
         .plan_resident_metadata(&backend)
         .map_err(|error| JsValue::from_str(&error.to_string()))?;
+    let metadata_read_ms = js_sys::Date::now() - metadata_started;
 
+    let segment_started = js_sys::Date::now();
     for range in resident_plan.candidate_segment_ranges() {
         if let Some(loaded) = load_optional_range(idb, range).await? {
             for (page_id, page) in &loaded {
@@ -2817,12 +3041,34 @@ async fn open_current_sparse_storage(
                 .map_err(|error| JsValue::from_str(&error.to_string()))?;
         }
     }
+    let segment_load_ms = js_sys::Date::now() - segment_started;
 
     let pins = authority_pin_ids(&plan, &resident_plan, &backend);
     backend
         .replace_pinned_pages(pins)
         .map_err(|error| JsValue::from_str(&error.to_string()))?;
-    PersistentFactStorage::new(backend, 256).map_err(|error| JsValue::from_str(&error.to_string()))
+    let construct_started = js_sys::Date::now();
+    let pfs = PersistentFactStorage::new(backend, 256)
+        .map_err(|error| JsValue::from_str(&error.to_string()))?;
+    let persistent_storage_construct_ms = js_sys::Date::now() - construct_started;
+    let selected_manifest_generation = pfs
+        .browser_selected_manifest_identity()
+        .map_err(|error| JsValue::from_str(&error.to_string()))?
+        .map(|(_, generation)| generation);
+    let (visible_delta_segment_count, visible_delta_pages) = pfs.delta_growth_snapshot();
+    Ok((
+        pfs,
+        BrowserSparseOpenMetrics {
+            manifest_candidate_count,
+            selected_manifest_generation,
+            visible_delta_segment_count,
+            visible_delta_pages,
+            projection_catalog_present,
+            metadata_read_ms,
+            segment_load_ms,
+            persistent_storage_construct_ms,
+        },
+    ))
 }
 
 async fn open_eager_or_migrate_storage(
@@ -6114,6 +6360,84 @@ mod tests {
             maintenance.db.inner.borrow().open_mode,
             BrowserOpenMode::Paged
         );
+    }
+
+    #[wasm_bindgen_test]
+    async fn browser_interactive_current_open_returns_content_free_receipt() {
+        let db_name = format!("vicia-current-open-receipt-{}", js_sys::Date::now());
+        let ledger = BrowserInteractiveLedger::open_current(&db_name)
+            .await
+            .expect("open fresh current ledger");
+        let receipt: serde_json::Value = serde_json::from_str(
+            &ledger
+                .open_receipt()
+                .expect("current open must expose a receipt"),
+        )
+        .expect("current open receipt JSON");
+
+        assert_eq!(
+            receipt["schema"],
+            "vicia.browser-current-open-stage-receipt.v1"
+        );
+        assert_eq!(receipt["outcome"], "fresh_current");
+        assert!(receipt["source_format_version"].is_null());
+        assert_eq!(
+            receipt["resulting_format_version"],
+            crate::storage::FORMAT_VERSION
+        );
+        assert_eq!(receipt["declared_page_count"], 1);
+        assert!(receipt["stages"]["indexed_db_open_ms"].is_number());
+        assert!(receipt["stages"]["total_ms"].is_number());
+
+        let reopened = BrowserInteractiveLedger::open_current(&db_name)
+            .await
+            .expect("reopen current ledger");
+        let reopened_receipt: serde_json::Value = serde_json::from_str(
+            &reopened
+                .open_receipt()
+                .expect("reopen must expose a receipt"),
+        )
+        .expect("reopen receipt JSON");
+        assert_eq!(reopened_receipt["outcome"], "ready_current");
+        assert_eq!(
+            reopened_receipt["source_format_version"],
+            crate::storage::FORMAT_VERSION
+        );
+    }
+
+    #[wasm_bindgen_test]
+    async fn browser_interactive_current_open_classifies_legacy_without_mutation() {
+        let db_name = format!("vicia-current-open-legacy-{}", js_sys::Date::now());
+        let idb = IndexedDbBackend::open(&db_name)
+            .await
+            .expect("open legacy seed IDB");
+        idb.replace_all_pages(fixture_pages(NATIVE_FIXTURE))
+            .await
+            .expect("seed frozen v10 fixture");
+        let before = idb
+            .load_all_pages()
+            .await
+            .expect("read source legacy image");
+
+        let error = match BrowserInteractiveLedger::open_current(&db_name).await {
+            Ok(_) => panic!("legacy current-only open must reject"),
+            Err(error) => error,
+        };
+        let receipt: serde_json::Value = serde_json::from_str(
+            &error
+                .as_string()
+                .expect("legacy rejection must be a JSON receipt"),
+        )
+        .expect("legacy rejection receipt JSON");
+        assert_eq!(receipt["outcome"], "migration_required");
+        assert_eq!(receipt["source_format_version"], 10);
+        assert!(receipt["resulting_format_version"].is_null());
+
+        let after = idb
+            .load_all_pages()
+            .await
+            .expect("read legacy image after classification");
+        assert_eq!(after, before, "current-only classification must not mutate");
     }
 
     #[wasm_bindgen_test]
