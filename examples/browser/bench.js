@@ -4,7 +4,10 @@
 // Serve from repo root and open /examples/browser/bench.html; runner steps
 // are documented in docs/BENCHMARKS.md ("Browser Open at Scale").
 
-import init, { BrowserDb } from "../../vicia-db-wasm/vicia_db.js";
+import init, {
+  BrowserDb,
+  BrowserInteractiveLedger,
+} from "../../vicia-db-wasm/vicia_db.js";
 
 const DB_NAME = "vicia-db-bench";
 const PAGE_SIZE = 4096;
@@ -368,6 +371,111 @@ window.benchPagedOpen = async () => {
       stats: await idbStats(),
     }),
   );
+};
+
+// Build an exact visible-segment lineage without importing or recompacting the
+// authority. Each atomic one-fact transaction publishes one delta segment, so
+// the following fresh renderer can measure current-only open at named counts.
+window.benchCurrentOpenGrow = async (fromSegmentCount, toSegmentCount) => {
+  await initPromise;
+  if (
+    !Number.isSafeInteger(fromSegmentCount) ||
+    !Number.isSafeInteger(toSegmentCount) ||
+    fromSegmentCount < 0 ||
+    toSegmentCount <= fromSegmentCount
+  ) {
+    throw new Error("current-open growth requires an increasing segment range");
+  }
+  const db = await BrowserDb.openPaged(DB_NAME);
+  const durations = [];
+  let finalWrite = null;
+  const started = performance.now();
+  try {
+    for (let cycle = fromSegmentCount + 1; cycle <= toSegmentCount; cycle++) {
+      const writeStarted = performance.now();
+      finalWrite = JSON.parse(
+        await db.execute(
+          `(transact [[:current-open/segment-${cycle} :current-open/value ${cycle}]])`,
+        ),
+      );
+      durations.push(performance.now() - writeStarted);
+    }
+    const proofStarted = performance.now();
+    const proof = JSON.parse(
+      await db.execute(
+        `(query [:find ?value :where [:current-open/segment-${toSegmentCount} :current-open/value ?value]])`,
+      ),
+    );
+    const proofMs = performance.now() - proofStarted;
+    if (proof.results?.[0]?.[0] !== toSegmentCount) {
+      throw new Error(`current-open growth proof failed: ${JSON.stringify(proof)}`);
+    }
+    const sorted = [...durations].sort((left, right) => left - right);
+    return show(JSON.stringify({
+      fromSegmentCount,
+      toSegmentCount,
+      writes: durations.length,
+      totalMs: Math.round((performance.now() - started) * 1000) / 1000,
+      writeP50Ms: percentile(sorted, 50),
+      writeP95Ms: percentile(sorted, 95),
+      writeMaxMs: percentile(sorted, 100),
+      finalAdvice: finalWrite?.advice ?? null,
+      proofMs: Math.round(proofMs * 1000) / 1000,
+      stats: await idbStats(),
+    }));
+  } finally {
+    db.free();
+  }
+};
+
+// Measure the typed current-only open receipt in a fresh renderer and prove
+// one fact from the newest segment through the bounded interactive read view.
+window.benchCurrentOpen = async (expectedSegmentCount) => {
+  await initPromise;
+  window.gc?.();
+  const heapBeforeBytes = heap();
+  const started = performance.now();
+  const ledger = await BrowserInteractiveLedger.openCurrent(DB_NAME);
+  const opened = performance.now();
+  try {
+    const receipt = JSON.parse(ledger.openReceipt);
+    if (
+      receipt.schema !== "vicia.browser-current-open-stage-receipt.v1" ||
+      receipt.outcome !== "ready_current" ||
+      receipt.visible_delta_segment_count !== expectedSegmentCount
+    ) {
+      throw new Error(`current-open receipt mismatch: ${JSON.stringify(receipt)}`);
+    }
+    const view = ledger.readView();
+    let proof;
+    const proofStarted = performance.now();
+    try {
+      proof = JSON.parse(
+        await view.query(
+          `(query [:find ?value :where [:current-open/segment-${expectedSegmentCount} :current-open/value ?value]])`,
+          8,
+          8192,
+        ),
+      );
+    } finally {
+      view.free();
+    }
+    const proofMs = performance.now() - proofStarted;
+    if (proof.results?.[0]?.[0] !== expectedSegmentCount) {
+      throw new Error(`current-open proof failed: ${JSON.stringify(proof)}`);
+    }
+    return show(JSON.stringify({
+      expectedSegmentCount,
+      wallOpenMs: Math.round((opened - started) * 1000) / 1000,
+      proofMs: Math.round(proofMs * 1000) / 1000,
+      heapBeforeBytes,
+      heapAfterOpenBytes: heap(),
+      receipt,
+      stats: await idbStats(),
+    }));
+  } finally {
+    ledger.free();
+  }
 };
 
 function encodeLedgerCallerValue(value) {

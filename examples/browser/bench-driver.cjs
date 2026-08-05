@@ -7,6 +7,9 @@
 //   CHROME_PATH=<chrome binary> NODE_PATH=<dir with puppeteer> \
 //     node examples/browser/bench-driver.cjs paged-matrix \
 //       <fixture-url-path> [openRuns] [growthCycles]
+//   CHROME_PATH=<chrome binary> NODE_PATH=<dir with puppeteer> \
+//     node examples/browser/bench-driver.cjs current-open-segment-matrix \
+//       [openRuns] [desktop|simulated-mobile] [receipt-path]
 //
 // Requires bench.html served (python3 -m http.server 8123 from repo root) and
 // fixtures from examples/generate_bench_fixture.rs. Imports in one browser,
@@ -51,6 +54,49 @@ async function withPage(fn, { extraArgs = [], forwardConsole = false } = {}) {
   } finally {
     await browser.close();
   }
+}
+
+const CURRENT_OPEN_DEVICE_MODES = {
+  desktop: {
+    label: "desktop-headless",
+    cpuThrottlingRate: 1,
+    viewport: null,
+    jsHeapLimitMiB: null,
+    actualMobileDevice: false,
+  },
+  "simulated-mobile": {
+    label: "simulated-mobile",
+    cpuThrottlingRate: 6,
+    viewport: {
+      width: 390,
+      height: 844,
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true,
+    },
+    jsHeapLimitMiB: 512,
+    actualMobileDevice: false,
+  },
+};
+
+async function withCurrentOpenPage(mode, fn, { forwardConsole = false } = {}) {
+  const emulation = CURRENT_OPEN_DEVICE_MODES[mode];
+  if (!emulation) throw new Error(`unknown current-open device mode: ${mode}`);
+  const extraArgs = ["--js-flags=--expose-gc"];
+  if (emulation.jsHeapLimitMiB !== null) {
+    extraArgs[0] += ` --max-old-space-size=${emulation.jsHeapLimitMiB}`;
+  }
+  return withPage(
+    async (page, browser) => {
+      if (emulation.viewport) await page.setViewport(emulation.viewport);
+      const session = await page.createCDPSession();
+      await session.send("Emulation.setCPUThrottlingRate", {
+        rate: emulation.cpuThrottlingRate,
+      });
+      return fn(page, browser);
+    },
+    { extraArgs, forwardConsole },
+  );
 }
 
 function browserTreeMemoryBytes(rootPid) {
@@ -155,6 +201,153 @@ function summary(values) {
     return Math.round(sorted[index] * 1000) / 1000;
   };
   return { p50: pick(50), p95: pick(95), max: pick(100) };
+}
+
+function currentOpenCaseSummary(opens) {
+  const receiptStages = (stage) =>
+    summary(opens.map((entry) => entry.result.receipt.stages[stage]));
+  return {
+    wallOpenMs: summary(opens.map((entry) => entry.result.wallOpenMs)),
+    receiptTotalMs: receiptStages("total_ms"),
+    indexedDbOpenMs: receiptStages("indexed_db_open_ms"),
+    page0ReadDecodeMs: receiptStages("page0_read_decode_ms"),
+    metadataReadMs: receiptStages("metadata_read_ms"),
+    segmentLoadMs: receiptStages("segment_load_ms"),
+    persistentStorageConstructMs: receiptStages("persistent_storage_construct_ms"),
+    proofMs: summary(opens.map((entry) => entry.result.proofMs)),
+    pssPeakDeltaBytes: summary(opens.map((entry) => entry.pss.peakDeltaBytes)),
+  };
+}
+
+// Risk probe for the current-format browser open boundary. It deliberately
+// varies only visible delta lineage, uses a fresh renderer per sample, and
+// labels CPU/viewport emulation as simulated rather than real-device evidence.
+async function currentOpenSegmentMatrixMain() {
+  const runs = Number(process.argv[3] ?? 10);
+  const mode = process.argv[4] ?? "desktop";
+  const outputPath = process.argv[5] ? path.resolve(process.argv[5]) : null;
+  const targets = [1, 100, 500, 1024];
+  const emulation = CURRENT_OPEN_DEVICE_MODES[mode];
+  if (!Number.isSafeInteger(runs) || runs < 1 || !emulation) {
+    console.error(
+      "usage: bench-driver.cjs current-open-segment-matrix [openRuns] [desktop|simulated-mobile] [receipt-path]",
+    );
+    process.exit(1);
+  }
+  const evidence = {
+    schema: "vicia.browser-current-open-segment-matrix.v1",
+    generatedAt: new Date().toISOString(),
+    mode: emulation.label,
+    admissionEligible: false,
+    admissionReason: emulation.actualMobileDevice
+      ? null
+      : "desktop or simulated-mobile evidence is a risk probe, not a real-mobile release gate",
+    chrome: CHROME,
+    chromeVersion: execFileSync(CHROME, ["--version"], { encoding: "utf8" }).trim(),
+    profile: PROFILE,
+    configuration: {
+      runs,
+      segmentTargets: targets,
+      cpuThrottlingRate: emulation.cpuThrottlingRate,
+      viewport: emulation.viewport,
+      jsHeapLimitMiB: emulation.jsHeapLimitMiB,
+      network: "unthrottled-local-assets; IndexedDB open has no network dependency",
+      freshRendererPerOpen: true,
+    },
+    source: {
+      commit: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+      trackedClean: execFileSync(
+        "git",
+        ["status", "--porcelain", "--untracked-files=no"],
+        { encoding: "utf8" },
+      ).trim().length === 0,
+      wasmSha256: crypto.createHash("sha256").update(
+        fs.readFileSync(path.resolve(process.cwd(), "vicia-db-wasm/vicia_db_bg.wasm")),
+      ).digest("hex"),
+    },
+    environment: {
+      platform: process.platform,
+      release: os.release(),
+      cpu: os.cpus()[0]?.model ?? null,
+      logicalCpus: os.cpus().length,
+      totalMemoryBytes: os.totalmem(),
+      node: process.version,
+    },
+    cases: [],
+    gates: {},
+  };
+
+  await withCurrentOpenPage(mode, async (page) => {
+    await page.evaluate(() => window.benchReset());
+    await page.evaluate(() => window.benchReady());
+  });
+
+  let previousTarget = 0;
+  for (const target of targets) {
+    const growth = await withCurrentOpenPage(
+      mode,
+      async (page, browser) => {
+        await page.evaluate(() => window.benchReady());
+        return measureBrowserRss(browser, async () => JSON.parse(
+          await page.evaluate(
+            (fromSegmentCount, toSegmentCount) =>
+              window.benchCurrentOpenGrow(fromSegmentCount, toSegmentCount),
+            previousTarget,
+            target,
+          ),
+        ));
+      },
+      { forwardConsole: true },
+    );
+    const opens = [];
+    for (let run = 0; run < runs; run++) {
+      const measured = await withCurrentOpenPage(
+        mode,
+        async (page, browser) => {
+          await page.evaluate(() => window.benchReady());
+          return measureBrowserRss(browser, async () => JSON.parse(
+            await page.evaluate(
+              (expectedSegmentCount) => window.benchCurrentOpen(expectedSegmentCount),
+              target,
+            ),
+          ));
+        },
+      );
+      opens.push(measured);
+      console.log(`currentOpen[${mode}][${target}][${run}]:`, JSON.stringify(measured));
+    }
+    evidence.cases.push({
+      segmentCount: target,
+      visibleDeltaPages: opens[0].result.receipt.visible_delta_pages,
+      growth,
+      opens,
+      summary: currentOpenCaseSummary(opens),
+    });
+    previousTarget = target;
+  }
+
+  evidence.gates = {
+    currentFormatOnly: evidence.cases.every((entry) =>
+      entry.opens.every((sample) => sample.result.receipt.outcome === "ready_current")
+    ),
+    exactSegmentCounts: evidence.cases.every((entry) =>
+      entry.opens.every((sample) =>
+        sample.result.receipt.visible_delta_segment_count === entry.segmentCount
+      )
+    ),
+    exactLatestFact: evidence.cases.every((entry) =>
+      entry.opens.every((sample) => sample.result.proofMs >= 0)
+    ),
+    sourceTrackedClean: evidence.source.trackedClean,
+  };
+  if (!Object.values(evidence.gates).every(Boolean)) {
+    throw new Error(`current-open segment matrix failed: ${JSON.stringify(evidence.gates)}`);
+  }
+  if (outputPath) {
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, `${JSON.stringify(evidence, null, 2)}\n`);
+  }
+  console.log("currentOpenSegmentMatrix:", JSON.stringify(evidence));
 }
 
 // A5-2 growth mode: repeated small write executes against one live handle,
@@ -806,6 +999,7 @@ async function openMain() {
     console.error(
         "usage: bench-driver.cjs <fixture-url-path|skip-import> [runs]\n" +
         "       bench-driver.cjs paged-matrix <fixture-url-path> [openRuns] [growthCycles]\n" +
+        "       bench-driver.cjs current-open-segment-matrix [openRuns] [desktop|simulated-mobile] [receipt-path]\n" +
         "       bench-driver.cjs projection-maintenance <fixture-url-path>\n" +
         "       bench-driver.cjs ledger-caller <fixture-url-path> [samples]\n" +
         "       bench-driver.cjs valid-time-diff <fixture-url-path> [samples]\n" +
@@ -837,6 +1031,8 @@ async function openMain() {
 let main;
 if (process.argv[2] === "paged-matrix") {
   main = pagedMatrixMain();
+} else if (process.argv[2] === "current-open-segment-matrix") {
+  main = currentOpenSegmentMatrixMain();
 } else if (process.argv[2] === "projection-maintenance") {
   main = projectionMaintenanceMain();
 } else if (process.argv[2] === "ledger-caller") {
