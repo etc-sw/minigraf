@@ -225,9 +225,20 @@ function summary(values) {
 }
 
 function currentOpenCaseSummary(opens) {
+  const clockCoherent = opens.filter((entry) =>
+    Math.abs(
+      entry.result.wallOpenMs - entry.result.receipt.stages.total_ms,
+    ) <= 100
+  );
+  if (clockCoherent.length === 0) {
+    throw new Error("current-open case has no wall-clock-coherent stage receipts");
+  }
   const receiptStages = (stage) =>
-    summary(opens.map((entry) => entry.result.receipt.stages[stage]));
+    summary(clockCoherent.map((entry) => entry.result.receipt.stages[stage]));
   return {
+    sampleCount: opens.length,
+    clockCoherentSampleCount: clockCoherent.length,
+    clockAnomalyCount: opens.length - clockCoherent.length,
     wallOpenMs: summary(opens.map((entry) => entry.result.wallOpenMs)),
     receiptTotalMs: receiptStages("total_ms"),
     indexedDbOpenMs: receiptStages("indexed_db_open_ms"),
@@ -377,6 +388,9 @@ async function currentOpenSegmentMatrixMain() {
     ),
     exactLatestFact: evidence.cases.every((entry) =>
       entry.opens.every((sample) => sample.result.proofMs >= 0)
+    ),
+    stageClockCoverage: evidence.cases.every((entry) =>
+      entry.summary.clockCoherentSampleCount >= Math.max(1, runs - 1)
     ),
     sourceTrackedClean: evidence.source.trackedClean,
   };
