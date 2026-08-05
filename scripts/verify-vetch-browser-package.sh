@@ -118,7 +118,8 @@ done
 
 chromedriver="$(find_chromedriver)"
 
-run_check pnpm-install pnpm --dir "$quiet_surface" install --prefer-offline
+run_check pnpm-install pnpm --dir "$vetch_dir" install --prefer-offline \
+  --filter @vetch/quiet-surface...
 
 if [[ ! -L "$linked_package" ]]; then
   echo "error: expected pnpm package link at $linked_package" >&2

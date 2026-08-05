@@ -305,7 +305,8 @@ restore_previous() {
   if [[ -d "$backup_destination" ]]; then
     mv "$backup_destination" "$destination"
   fi
-  pnpm --dir "$quiet_surface" install --prefer-offline >/dev/null 2>&1 || true
+  pnpm --dir "$vetch_dir" install --prefer-offline \
+    --filter @vetch/quiet-surface... >/dev/null 2>&1 || true
 }
 
 if [[ -d "$destination" ]]; then
@@ -317,7 +318,8 @@ if ! mv "$next_destination" "$destination"; then
   exit 1
 fi
 
-if ! pnpm --dir "$quiet_surface" install --prefer-offline; then
+if ! pnpm --dir "$vetch_dir" install --prefer-offline \
+  --filter @vetch/quiet-surface...; then
   restore_previous
   echo "error: pnpm install failed after publish; previous package restored" >&2
   exit 1
