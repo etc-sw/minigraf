@@ -79,24 +79,45 @@ const CURRENT_OPEN_DEVICE_MODES = {
   },
 };
 
-async function withCurrentOpenPage(mode, fn, { forwardConsole = false } = {}) {
+async function launchCurrentOpenBrowser(mode) {
   const emulation = CURRENT_OPEN_DEVICE_MODES[mode];
   if (!emulation) throw new Error(`unknown current-open device mode: ${mode}`);
   const extraArgs = ["--js-flags=--expose-gc"];
   if (emulation.jsHeapLimitMiB !== null) {
     extraArgs[0] += ` --max-old-space-size=${emulation.jsHeapLimitMiB}`;
   }
-  return withPage(
-    async (page, browser) => {
-      if (emulation.viewport) await page.setViewport(emulation.viewport);
-      const session = await page.createCDPSession();
-      await session.send("Emulation.setCPUThrottlingRate", {
-        rate: emulation.cpuThrottlingRate,
-      });
-      return fn(page, browser);
-    },
-    { extraArgs, forwardConsole },
-  );
+  return puppeteer.launch({
+    executablePath: CHROME,
+    headless: true,
+    protocolTimeout: 1_800_000,
+    userDataDir: PROFILE,
+    args: ["--enable-precise-memory-info", "--disable-gpu", ...extraArgs],
+  });
+}
+
+async function withCurrentOpenPage(
+  browser,
+  mode,
+  fn,
+  { forwardConsole = false } = {},
+) {
+  const emulation = CURRENT_OPEN_DEVICE_MODES[mode];
+  const page = await browser.newPage();
+  page.setDefaultTimeout(1_800_000);
+  page.on("pageerror", (error) => console.error("pageerror:", error.message));
+  if (forwardConsole) page.on("console", (message) => console.log(message.text()));
+  if (emulation.viewport) await page.setViewport(emulation.viewport);
+  const session = await page.createCDPSession();
+  await session.send("Emulation.setCPUThrottlingRate", {
+    rate: emulation.cpuThrottlingRate,
+  });
+  try {
+    await page.goto(PAGE, { waitUntil: "load" });
+    return await fn(page, browser);
+  } finally {
+    await session.detach();
+    await page.close();
+  }
 }
 
 function browserTreeMemoryBytes(rootPid) {
@@ -252,7 +273,7 @@ async function currentOpenSegmentMatrixMain() {
       viewport: emulation.viewport,
       jsHeapLimitMiB: emulation.jsHeapLimitMiB,
       network: "unthrottled-local-assets; IndexedDB open has no network dependency",
-      freshRendererPerOpen: true,
+      freshPageAndWasmContextPerOpen: true,
     },
     source: {
       commit: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
@@ -278,63 +299,71 @@ async function currentOpenSegmentMatrixMain() {
     gates: {},
   };
 
-  await withCurrentOpenPage(mode, async (page) => {
-    await page.evaluate(() => window.benchReset());
-    await page.evaluate(() => window.benchReady());
-  });
-  evidence.seed = await withCurrentOpenPage(
-    mode,
-    async (page, browser) => {
+  const browser = await launchCurrentOpenBrowser(mode);
+  try {
+    await withCurrentOpenPage(browser, mode, async (page) => {
+      await page.evaluate(() => window.benchReset());
       await page.evaluate(() => window.benchReady());
-      return measureBrowserRss(browser, async () => JSON.parse(
-        await page.evaluate(() => window.benchCurrentOpenSeed()),
-      ));
-    },
-    { forwardConsole: true },
-  );
-
-  let previousTarget = 0;
-  for (const target of targets) {
-    const growth = await withCurrentOpenPage(
+    });
+    evidence.seed = await withCurrentOpenPage(
+      browser,
       mode,
-      async (page, browser) => {
+      async (page, measuredBrowser) => {
         await page.evaluate(() => window.benchReady());
-        return measureBrowserRss(browser, async () => JSON.parse(
-          await page.evaluate(
-            (fromSegmentCount, toSegmentCount) =>
-              window.benchCurrentOpenGrow(fromSegmentCount, toSegmentCount),
-            previousTarget,
-            target,
-          ),
+        return measureBrowserRss(measuredBrowser, async () => JSON.parse(
+          await page.evaluate(() => window.benchCurrentOpenSeed()),
         ));
       },
       { forwardConsole: true },
     );
-    const opens = [];
-    for (let run = 0; run < runs; run++) {
-      const measured = await withCurrentOpenPage(
+
+    let previousTarget = 0;
+    for (const target of targets) {
+      const growth = await withCurrentOpenPage(
+        browser,
         mode,
-        async (page, browser) => {
+        async (page, measuredBrowser) => {
           await page.evaluate(() => window.benchReady());
-          return measureBrowserRss(browser, async () => JSON.parse(
+          return measureBrowserRss(measuredBrowser, async () => JSON.parse(
             await page.evaluate(
-              (expectedSegmentCount) => window.benchCurrentOpen(expectedSegmentCount),
+              (fromSegmentCount, toSegmentCount) =>
+                window.benchCurrentOpenGrow(fromSegmentCount, toSegmentCount),
+              previousTarget,
               target,
             ),
           ));
         },
+        { forwardConsole: true },
       );
-      opens.push(measured);
-      console.log(`currentOpen[${mode}][${target}][${run}]:`, JSON.stringify(measured));
+      const opens = [];
+      for (let run = 0; run < runs; run++) {
+        const measured = await withCurrentOpenPage(
+          browser,
+          mode,
+          async (page, measuredBrowser) => {
+            await page.evaluate(() => window.benchReady());
+            return measureBrowserRss(measuredBrowser, async () => JSON.parse(
+              await page.evaluate(
+                (expectedSegmentCount) => window.benchCurrentOpen(expectedSegmentCount),
+                target,
+              ),
+            ));
+          },
+        );
+        opens.push(measured);
+        console.log(`currentOpen[${mode}][${target}][${run}]:`, JSON.stringify(measured));
+      }
+      evidence.cases.push({
+        segmentCount: target,
+        visibleDeltaPages: opens[0].result.receipt.visible_delta_pages,
+        growth,
+        opens,
+        summary: currentOpenCaseSummary(opens),
+      });
+      previousTarget = target;
     }
-    evidence.cases.push({
-      segmentCount: target,
-      visibleDeltaPages: opens[0].result.receipt.visible_delta_pages,
-      growth,
-      opens,
-      summary: currentOpenCaseSummary(opens),
-    });
-    previousTarget = target;
+  } finally {
+    await browser.close();
   }
 
   evidence.gates = {
