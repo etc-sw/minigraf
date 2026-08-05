@@ -1157,6 +1157,33 @@ clock-anomaly handling, constraints, and reproduction context are in
 The simulated p95 exceeds the provisional 1,000 ms real-mobile budget, but only
 a physical Android run can pass or fail that gate.
 
+### Browser current-open exact-page batching (2026-08-05)
+
+Clean Vicia commit `c476e8f` replaces one readonly IndexedDB transaction per
+visible segment range with exact page requests in batches of at most 256. Each
+batch observes page 0 once. Missing or malformed pages remain candidate-local;
+only complete segment ranges enter the unchanged manifest selector, so corrupt
+newest state still falls back to a valid predecessor without broad range
+overfetch or a file-format/API change.
+
+The same 20-run 1/100/500/1,024 matrix passes its exactness and clock gates:
+
+| Visible segments | Desktop baseline → batch p95 | Simulated-mobile baseline → batch p95 | Desktop segment-load baseline → batch p95 | Simulated-mobile segment-load baseline → batch p95 |
+|---:|---:|---:|---:|---:|
+| 1 | 8.3 → 8.2 ms | 73.2 → 57.4 ms | 1 → 1 ms | 4 → 3 ms |
+| 100 | 42.7 → 16.8 ms | 294.8 → 92.9 ms | 33 → 7 ms | 211 → 31 ms |
+| 500 | 185.4 → 36.5 ms | 1,027.3 → 233.4 ms | 174 → 22 ms | 934 → 145 ms |
+| 1,024 | 427.1 → 76.2 ms | 1,935.3 → 380.5 ms | 404 → 46 ms | 1,839 → 269 ms |
+
+The 1,024-segment end-to-end p95 improves 82.2% on desktop and 80.3% under
+CPU-6x simulated mobile. The real-Chrome suite passes all 93 browser tests,
+including candidate corruption/fallback. The risk probe therefore admits the
+exact-page batch primitive. Open remains proportional to visible segment
+payload; lazy generation-pinned segment residency is still the structural next
+direction if another cold-open slice is needed. Raw receipts and PSS details
+are in
+`benchmarks/baselines/browser-current-open/2026-08-05-hal7800-exact-batch/`.
+
 ---
 
 ## Concurrency (In-Memory)
